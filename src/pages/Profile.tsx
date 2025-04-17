@@ -1,22 +1,40 @@
 
-import { User, Settings, Clock, Heart } from 'lucide-react';
+import { User, Settings, Clock, Heart, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import ScrollableRow from '@/components/ScrollableRow';
 import { usePlayer } from '@/contexts/PlayerContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import SongTile from '@/components/SongTile';
 
 const Profile = () => {
   const { recentlyPlayed } = usePlayer();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   return (
     <div className="pt-6 pb-24 animate-slide-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
         <h1 className="text-3xl font-bold">Profile</h1>
-        <Button variant="outline" className="flex items-center gap-2">
-          <Settings className="h-4 w-4" />
-          Settings
-        </Button>
+        <div className="flex gap-2 mt-4 md:mt-0">
+          <Button variant="outline" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Settings
+          </Button>
+          <Button 
+            variant="destructive" 
+            className="flex items-center gap-2"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Button>
+        </div>
       </div>
       
       {/* User Info */}
@@ -26,8 +44,8 @@ const Profile = () => {
         </div>
         
         <div className="text-center md:text-left">
-          <h2 className="text-2xl font-bold mb-1">Guest User</h2>
-          <p className="text-gray-400 mb-4">@guest_user</p>
+          <h2 className="text-2xl font-bold mb-1">{user?.username || 'User'}</h2>
+          <p className="text-gray-400 mb-4">{user?.email}</p>
           
           <div className="flex flex-wrap gap-4 justify-center md:justify-start">
             <div className="text-center">

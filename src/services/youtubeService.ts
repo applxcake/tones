@@ -1,9 +1,7 @@
-
 import { toast } from '@/components/ui/use-toast';
 
-// This is a simple YouTube API key for demonstration
-// In production, this should be handled securely
-const API_KEY = 'AIzaSyBgT-MYRIZE13fyImi3nIQz7wwxx9jl-Hg';
+// Use the new API key provided by the user
+const API_KEY = 'AIzaSyD_-rqFfFxCzPFqT9fhLUPri0DGoSCRMsE';
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
 export interface YouTubeVideo {
@@ -40,7 +38,8 @@ export const searchVideos = async (
     const response = await fetch(`${BASE_URL}/search?${params.toString()}`);
     
     if (!response.ok) {
-      throw new Error('Network response was not ok');
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'Network response was not ok');
     }
     
     const data = await response.json();
@@ -61,7 +60,7 @@ export const searchVideos = async (
     console.error('Error fetching videos:', error);
     toast({
       title: "Error fetching videos",
-      description: "There was a problem with the YouTube API.",
+      description: error instanceof Error ? error.message : "There was a problem with the YouTube API.",
       variant: "destructive"
     });
     return { items: [] };
@@ -81,7 +80,8 @@ export const getTrendingMusic = async (): Promise<YouTubeVideo[]> => {
     const response = await fetch(`${BASE_URL}/videos?${params.toString()}`);
     
     if (!response.ok) {
-      throw new Error('Network response was not ok');
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'Network response was not ok');
     }
     
     const data = await response.json();
@@ -97,14 +97,13 @@ export const getTrendingMusic = async (): Promise<YouTubeVideo[]> => {
     console.error('Error fetching trending music:', error);
     toast({
       title: "Error fetching trends",
-      description: "There was a problem with the YouTube API.",
+      description: error instanceof Error ? error.message : "There was a problem with the YouTube API.",
       variant: "destructive"
     });
     return [];
   }
 };
 
-// Function to get video details for recommended music
 export const getRecommendedMusic = async (videoId: string): Promise<YouTubeVideo[]> => {
   try {
     const params = new URLSearchParams({

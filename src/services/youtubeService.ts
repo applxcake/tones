@@ -1,7 +1,7 @@
 import { toast } from '@/components/ui/use-toast';
 
 // Use the new API key provided by the user
-const API_KEY = 'AIzaSyD_-rqFfFxCzPFqT9fhLUPri0DGoSCRMsE';
+const API_KEY = 'AIzaSyDw396jNgBIcbQljAB-C0EHBtHw6OLdy3A';
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
 export interface YouTubeVideo {

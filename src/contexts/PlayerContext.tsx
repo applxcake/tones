@@ -70,9 +70,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         audioRef.current.play().catch(error => {
           console.error('Failed to play:', error);
           toast({
-            title: "Playback Error",
-            description: "Could not play this track. YouTube API limits apply.",
-            variant: "destructive"
+            title: "Demo Mode",
+            description: "This is a demo application. In a real app, you would connect to YouTube's IFrame API for actual playback.",
+            variant: "default"
           });
         });
       }

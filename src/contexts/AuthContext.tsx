@@ -1,12 +1,22 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { toast } from "sonner";
 
 // Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create a function to determine if the environment variables are set
+const areSupabaseCredentialsSet = () => {
+  return supabaseUrl !== '' && supabaseAnonKey !== '';
+};
+
+// Only create the client if credentials are available
+let supabase = null;
+if (areSupabaseCredentialsSet()) {
+  supabase = createClient(supabaseUrl, supabaseAnonKey);
+}
 
 type User = {
   id: string;
@@ -33,10 +43,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    // Check if Supabase credentials are set
+    if (!areSupabaseCredentialsSet()) {
+      console.error('Supabase credentials are not set. Authentication will not work.');
+      toast.error('Authentication is not configured. Please set Supabase credentials.');
+      setIsLoading(false);
+      return;
+    }
+
     // Check active sessions and set the user
+    setIsLoading(true);
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && session.user) {
         setUser({
@@ -70,6 +89,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    if (!areSupabaseCredentialsSet()) {
+      return {
+        error: new Error('Authentication is not configured'),
+        data: null
+      };
+    }
+
     setIsLoading(true);
     const result = await supabase.auth.signInWithPassword({ email, password });
     setIsLoading(false);
@@ -77,6 +103,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string, username?: string) => {
+    if (!areSupabaseCredentialsSet()) {
+      return {
+        error: new Error('Authentication is not configured'),
+        data: null
+      };
+    }
+
     setIsLoading(true);
     const result = await supabase.auth.signUp({
       email,
@@ -92,6 +125,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    if (!areSupabaseCredentialsSet()) {
+      return;
+    }
+
     setIsLoading(true);
     await supabase.auth.signOut();
     setIsLoading(false);

@@ -42,6 +42,7 @@ const SongTile = ({ song, className }: SongTileProps) => {
           src={song.thumbnailUrl} 
           alt={song.title}
           className="w-full h-full object-cover"
+          loading="lazy"
         />
         <div 
           className={cn(

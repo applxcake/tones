@@ -1,4 +1,5 @@
 
+import { useState } from 'react';
 import { User, Settings, Clock, Heart, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,11 +7,13 @@ import { usePlayer } from '@/contexts/PlayerContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import SongTile from '@/components/SongTile';
+import { getCurrentUser } from '@/services/userService';
 
 const Profile = () => {
-  const { recentlyPlayed } = usePlayer();
+  const { recentlyPlayed, likedSongs } = usePlayer();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const currentUser = getCurrentUser();
 
   const handleLogout = async () => {
     await signOut();
@@ -22,7 +25,11 @@ const Profile = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
         <h1 className="text-3xl font-bold">Profile</h1>
         <div className="flex gap-2 mt-4 md:mt-0">
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={() => navigate('/settings')}
+          >
             <Settings className="h-4 w-4" />
             Settings
           </Button>
@@ -49,15 +56,15 @@ const Profile = () => {
           
           <div className="flex flex-wrap gap-4 justify-center md:justify-start">
             <div className="text-center">
-              <p className="text-xl font-bold">0</p>
+              <p className="text-xl font-bold">2</p>
               <p className="text-sm text-gray-400">Playlists</p>
             </div>
             <div className="text-center">
-              <p className="text-xl font-bold">0</p>
+              <p className="text-xl font-bold">{currentUser?.followers.length || 0}</p>
               <p className="text-sm text-gray-400">Followers</p>
             </div>
             <div className="text-center">
-              <p className="text-xl font-bold">0</p>
+              <p className="text-xl font-bold">{currentUser?.following.length || 0}</p>
               <p className="text-sm text-gray-400">Following</p>
             </div>
           </div>
@@ -92,9 +99,17 @@ const Profile = () => {
         </TabsContent>
         
         <TabsContent value="liked">
-          <div className="py-12 text-center glass-panel rounded-lg">
-            <p className="text-gray-400">Your liked songs will appear here</p>
-          </div>
+          {likedSongs.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              {likedSongs.map((song) => (
+                <SongTile key={song.id} song={song} />
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center glass-panel rounded-lg">
+              <p className="text-gray-400">Your liked songs will appear here</p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

@@ -14,7 +14,7 @@ const Layout = () => {
     <div className="min-h-screen bg-background text-foreground">
       <div 
         className={`transition-all duration-300 fixed top-0 bottom-0 z-30 
-          ${sidebarOpen ? 'left-0' : '-left-64'}`}
+          ${sidebarOpen ? 'left-0 opacity-100' : '-left-64 opacity-0 md:opacity-100'}`}
       >
         <AppSidebar />
       </div>
@@ -23,7 +23,9 @@ const Layout = () => {
       <Button 
         variant="ghost" 
         size="icon" 
-        className="fixed top-4 left-4 z-40 md:left-[260px] transition-all duration-300"
+        className={`fixed top-4 z-40 transition-all duration-300 ${
+          sidebarOpen ? 'left-[260px]' : 'left-4'
+        }`}
         onClick={() => setSidebarOpen(!sidebarOpen)}
       >
         {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}

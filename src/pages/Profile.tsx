@@ -8,19 +8,28 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import SongTile from '@/components/SongTile';
 import { getCurrentUser } from '@/services/userService';
+import { YouTubeVideoBasic } from '@/services/youtubeService';
 
 const Profile = () => {
   const { recentlyPlayed, likedSongs } = usePlayer();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUserData, setCurrentUserData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   // Fetch current user data when the component mounts or user changes
   useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
-        const userData = await getCurrentUser(user.id);
-        setCurrentUser(userData);
+        try {
+          setLoading(true);
+          const userData = await getCurrentUser(user.id);
+          setCurrentUserData(userData);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        } finally {
+          setLoading(false);
+        }
       }
     };
     
@@ -31,6 +40,24 @@ const Profile = () => {
     await signOut();
     navigate('/login');
   };
+
+  if (loading) {
+    return (
+      <div className="pt-6 pb-24 animate-slide-in">
+        <div className="flex justify-center py-12">
+          <div className="flex gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div 
+                key={i}
+                className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-6 pb-24 animate-slide-in">
@@ -72,11 +99,11 @@ const Profile = () => {
               <p className="text-sm text-gray-400">Playlists</p>
             </div>
             <div className="text-center">
-              <p className="text-xl font-bold">{currentUser?.followers?.length || 0}</p>
+              <p className="text-xl font-bold">{currentUserData?.followers?.length || 0}</p>
               <p className="text-sm text-gray-400">Followers</p>
             </div>
             <div className="text-center">
-              <p className="text-xl font-bold">{currentUser?.following?.length || 0}</p>
+              <p className="text-xl font-bold">{currentUserData?.following?.length || 0}</p>
               <p className="text-sm text-gray-400">Following</p>
             </div>
           </div>
@@ -100,7 +127,7 @@ const Profile = () => {
           {recentlyPlayed.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {recentlyPlayed.map((song) => (
-                <SongTile key={song.id} song={song} />
+                <SongTile key={song.id} song={song as any} />
               ))}
             </div>
           ) : (
@@ -114,7 +141,7 @@ const Profile = () => {
           {likedSongs.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {likedSongs.map((song) => (
-                <SongTile key={song.id} song={song} />
+                <SongTile key={song.id} song={song as any} />
               ))}
             </div>
           ) : (

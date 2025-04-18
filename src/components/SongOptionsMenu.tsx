@@ -27,14 +27,27 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
   const { addToQueue, toggleLike, isLiked } = usePlayer();
   const { user } = useAuth();
   const [playlists, setPlaylists] = useState<any[]>([]);
-  const [liked, setLiked] = useState(isLiked(song.id));
+  const [liked, setLiked] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Check if song is liked when component mounts
+  useEffect(() => {
+    setLiked(isLiked(song.id));
+  }, [song.id, isLiked]);
 
   // Fetch user playlists when component mounts
   useEffect(() => {
     const fetchPlaylists = async () => {
       if (user) {
-        const userPlaylists = await getUserPlaylists(user.id);
-        setPlaylists(userPlaylists || []);
+        try {
+          setLoading(true);
+          const userPlaylists = await getUserPlaylists(user.id);
+          setPlaylists(userPlaylists || []);
+        } catch (error) {
+          console.error('Error fetching playlists:', error);
+        } finally {
+          setLoading(false);
+        }
       }
     };
     
@@ -42,13 +55,21 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
   }, [user]);
 
   const handleLike = async () => {
-    const isLikedNow = await toggleLike(song);
-    setLiked(isLikedNow);
+    try {
+      const isLikedNow = await toggleLike(song);
+      setLiked(isLikedNow);
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
   };
 
   const handleAddToPlaylist = async (playlistId: string) => {
     if (user) {
-      await addSongToPlaylist(playlistId, song, user.id);
+      try {
+        await addSongToPlaylist(playlistId, song, user.id);
+      } catch (error) {
+        console.error('Error adding song to playlist:', error);
+      }
     }
   };
 
@@ -82,7 +103,11 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
             Add to Playlist
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            {playlists.length > 0 ? (
+            {loading ? (
+              <DropdownMenuLabel className="text-sm text-muted-foreground">
+                Loading playlists...
+              </DropdownMenuLabel>
+            ) : playlists.length > 0 ? (
               playlists.map((playlist) => (
                 <DropdownMenuItem 
                   key={playlist.id}

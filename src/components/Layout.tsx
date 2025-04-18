@@ -12,9 +12,10 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Sidebar with transition */}
       <div 
-        className={`transition-all duration-300 fixed top-0 bottom-0 z-30 
-          ${sidebarOpen ? 'left-0 opacity-100' : '-left-64 opacity-0 md:opacity-100'}`}
+        className={`fixed top-0 bottom-0 z-30 transition-all duration-300 transform
+          ${sidebarOpen ? 'left-0' : '-translate-x-full'}`}
       >
         <AppSidebar />
       </div>

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Search, ListMusic, User, Disc3, LogOut } from 'lucide-react';
+import { Home, Search, ListMusic, User, Disc3, LogOut, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -10,19 +10,21 @@ const AppSidebar = () => {
   const { isAuthenticated, user, signOut } = useAuth();
 
   return (
-    <div className="hidden md:flex flex-col h-screen w-64 bg-sidebar fixed left-0 top-0 z-30 glass-panel">
+    <div className="h-screen w-64 bg-sidebar fixed left-0 top-0 z-30 glass-panel">
       <div className="p-6">
-        <div className="flex items-center gap-2 mb-8">
+        <div className="flex items-center gap-2 mb-2">
           <Disc3 className="h-8 w-8 text-neon-purple animate-pulse-glow" />
           <h1 className="text-2xl font-bold bg-gradient-to-r from-neon-purple to-neon-pink text-transparent bg-clip-text">
             Tones
           </h1>
         </div>
+        <p className="text-sm text-gray-400 mb-8">Music made free!</p>
         
         <nav className="space-y-1">
           <SidebarNavItem to="/" icon={<Home className="h-5 w-5" />} label="Home" />
           <SidebarNavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
           <SidebarNavItem to="/playlists" icon={<ListMusic className="h-5 w-5" />} label="Playlists" />
+          <SidebarNavItem to="/explore" icon={<Users className="h-5 w-5" />} label="Explore" />
           <SidebarNavItem to="/profile" icon={<User className="h-5 w-5" />} label="Profile" />
         </nav>
       </div>
@@ -66,7 +68,7 @@ const AppSidebar = () => {
         
         <div className="text-xs text-gray-500 mt-4">
           <p>© 2025 Tones</p>
-          <p className="mt-1">Futuristic Music Streaming</p>
+          <p className="mt-1">Music made free!</p>
         </div>
       </div>
     </div>

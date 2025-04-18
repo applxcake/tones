@@ -3,15 +3,20 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { searchVideos, YouTubeVideo } from '@/services/youtubeService';
+import { searchUsers } from '@/services/userService';
 import SearchBar from '@/components/SearchBar';
 import SongTile from '@/components/SongTile';
+import UserCard from '@/components/UserCard';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Search = () => {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('songs');
   const [nextPageToken, setNextPageToken] = useState<string | undefined>();
   const [searchResults, setSearchResults] = useState<YouTubeVideo[]>([]);
+  const [userResults, setUserResults] = useState<any[]>([]);
 
   // Get search query from URL
   useEffect(() => {
@@ -23,10 +28,10 @@ const Search = () => {
   }, [location.search]);
 
   // Search for videos
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['searchVideos', searchQuery],
     queryFn: () => searchVideos(searchQuery),
-    enabled: searchQuery.length > 0,
+    enabled: searchQuery.length > 0 && activeTab === 'songs',
   });
 
   // Update results when data changes
@@ -36,6 +41,14 @@ const Search = () => {
       setNextPageToken(data.nextPageToken);
     }
   }, [data]);
+
+  // Search for users when tab is 'users'
+  useEffect(() => {
+    if (searchQuery && activeTab === 'users') {
+      const results = searchUsers(searchQuery);
+      setUserResults(results);
+    }
+  }, [searchQuery, activeTab]);
 
   // Handle search submission
   const handleSearch = (query: string) => {
@@ -51,64 +64,92 @@ const Search = () => {
     }
   };
 
+  // Change active tab
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
   return (
     <div className="pt-6 pb-24 animate-slide-in">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold">Search</h1>
-        <SearchBar onSearch={handleSearch} className="w-full md:w-auto" />
+      <div className="flex flex-col items-center justify-center mb-10">
+        <h1 className="text-3xl font-bold mb-6 text-center">Find your favorites</h1>
+        <SearchBar onSearch={handleSearch} className="w-full max-w-2xl" />
       </div>
 
       {searchQuery ? (
         <div>
-          <h2 className="text-xl font-semibold mb-4">
-            Results for "{searchQuery}"
-          </h2>
+          <Tabs defaultValue="songs" value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <TabsList className="w-full max-w-md mx-auto mb-8">
+              <TabsTrigger value="songs" className="flex-1">Songs</TabsTrigger>
+              <TabsTrigger value="users" className="flex-1">Users</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="songs">
+              <h2 className="text-xl font-semibold mb-4">
+                Songs matching "{searchQuery}"
+              </h2>
 
-          {isLoading ? (
-            <div className="py-12 flex justify-center">
-              <div className="flex gap-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div 
-                    key={i}
-                    className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
-                    style={{ animationDelay: `${i * 0.15}s` }}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : isError ? (
-            <div className="py-12 text-center">
-              <p className="text-gray-400">An error occurred while searching. Please try again.</p>
-            </div>
-          ) : searchResults.length === 0 ? (
-            <div className="py-12 text-center">
-              <p className="text-gray-400">No results found for "{searchQuery}"</p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {searchResults.map((video) => (
-                  <SongTile key={video.id} song={video} />
-                ))}
-              </div>
+              {isLoading ? (
+                <div className="py-12 flex justify-center">
+                  <div className="flex gap-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div 
+                        key={i}
+                        className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
+                        style={{ animationDelay: `${i * 0.15}s` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div className="py-12 text-center">
+                  <p className="text-gray-400">No songs found for "{searchQuery}"</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {searchResults.map((video) => (
+                      <SongTile key={video.id} song={video} />
+                    ))}
+                  </div>
 
-              {nextPageToken && (
-                <div className="mt-8 flex justify-center">
-                  <Button 
-                    onClick={loadMore} 
-                    variant="outline" 
-                    className="hover:neon-glow-purple"
-                  >
-                    Load More
-                  </Button>
+                  {nextPageToken && (
+                    <div className="mt-8 flex justify-center">
+                      <Button 
+                        onClick={loadMore} 
+                        variant="outline" 
+                        className="hover:neon-glow-purple"
+                      >
+                        Load More
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="users">
+              <h2 className="text-xl font-semibold mb-4">
+                Users matching "{searchQuery}"
+              </h2>
+
+              {userResults.length === 0 ? (
+                <div className="py-12 text-center">
+                  <p className="text-gray-400">No users found for "{searchQuery}"</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {userResults.map((user) => (
+                    <UserCard key={user.id} user={user} />
+                  ))}
                 </div>
               )}
-            </>
-          )}
+            </TabsContent>
+          </Tabs>
         </div>
       ) : (
-        <div className="py-12 text-center">
-          <p className="text-gray-400">Search for your favorite music</p>
+        <div className="py-12 text-center max-w-md mx-auto">
+          <p className="text-gray-400">Search for your favorite music or connect with other users</p>
         </div>
       )}
     </div>

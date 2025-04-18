@@ -46,24 +46,24 @@ const SearchBar = ({ onSearch, className }: SearchBarProps) => {
       onSubmit={handleSubmit}
       className={cn(
         "relative transition-all duration-300",
-        isFocused ? "w-full" : "w-64",
+        "w-full", // Always full width for better UI
         className
       )}
     >
       <div className={cn(
-        "flex items-center h-10 px-3 rounded-full transition-all duration-300",
+        "flex items-center h-12 px-4 rounded-full transition-all duration-300",
         "glass-panel",
         isFocused ? "neon-glow-blue" : "hover:neon-glow-blue"
       )}>
-        <Search className="h-4 w-4 flex-shrink-0 text-gray-400" />
+        <Search className="h-5 w-5 flex-shrink-0 text-gray-400" />
         
         <Input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
-          placeholder="Search for music..."
-          className="border-none bg-transparent focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 text-sm h-full py-0 px-3"
+          placeholder="Search for music or users..."
+          className="border-none bg-transparent focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 text-base h-full py-0 px-3"
         />
         
         {query && (
@@ -72,13 +72,17 @@ const SearchBar = ({ onSearch, className }: SearchBarProps) => {
             size="icon"
             variant="ghost"
             onClick={clearSearch}
-            className="h-5 w-5 p-0 text-gray-400 hover:text-white"
+            className="h-6 w-6 p-0 text-gray-400 hover:text-white"
           >
-            <X className="h-3 w-3" />
+            <X className="h-4 w-4" />
           </Button>
         )}
         
-        <Button type="submit" className="sr-only">
+        <Button 
+          type="submit" 
+          variant="ghost"
+          className="ml-2 px-4 h-8 bg-neon-purple/20 hover:bg-neon-purple/40 text-white"
+        >
           Search
         </Button>
       </div>

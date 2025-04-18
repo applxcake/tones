@@ -10,8 +10,12 @@ import Layout from "@/components/Layout";
 import Home from "@/pages/Home";
 import Search from "@/pages/Search";
 import Playlists from "@/pages/Playlists";
+import PlaylistDetails from "@/pages/PlaylistDetails";
 import Profile from "@/pages/Profile";
 import Auth from "@/pages/Auth";
+import Explore from "@/pages/Explore";
+import UserProfile from "@/pages/UserProfile";
+import Settings from "@/pages/Settings";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -34,8 +38,14 @@ const App = () => (
               <Route path="/" element={<Layout />}>
                 <Route index element={<Home />} />
                 <Route path="search" element={<Search />} />
-                <Route path="playlists" element={<ProtectedRoute><Playlists /></ProtectedRoute>} />
+                <Route path="playlists">
+                  <Route index element={<ProtectedRoute><Playlists /></ProtectedRoute>} />
+                  <Route path=":id" element={<ProtectedRoute><PlaylistDetails /></ProtectedRoute>} />
+                </Route>
+                <Route path="explore" element={<Explore />} />
+                <Route path="users/:id" element={<UserProfile />} />
                 <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>

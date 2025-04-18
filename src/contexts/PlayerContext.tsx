@@ -1,7 +1,8 @@
-
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Define YouTube Player API types
 declare global {
@@ -77,13 +78,14 @@ interface PlayerContextType {
   prevTrack: () => void;
   setVolume: (volume: number) => void;
   addToQueue: (track: YouTubeVideo) => void;
-  toggleLike: (track: YouTubeVideo) => boolean;
+  toggleLike: (track: YouTubeVideo) => Promise<boolean>;
   isLiked: (trackId: string) => boolean;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [currentTrack, setCurrentTrack] = useState<YouTubeVideo | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -99,7 +101,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   
   // Load YouTube IFrame API
   useEffect(() => {
-    // Only load the API if it's not already loaded
     if (!window.YT) {
       const tag = document.createElement('script');
       tag.src = 'https://www.youtube.com/iframe_api';
@@ -108,7 +109,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
       }
       
-      // Set up the callback for when the API is ready
       window.onYouTubeIframeAPIReady = () => {
         setIsApiReady(true);
       };
@@ -116,7 +116,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsApiReady(true);
     }
     
-    // Create hidden container for YouTube player if it doesn't exist
     if (!playerContainerRef.current) {
       const container = document.createElement('div');
       container.id = 'youtube-player-container';
@@ -138,13 +137,75 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, []);
   
-  // Initialize YouTube Player when API is ready and we have a track
+  useEffect(() => {
+    const fetchLikedSongs = async () => {
+      if (!user?.id) {
+        setLikedSongs([]);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('liked_songs')
+          .select('songs(*)')
+          .eq('user_id', user.id);
+          
+        if (error) throw error;
+        
+        const songs = data?.map(item => ({
+          id: item.songs.id,
+          title: item.songs.title,
+          thumbnailUrl: item.songs.thumbnail_url,
+          channelTitle: item.songs.channel_title,
+        })) || [];
+        
+        setLikedSongs(songs);
+      } catch (error) {
+        console.error('Error loading liked songs:', error);
+      }
+    };
+    
+    fetchLikedSongs();
+  }, [user]);
+  
+  useEffect(() => {
+    const fetchRecentlyPlayed = async () => {
+      if (!user?.id) {
+        setRecentlyPlayed([]);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('recently_played')
+          .select('songs(*)')
+          .eq('user_id', user.id)
+          .order('played_at', { ascending: false })
+          .limit(20);
+          
+        if (error) throw error;
+        
+        const songs = data?.map(item => ({
+          id: item.songs.id,
+          title: item.songs.title,
+          thumbnailUrl: item.songs.thumbnail_url,
+          channelTitle: item.songs.channel_title,
+        })) || [];
+        
+        setRecentlyPlayed(songs);
+      } catch (error) {
+        console.error('Error loading recently played:', error);
+      }
+    };
+    
+    fetchRecentlyPlayed();
+  }, [user]);
+  
   useEffect(() => {
     const initPlayer = () => {
       if (currentTrack && playerContainerRef.current && isApiReady && window.YT && window.YT.Player) {
         try {
           if (playerRef.current) {
-            // If player exists, just load the new video
             playerRef.current.loadVideoById(currentTrack.id);
             if (isPlaying) {
               playerRef.current.playVideo();
@@ -152,7 +213,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               playerRef.current.pauseVideo();
             }
           } else {
-            // Create new player
             playerRef.current = new window.YT.Player('youtube-player-container', {
               videoId: currentTrack.id,
               playerVars: {
@@ -205,13 +265,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     };
 
-    // Only initialize if API is ready and we have a track
     if (isApiReady && currentTrack) {
       initPlayer();
     }
   }, [currentTrack, isApiReady]);
   
-  // Progress tracking
   const progressIntervalRef = useRef<number | null>(null);
   
   const startProgressInterval = () => {
@@ -238,7 +296,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
   
-  // Effect to update YouTube player state based on isPlaying
   useEffect(() => {
     if (playerRef.current && isApiReady) {
       try {
@@ -253,7 +310,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [isPlaying, isApiReady]);
   
-  // Effect to update YouTube player volume
   useEffect(() => {
     if (playerRef.current && isApiReady && typeof playerRef.current.setVolume === 'function') {
       try {
@@ -264,7 +320,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [volume, isApiReady]);
   
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       clearProgressInterval();
@@ -278,15 +333,70 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, []);
 
-  const playTrack = (track: YouTubeVideo) => {
-    // Add current track to recently played if it exists
-    if (currentTrack) {
-      setRecentlyPlayed(prev => {
-        // Filter out this track if it's already in the list
-        const filtered = prev.filter(item => item.id !== currentTrack.id);
-        // Add it to the beginning and limit to 20 items
-        return [currentTrack, ...filtered].slice(0, 20);
-      });
+  const playTrack = async (track: YouTubeVideo) => {
+    if (currentTrack && user?.id) {
+      try {
+        const { data: existingSong } = await supabase
+          .from('songs')
+          .select('*')
+          .eq('id', currentTrack.id)
+          .single();
+        
+        if (!existingSong) {
+          await supabase
+            .from('songs')
+            .insert([{
+              id: currentTrack.id,
+              title: currentTrack.title,
+              thumbnail_url: currentTrack.thumbnailUrl,
+              channel_title: currentTrack.channelTitle,
+            }]);
+        }
+        
+        await supabase
+          .from('recently_played')
+          .upsert(
+            {
+              user_id: user.id,
+              song_id: currentTrack.id,
+              played_at: new Date().toISOString()
+            },
+            {
+              onConflict: 'user_id,song_id',
+              ignoreDuplicates: false
+            }
+          );
+          
+        setRecentlyPlayed(prev => {
+          const filtered = prev.filter(item => item.id !== currentTrack.id);
+          return [currentTrack, ...filtered].slice(0, 20);
+        });
+      } catch (error) {
+        console.error("Error saving recently played:", error);
+      }
+    }
+    
+    if (user?.id) {
+      try {
+        const { data: existingSong } = await supabase
+          .from('songs')
+          .select('*')
+          .eq('id', track.id)
+          .single();
+        
+        if (!existingSong) {
+          await supabase
+            .from('songs')
+            .insert([{
+              id: track.id,
+              title: track.title,
+              thumbnail_url: track.thumbnailUrl,
+              channel_title: track.channelTitle,
+            }]);
+        }
+      } catch (error) {
+        console.error("Error saving song:", error);
+      }
     }
     
     setCurrentTrack(track);
@@ -299,22 +409,18 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const nextTrack = () => {
     if (queue.length > 0) {
-      // Play the next track in the queue
       const nextUp = queue[0];
       setQueue(prev => prev.slice(1));
       playTrack(nextUp);
     } else {
-      // No more tracks in queue
       setIsPlaying(false);
     }
   };
 
   const prevTrack = () => {
     if (recentlyPlayed.length > 0) {
-      // Play the previous track from history
       const prevTrack = recentlyPlayed[0];
       setRecentlyPlayed(prev => prev.slice(1));
-      // Add current track to the beginning of the queue if it exists
       if (currentTrack) {
         setQueue(prev => [currentTrack, ...prev]);
       }
@@ -335,25 +441,78 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   };
   
-  const toggleLike = (track: YouTubeVideo) => {
-    const isCurrentlyLiked = likedSongs.some(song => song.id === track.id);
-    
-    if (isCurrentlyLiked) {
-      // Remove from liked songs
-      setLikedSongs(prev => prev.filter(song => song.id !== track.id));
+  const toggleLike = async (track: YouTubeVideo) => {
+    if (!user?.id) {
       toast({
-        title: "Removed from Liked Songs",
-        description: `"${track.title}" removed from your liked songs.`,
+        title: "Sign in required",
+        description: "Please sign in to like songs.",
+        variant: "destructive"
       });
       return false;
-    } else {
-      // Add to liked songs
-      setLikedSongs(prev => [...prev, track]);
+    }
+    
+    const isCurrentlyLiked = likedSongs.some(song => song.id === track.id);
+    
+    try {
+      const { data: existingSong } = await supabase
+        .from('songs')
+        .select('*')
+        .eq('id', track.id)
+        .single();
+      
+      if (!existingSong) {
+        await supabase
+          .from('songs')
+          .insert([{
+            id: track.id,
+            title: track.title,
+            thumbnail_url: track.thumbnailUrl,
+            channel_title: track.channelTitle,
+          }]);
+      }
+      
+      if (isCurrentlyLiked) {
+        const { error } = await supabase
+          .from('liked_songs')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('song_id', track.id);
+          
+        if (error) throw error;
+        
+        setLikedSongs(prev => prev.filter(song => song.id !== track.id));
+        
+        toast({
+          title: "Removed from Liked Songs",
+          description: `"${track.title}" removed from your liked songs.`,
+        });
+        return false;
+      } else {
+        const { error } = await supabase
+          .from('liked_songs')
+          .insert([{
+            user_id: user.id,
+            song_id: track.id,
+          }]);
+          
+        if (error) throw error;
+        
+        setLikedSongs(prev => [...prev, track]);
+        
+        toast({
+          title: "Added to Liked Songs",
+          description: `"${track.title}" added to your liked songs.`,
+        });
+        return true;
+      }
+    } catch (error) {
+      console.error("Error toggling liked song:", error);
       toast({
-        title: "Added to Liked Songs",
-        description: `"${track.title}" added to your liked songs.`,
+        title: "Error",
+        description: "Could not update liked songs.",
+        variant: "destructive"
       });
-      return true;
+      return isCurrentlyLiked;
     }
   };
   

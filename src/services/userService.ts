@@ -15,7 +15,7 @@ export interface User {
   likedSongs?: string[];
 }
 
-// Get current user
+// Get current user - returns a promise
 export const getCurrentUser = async (userId?: string) => {
   if (!userId) return null;
   

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
@@ -10,6 +11,15 @@ declare global {
     YT: typeof YT;
     onYouTubeIframeAPIReady: (() => void) | null;
   }
+}
+
+// Define YouTubeVideoBasic type for videos from database with fewer properties
+interface YouTubeVideoBasic {
+  id: string;
+  title: string;
+  thumbnailUrl: string;
+  channelTitle: string;
+  publishedAt?: string;
 }
 
 // YouTube Player Types
@@ -69,9 +79,9 @@ interface PlayerContextType {
   isPlaying: boolean;
   progress: number;
   volume: number;
-  recentlyPlayed: YouTubeVideo[];
+  recentlyPlayed: YouTubeVideoBasic[];
   queue: YouTubeVideo[];
-  likedSongs: YouTubeVideo[];
+  likedSongs: YouTubeVideoBasic[];
   playTrack: (track: YouTubeVideo) => void;
   togglePlayPause: () => void;
   nextTrack: () => void;
@@ -90,9 +100,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [volume, setVolumeState] = useState(0.7);
-  const [recentlyPlayed, setRecentlyPlayed] = useState<YouTubeVideo[]>([]);
+  const [recentlyPlayed, setRecentlyPlayed] = useState<YouTubeVideoBasic[]>([]);
   const [queue, setQueue] = useState<YouTubeVideo[]>([]);
-  const [likedSongs, setLikedSongs] = useState<YouTubeVideo[]>([]);
+  const [likedSongs, setLikedSongs] = useState<YouTubeVideoBasic[]>([]);
   const [isApiReady, setIsApiReady] = useState(false);
   
   // YouTube Player integration
@@ -157,6 +167,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           title: item.songs.title,
           thumbnailUrl: item.songs.thumbnail_url,
           channelTitle: item.songs.channel_title,
+          publishedAt: new Date().toISOString(), // Add a default publishedAt
         })) || [];
         
         setLikedSongs(songs);
@@ -190,6 +201,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           title: item.songs.title,
           thumbnailUrl: item.songs.thumbnail_url,
           channelTitle: item.songs.channel_title,
+          publishedAt: new Date().toISOString(), // Add a default publishedAt
         })) || [];
         
         setRecentlyPlayed(songs);
@@ -367,10 +379,19 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }
           );
           
-        setRecentlyPlayed(prev => {
-          const filtered = prev.filter(item => item.id !== currentTrack.id);
-          return [currentTrack, ...filtered].slice(0, 20);
-        });
+        // Update recently played in state
+        const updatedRecently = [
+          {
+            id: currentTrack.id,
+            title: currentTrack.title,
+            thumbnailUrl: currentTrack.thumbnailUrl,
+            channelTitle: currentTrack.channelTitle,
+            publishedAt: currentTrack.publishedAt || new Date().toISOString(),
+          },
+          ...recentlyPlayed.filter(item => item.id !== currentTrack.id)
+        ].slice(0, 20);
+        
+        setRecentlyPlayed(updatedRecently);
       } catch (error) {
         console.error("Error saving recently played:", error);
       }
@@ -497,7 +518,16 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           
         if (error) throw error;
         
-        setLikedSongs(prev => [...prev, track]);
+        // Add to liked songs state
+        const newLikedSong = {
+          id: track.id,
+          title: track.title,
+          thumbnailUrl: track.thumbnailUrl,
+          channelTitle: track.channelTitle,
+          publishedAt: track.publishedAt || new Date().toISOString(),
+        };
+        
+        setLikedSongs(prev => [...prev, newLikedSong]);
         
         toast({
           title: "Added to Liked Songs",

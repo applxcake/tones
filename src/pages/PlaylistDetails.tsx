@@ -27,13 +27,45 @@ const PlaylistDetails = () => {
   const navigate = useNavigate();
   const { playTrack, addToQueue, isPlaying, currentTrack, togglePlayPause } = usePlayer();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [playlist, setPlaylist] = useState(getPlaylistById(id || ''));
+  const [playlist, setPlaylist] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    if (!playlist) {
+    const loadPlaylist = async () => {
+      if (id) {
+        setLoading(true);
+        const playlistData = await getPlaylistById(id);
+        setPlaylist(playlistData);
+        setLoading(false);
+      }
+    };
+    
+    loadPlaylist();
+  }, [id]);
+
+  useEffect(() => {
+    if (!loading && !playlist) {
       navigate('/playlists');
     }
-  }, [playlist, navigate]);
+  }, [playlist, navigate, loading]);
+
+  if (loading) {
+    return (
+      <div className="pt-6 pb-24 animate-slide-in">
+        <div className="flex justify-center py-12">
+          <div className="flex gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div 
+                key={i}
+                className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!playlist) {
     return null;
@@ -43,13 +75,15 @@ const PlaylistDetails = () => {
     playTrack(song);
   };
 
-  const handleRemoveSong = (songId: string) => {
-    removeSongFromPlaylist(playlist.id, songId);
-    setPlaylist(getPlaylistById(playlist.id));
+  const handleRemoveSong = async (songId: string) => {
+    await removeSongFromPlaylist(playlist.id, songId);
+    // Refresh playlist data
+    const updatedPlaylist = await getPlaylistById(playlist.id);
+    setPlaylist(updatedPlaylist);
   };
 
-  const handleDeletePlaylist = () => {
-    deletePlaylist(playlist.id);
+  const handleDeletePlaylist = async () => {
+    await deletePlaylist(playlist.id);
     navigate('/playlists');
   };
 
@@ -63,7 +97,7 @@ const PlaylistDetails = () => {
       playTrack(playlist.songs[0]);
       
       // Add the rest to queue
-      playlist.songs.slice(1).forEach(song => {
+      playlist.songs.slice(1).forEach((song: any) => {
         addToQueue(song);
       });
     }
@@ -124,7 +158,7 @@ const PlaylistDetails = () => {
 
       {playlist.songs.length > 0 ? (
         <div className="space-y-2">
-          {playlist.songs.map((song) => (
+          {playlist.songs.map((song: any) => (
             <div 
               key={song.id} 
               className="flex items-center justify-between p-3 rounded-lg glass-panel hover:neon-glow-purple"

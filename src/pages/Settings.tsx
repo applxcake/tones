@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,17 +8,43 @@ import { Label } from '@/components/ui/label';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser, updateUserProfile } from '@/services/userService';
 import { toast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Settings = () => {
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
+  const { user: authUser } = useAuth();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   
   const [formData, setFormData] = useState({
-    username: currentUser?.username || '',
-    email: currentUser?.email || '',
-    bio: currentUser?.bio || '',
-    avatar: currentUser?.avatar || '',
+    username: '',
+    email: '',
+    bio: '',
+    avatar: '',
   });
+  
+  // Fetch current user data when component mounts
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (authUser) {
+        setLoading(true);
+        const userData = await getCurrentUser(authUser.id);
+        setCurrentUser(userData);
+        
+        if (userData) {
+          setFormData({
+            username: userData.username || '',
+            email: userData.email || '',
+            bio: userData.bio || '',
+            avatar: userData.avatar || '',
+          });
+        }
+        setLoading(false);
+      }
+    };
+    
+    fetchUserData();
+  }, [authUser]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -28,14 +54,34 @@ const Settings = () => {
     }));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateUserProfile(formData);
-    toast({
-      title: "Settings saved",
-      description: "Your profile has been updated successfully.",
-    });
+    if (authUser) {
+      await updateUserProfile(formData, authUser.id);
+      toast({
+        title: "Settings saved",
+        description: "Your profile has been updated successfully.",
+      });
+    }
   };
+  
+  if (loading) {
+    return (
+      <div className="pt-6 pb-24 animate-slide-in">
+        <div className="flex justify-center py-12">
+          <div className="flex gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div 
+                key={i}
+                className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="pt-6 pb-24 animate-slide-in">

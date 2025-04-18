@@ -1,10 +1,11 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { User as UserIcon, UserPlus, UserMinus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { followUser, unfollowUser, getCurrentUser } from '@/services/userService';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserCardProps {
   user: {
@@ -17,18 +18,32 @@ interface UserCardProps {
 }
 
 const UserCard = ({ user }: UserCardProps) => {
-  const currentUser = getCurrentUser();
-  const [isFollowing, setIsFollowing] = useState(
-    currentUser?.following.includes(user.id) || false
-  );
+  const { user: authUser } = useAuth();
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
-  const handleFollowToggle = () => {
+  // Fetch current user data to check following status
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      if (authUser) {
+        const userData = await getCurrentUser(authUser.id);
+        setCurrentUser(userData);
+        setIsFollowing(userData?.following.includes(user.id) || false);
+      }
+    };
+    
+    fetchCurrentUser();
+  }, [authUser, user.id]);
+
+  const handleFollowToggle = async () => {
+    if (!authUser) return;
+    
     if (isFollowing) {
-      unfollowUser(user.id);
-      setIsFollowing(false);
+      const success = await unfollowUser(user.id, authUser.id);
+      if (success) setIsFollowing(false);
     } else {
-      followUser(user.id);
-      setIsFollowing(true);
+      const success = await followUser(user.id, authUser.id);
+      if (success) setIsFollowing(true);
     }
   };
 

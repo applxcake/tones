@@ -1,9 +1,10 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MoreVertical, ListPlus, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { getUserPlaylists, addSongToPlaylist } from '@/services/playlistService';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,16 +25,31 @@ interface SongOptionsMenuProps {
 
 const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
   const { addToQueue, toggleLike, isLiked } = usePlayer();
-  const playlists = getUserPlaylists();
+  const { user } = useAuth();
+  const [playlists, setPlaylists] = useState<any[]>([]);
   const [liked, setLiked] = useState(isLiked(song.id));
 
-  const handleLike = () => {
-    const isLikedNow = toggleLike(song);
+  // Fetch user playlists when component mounts
+  useEffect(() => {
+    const fetchPlaylists = async () => {
+      if (user) {
+        const userPlaylists = await getUserPlaylists(user.id);
+        setPlaylists(userPlaylists || []);
+      }
+    };
+    
+    fetchPlaylists();
+  }, [user]);
+
+  const handleLike = async () => {
+    const isLikedNow = await toggleLike(song);
     setLiked(isLikedNow);
   };
 
-  const handleAddToPlaylist = (playlistId: string) => {
-    addSongToPlaylist(playlistId, song);
+  const handleAddToPlaylist = async (playlistId: string) => {
+    if (user) {
+      await addSongToPlaylist(playlistId, song, user.id);
+    }
   };
 
   return (

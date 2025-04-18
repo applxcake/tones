@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, Settings, Clock, Heart, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,7 +13,19 @@ const Profile = () => {
   const { recentlyPlayed, likedSongs } = usePlayer();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Fetch current user data when the component mounts or user changes
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (user) {
+        const userData = await getCurrentUser(user.id);
+        setCurrentUser(userData);
+      }
+    };
+    
+    fetchUserData();
+  }, [user]);
 
   const handleLogout = async () => {
     await signOut();
@@ -60,11 +72,11 @@ const Profile = () => {
               <p className="text-sm text-gray-400">Playlists</p>
             </div>
             <div className="text-center">
-              <p className="text-xl font-bold">{currentUser?.followers.length || 0}</p>
+              <p className="text-xl font-bold">{currentUser?.followers?.length || 0}</p>
               <p className="text-sm text-gray-400">Followers</p>
             </div>
             <div className="text-center">
-              <p className="text-xl font-bold">{currentUser?.following.length || 0}</p>
+              <p className="text-xl font-bold">{currentUser?.following?.length || 0}</p>
               <p className="text-sm text-gray-400">Following</p>
             </div>
           </div>

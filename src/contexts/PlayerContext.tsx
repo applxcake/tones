@@ -1,78 +1,9 @@
 
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
-import { YouTubeVideo } from '@/services/youtubeService';
+import { YouTubeVideo, YouTubeVideoBasic } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-// Define YouTube Player API types
-declare global {
-  interface Window {
-    YT: typeof YT;
-    onYouTubeIframeAPIReady: (() => void) | null;
-  }
-}
-
-// Define YouTubeVideoBasic type for videos from database with fewer properties
-interface YouTubeVideoBasic {
-  id: string;
-  title: string;
-  thumbnailUrl: string;
-  channelTitle: string;
-  publishedAt?: string;
-}
-
-// YouTube Player Types
-declare namespace YT {
-  class Player {
-    constructor(elementId: string | HTMLElement, options: PlayerOptions);
-    loadVideoById(videoId: string, startSeconds?: number): void;
-    cueVideoById(videoId: string, startSeconds?: number): void;
-    playVideo(): void;
-    pauseVideo(): void;
-    stopVideo(): void;
-    seekTo(seconds: number, allowSeekAhead: boolean): void;
-    getVideoLoadedFraction(): number;
-    getCurrentTime(): number;
-    getDuration(): number;
-    getPlayerState(): number;
-    setVolume(volume: number): void;
-    getVolume(): number;
-    destroy(): void;
-  }
-
-  interface PlayerOptions {
-    videoId?: string;
-    width?: number | string;
-    height?: number | string;
-    playerVars?: {
-      autoplay?: 0 | 1;
-      controls?: 0 | 1;
-      disablekb?: 0 | 1;
-      fs?: 0 | 1;
-      iv_load_policy?: 1 | 3;
-      modestbranding?: 0 | 1;
-      rel?: 0 | 1;
-      start?: number;
-      [key: string]: any;
-    };
-    events?: {
-      onReady?: (event: { target: Player }) => void;
-      onStateChange?: (event: { data: number; target: Player }) => void;
-      onError?: (event: { data: number; target: Player }) => void;
-      [key: string]: any;
-    };
-  }
-
-  enum PlayerState {
-    UNSTARTED = -1,
-    ENDED = 0,
-    PLAYING = 1,
-    PAUSED = 2,
-    BUFFERING = 3,
-    CUED = 5
-  }
-}
 
 interface PlayerContextType {
   currentTrack: YouTubeVideo | null;
@@ -103,46 +34,33 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [recentlyPlayed, setRecentlyPlayed] = useState<YouTubeVideoBasic[]>([]);
   const [queue, setQueue] = useState<YouTubeVideo[]>([]);
   const [likedSongs, setLikedSongs] = useState<YouTubeVideoBasic[]>([]);
-  const [isApiReady, setIsApiReady] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  // YouTube Player integration
-  const playerRef = useRef<YT.Player | null>(null);
-  const playerContainerRef = useRef<HTMLDivElement | null>(null);
-  
-  // Load YouTube IFrame API
+  // Effect to initialize audio element
   useEffect(() => {
-    if (!window.YT) {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      if (firstScriptTag.parentNode) {
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-      }
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.volume = volume;
       
-      window.onYouTubeIframeAPIReady = () => {
-        setIsApiReady(true);
-      };
-    } else {
-      setIsApiReady(true);
-    }
-    
-    if (!playerContainerRef.current) {
-      const container = document.createElement('div');
-      container.id = 'youtube-player-container';
-      container.style.position = 'absolute';
-      container.style.top = '-9999px';
-      container.style.left = '-9999px';
-      document.body.appendChild(container);
-      playerContainerRef.current = container;
+      audioRef.current.addEventListener('ended', () => {
+        nextTrack();
+      });
+      
+      audioRef.current.addEventListener('timeupdate', () => {
+        const duration = audioRef.current?.duration || 0;
+        const currentTime = audioRef.current?.currentTime || 0;
+        if (duration > 0) {
+          setProgress((currentTime / duration) * 100);
+        }
+      });
     }
     
     return () => {
-      if (playerRef.current) {
-        try {
-          playerRef.current.destroy();
-        } catch (err) {
-          console.error("Error destroying player:", err);
-        }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.removeEventListener('ended', () => {});
+        audioRef.current.removeEventListener('timeupdate', () => {});
+        audioRef.current = null;
       }
     };
   }, []);
@@ -165,9 +83,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const songs = data?.map(item => ({
           id: item.songs.id,
           title: item.songs.title,
-          thumbnailUrl: item.songs.thumbnail_url,
-          channelTitle: item.songs.channel_title,
-          publishedAt: new Date().toISOString(), // Add a default publishedAt
+          thumbnailUrl: item.songs.thumbnail_url || '',
+          channelTitle: item.songs.channel_title || 'Unknown',
+          publishedAt: new Date().toISOString() // Default publishedAt
         })) || [];
         
         setLikedSongs(songs);
@@ -199,9 +117,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const songs = data?.map(item => ({
           id: item.songs.id,
           title: item.songs.title,
-          thumbnailUrl: item.songs.thumbnail_url,
-          channelTitle: item.songs.channel_title,
-          publishedAt: new Date().toISOString(), // Add a default publishedAt
+          thumbnailUrl: item.songs.thumbnail_url || '',
+          channelTitle: item.songs.channel_title || 'Unknown',
+          publishedAt: new Date().toISOString() // Default publishedAt
         })) || [];
         
         setRecentlyPlayed(songs);
@@ -213,147 +131,54 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     fetchRecentlyPlayed();
   }, [user]);
   
+  // Effect to handle play/pause state
   useEffect(() => {
-    const initPlayer = () => {
-      if (currentTrack && playerContainerRef.current && isApiReady && window.YT && window.YT.Player) {
-        try {
-          if (playerRef.current) {
-            playerRef.current.loadVideoById(currentTrack.id);
-            if (isPlaying) {
-              playerRef.current.playVideo();
-            } else {
-              playerRef.current.pauseVideo();
-            }
-          } else {
-            playerRef.current = new window.YT.Player('youtube-player-container', {
-              videoId: currentTrack.id,
-              playerVars: {
-                autoplay: isPlaying ? 1 : 0,
-                controls: 0,
-                disablekb: 1,
-                fs: 0,
-                iv_load_policy: 3,
-                modestbranding: 1,
-                rel: 0
-              },
-              events: {
-                onReady: (event) => {
-                  event.target.setVolume(volume * 100);
-                  if (isPlaying) {
-                    event.target.playVideo();
-                  }
-                },
-                onStateChange: (event) => {
-                  if (event.data === window.YT.PlayerState.ENDED) {
-                    nextTrack();
-                  }
-                  if (event.data === window.YT.PlayerState.PLAYING) {
-                    startProgressInterval();
-                  }
-                  if (event.data === window.YT.PlayerState.PAUSED) {
-                    clearProgressInterval();
-                  }
-                },
-                onError: (event) => {
-                  console.error('YouTube player error:', event.data);
-                  toast({
-                    title: "Playback Error",
-                    description: "Could not play this track. YouTube API limits apply.",
-                    variant: "destructive"
-                  });
-                  nextTrack();
-                }
-              }
-            });
-          }
-        } catch (error) {
-          console.error("Error initializing YouTube player:", error);
+    if (currentTrack) {
+      if (isPlaying && audioRef.current) {
+        // Use a Spotify preview URL (limited but available)
+        // In a real app, you'd use the actual streaming service
+        const audioUrl = `https://open.spotify.com/embed/track/${currentTrack.id}`;
+        
+        // Play audio if available
+        if (audioRef.current.src !== audioUrl) {
+          audioRef.current.src = audioUrl;
+        }
+        
+        audioRef.current.play().catch(error => {
+          console.error('Error playing audio:', error);
           toast({
-            title: "Player Error",
-            description: "There was a problem initializing the player. Please try again.",
+            title: "Playback Error",
+            description: "Preview not available. Spotify API limitations apply.",
             variant: "destructive"
           });
-        }
+          // Skip to next track if playback fails
+          nextTrack();
+        });
+      } else if (audioRef.current) {
+        audioRef.current.pause();
       }
-    };
-
-    if (isApiReady && currentTrack) {
-      initPlayer();
     }
-  }, [currentTrack, isApiReady]);
+  }, [currentTrack, isPlaying]);
   
-  const progressIntervalRef = useRef<number | null>(null);
-  
-  const startProgressInterval = () => {
-    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-    
-    progressIntervalRef.current = window.setInterval(() => {
-      if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function' && typeof playerRef.current.getDuration === 'function') {
-        try {
-          const currentTime = playerRef.current.getCurrentTime() || 0;
-          const duration = playerRef.current.getDuration() || 1;
-          const progressPercent = (currentTime / duration) * 100;
-          setProgress(isNaN(progressPercent) ? 0 : progressPercent);
-        } catch (error) {
-          console.error("Error updating progress:", error);
-        }
-      }
-    }, 1000);
-  };
-  
-  const clearProgressInterval = () => {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
-    }
-  };
-  
+  // Effect to handle volume changes
   useEffect(() => {
-    if (playerRef.current && isApiReady) {
-      try {
-        if (isPlaying && typeof playerRef.current.playVideo === 'function') {
-          playerRef.current.playVideo();
-        } else if (!isPlaying && typeof playerRef.current.pauseVideo === 'function') {
-          playerRef.current.pauseVideo();
-        }
-      } catch (error) {
-        console.error("Error toggling play state:", error);
-      }
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
     }
-  }, [isPlaying, isApiReady]);
-  
-  useEffect(() => {
-    if (playerRef.current && isApiReady && typeof playerRef.current.setVolume === 'function') {
-      try {
-        playerRef.current.setVolume(volume * 100);
-      } catch (error) {
-        console.error("Error setting volume:", error);
-      }
-    }
-  }, [volume, isApiReady]);
-  
-  useEffect(() => {
-    return () => {
-      clearProgressInterval();
-      if (playerRef.current) {
-        try {
-          playerRef.current.destroy();
-        } catch (err) {
-          console.error("Error destroying player:", err);
-        }
-      }
-    };
-  }, []);
+  }, [volume]);
 
   const playTrack = async (track: YouTubeVideo) => {
+    // Save currently playing track to recently played
     if (currentTrack && user?.id) {
       try {
+        // Check if track exists in songs table
         const { data: existingSong } = await supabase
           .from('songs')
           .select('*')
           .eq('id', currentTrack.id)
           .single();
         
+        // Add track to songs table if it doesn't exist
         if (!existingSong) {
           await supabase
             .from('songs')
@@ -365,6 +190,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }]);
         }
         
+        // Update recently_played table
         await supabase
           .from('recently_played')
           .upsert(
@@ -379,14 +205,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }
           );
           
-        // Update recently played in state
+        // Update recently played state
         const updatedRecently = [
           {
             id: currentTrack.id,
             title: currentTrack.title,
             thumbnailUrl: currentTrack.thumbnailUrl,
             channelTitle: currentTrack.channelTitle,
-            publishedAt: currentTrack.publishedAt || new Date().toISOString(),
+            publishedAt: currentTrack.publishedAt
           },
           ...recentlyPlayed.filter(item => item.id !== currentTrack.id)
         ].slice(0, 20);
@@ -397,6 +223,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     }
     
+    // Add new track to songs table if needed
     if (user?.id) {
       try {
         const { data: existingSong } = await supabase
@@ -420,6 +247,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     }
     
+    // Play the new track
     setCurrentTrack(track);
     setIsPlaying(true);
   };
@@ -439,14 +267,22 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const prevTrack = () => {
-    if (recentlyPlayed.length > 0) {
-      const prevTrack = recentlyPlayed[0];
-      setRecentlyPlayed(prev => prev.slice(1));
-      if (currentTrack) {
-        setQueue(prev => [currentTrack, ...prev]);
-      }
+    if (recentlyPlayed.length > 0 && currentTrack) {
+      // Get the most recent track from history
+      const prevTrack = {
+        ...recentlyPlayed[0],
+        publishedAt: recentlyPlayed[0].publishedAt || new Date().toISOString()
+      };
+      
+      // Add current track to the beginning of the queue
+      setQueue(prev => [currentTrack, ...prev]);
+      
+      // Play previous track
       setCurrentTrack(prevTrack);
       setIsPlaying(true);
+      
+      // Remove it from recently played
+      setRecentlyPlayed(prev => prev.slice(1));
     }
   };
 
@@ -475,12 +311,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const isCurrentlyLiked = likedSongs.some(song => song.id === track.id);
     
     try {
+      // Check if song exists in songs table
       const { data: existingSong } = await supabase
         .from('songs')
         .select('*')
         .eq('id', track.id)
         .single();
       
+      // Add song if it doesn't exist
       if (!existingSong) {
         await supabase
           .from('songs')
@@ -493,6 +331,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       
       if (isCurrentlyLiked) {
+        // Remove from liked_songs table
         const { error } = await supabase
           .from('liked_songs')
           .delete()
@@ -501,6 +340,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           
         if (error) throw error;
         
+        // Remove from liked songs state
         setLikedSongs(prev => prev.filter(song => song.id !== track.id));
         
         toast({
@@ -509,6 +349,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         });
         return false;
       } else {
+        // Add to liked_songs table
         const { error } = await supabase
           .from('liked_songs')
           .insert([{
@@ -524,7 +365,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           title: track.title,
           thumbnailUrl: track.thumbnailUrl,
           channelTitle: track.channelTitle,
-          publishedAt: track.publishedAt || new Date().toISOString(),
+          publishedAt: track.publishedAt
         };
         
         setLikedSongs(prev => [...prev, newLikedSong]);

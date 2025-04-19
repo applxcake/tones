@@ -31,7 +31,11 @@ const UserCard = ({ user }: UserCardProps) => {
           setLoading(true);
           const userData = await getCurrentUser(authUser.id);
           setCurrentUserData(userData);
-          setIsFollowing(userData?.following?.includes(user.id) || false);
+          if (userData?.following) {
+            setIsFollowing(userData.following.includes(user.id));
+          } else {
+            setIsFollowing(false);
+          }
         } catch (error) {
           console.error('Error fetching user data:', error);
         } finally {

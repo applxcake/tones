@@ -1,7 +1,6 @@
 
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 
 export interface User {
   id: string;
@@ -15,7 +14,7 @@ export interface User {
   likedSongs?: string[];
 }
 
-// Get current user - returns a promise
+// Get current user
 export const getCurrentUser = async (userId?: string) => {
   if (!userId) return null;
   
@@ -36,7 +35,7 @@ export const getCurrentUser = async (userId?: string) => {
       
     if (followingError) throw followingError;
     
-    // Get user from auth (need to create a user profile table in a real app)
+    // Get user from auth
     const { data: authUser } = await supabase.auth.getUser();
     
     if (!authUser?.user) return null;

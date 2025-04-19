@@ -1,8 +1,7 @@
 
 import { toast } from '@/components/ui/use-toast';
-import { YouTubeVideo } from './youtubeService';
+import { YouTubeVideo, YouTubeVideoBasic } from './youtubeService';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 
 export interface Playlist {
   id: string;
@@ -36,12 +35,21 @@ export const getUserPlaylists = async (userId?: string) => {
         
       if (error) throw error;
       
+      // Transform database records to match YouTubeVideo interface
+      const songs = playlistSongs?.map(item => ({
+        id: item.songs.id,
+        title: item.songs.title,
+        thumbnailUrl: item.songs.thumbnail_url || '',
+        channelTitle: item.songs.channel_title || 'Unknown',
+        publishedAt: new Date().toISOString() // Add default publishedAt
+      })) || [];
+      
       return {
         id: playlist.id,
         name: playlist.name,
         description: playlist.description || '',
         imageUrl: playlist.image_url || undefined,
-        songs: playlistSongs?.map(item => item.songs) || [],
+        songs: songs,
         createdAt: playlist.created_at,
         userId: playlist.user_id,
       };
@@ -265,17 +273,21 @@ export const getPlaylistById = async (playlistId: string) => {
       
     if (songsError) throw songsError;
     
+    // Transform database records to match YouTubeVideo interface
+    const songs = playlistSongs?.map(item => ({
+      id: item.songs.id,
+      title: item.songs.title,
+      thumbnailUrl: item.songs.thumbnail_url || '',
+      channelTitle: item.songs.channel_title || 'Unknown',
+      publishedAt: new Date().toISOString() // Add default publishedAt
+    })) || [];
+    
     return {
       id: playlist.id,
       name: playlist.name,
       description: playlist.description || '',
       imageUrl: playlist.image_url || undefined,
-      songs: playlistSongs?.map(item => ({
-        id: item.songs.id,
-        title: item.songs.title,
-        thumbnailUrl: item.songs.thumbnail_url,
-        channelTitle: item.songs.channel_title,
-      })) || [],
+      songs: songs,
       createdAt: playlist.created_at,
       userId: playlist.user_id,
     };

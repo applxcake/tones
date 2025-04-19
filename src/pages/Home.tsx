@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getTrendingMusic } from '@/services/youtubeService';
+import { getTrendingMusic, YouTubeVideo } from '@/services/youtubeService';
 import SongTile from '@/components/SongTile';
 import ScrollableRow from '@/components/ScrollableRow';
 import SearchBar from '@/components/SearchBar';
@@ -58,7 +58,7 @@ const Home = () => {
       {/* Recently Played */}
       {recentlyPlayed.length > 0 && (
         <ScrollableRow title="Recently Played">
-          {recentlyPlayed.map((song) => (
+          {recentlyPlayed.map((song: YouTubeVideo) => (
             <SongTile key={song.id} song={song} className="w-48" />
           ))}
         </ScrollableRow>

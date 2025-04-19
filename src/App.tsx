@@ -4,7 +4,7 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { PlayerProvider } from '@/contexts/PlayerContext';
 import { Toaster } from '@/components/ui/toaster';
-import Layout from '@/components/Layout';
+import { Layout } from '@/components/Layout';
 import Home from '@/pages/Home';
 import Search from '@/pages/Search';
 import Auth from '@/pages/Auth';

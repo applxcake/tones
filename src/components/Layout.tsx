@@ -5,12 +5,13 @@ import AppSidebar from "./AppSidebar";
 import MusicPlayer from "./MusicPlayer";
 import { AccountButton } from "./AccountButton";
 
-export const Layout = () => {
+// Export as both default and named export for backward compatibility
+const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
     <div className="h-screen flex">
-      <AppSidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <AppSidebar />
       
       <main className="flex-1 relative">
         <div className="absolute top-4 right-4 z-50">
@@ -24,3 +25,6 @@ export const Layout = () => {
     </div>
   );
 };
+
+export { Layout };
+export default Layout;

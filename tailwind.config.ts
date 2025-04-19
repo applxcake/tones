@@ -61,10 +61,10 @@ export default {
           accent: "hsl(var(--sidebar-accent))",
           accentForeground: "hsl(var(--sidebar-accent-foreground))",
         },
-        // Neon colors
-        'neon-purple': 'var(--neon-purple)',
-        'neon-pink': 'var(--neon-pink)',
-        'neon-blue': 'var(--neon-blue)'
+        // Neon colors with direct hex values to enable opacity modifiers
+        'neon-purple': "#9b87f5",
+        'neon-pink': "#d946ef",
+        'neon-blue': "#0ea5e9"
       },
       borderRadius: {
         lg: "var(--radius)",

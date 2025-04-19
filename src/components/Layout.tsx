@@ -1,58 +1,26 @@
 
-import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import AppSidebar from '@/components/AppSidebar';
-import MusicPlayer from '@/components/MusicPlayer';
-import MobileNav from '@/components/MobileNav';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { Outlet } from "react-router-dom";
+import AppSidebar from "./AppSidebar";
+import MusicPlayer from "./MusicPlayer";
+import { AccountButton } from "./AccountButton";
 
-const Layout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    // Check localStorage for saved preference
-    const saved = localStorage.getItem('sidebar-open');
-    return saved !== null ? JSON.parse(saved) : true;
-  });
-
-  // Save sidebar state to localStorage when it changes
-  useEffect(() => {
-    localStorage.setItem('sidebar-open', JSON.stringify(sidebarOpen));
-  }, [sidebarOpen]);
+export const Layout = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Sidebar with transition */}
-      <div 
-        className={`fixed top-0 bottom-0 z-30 transition-all duration-300 transform
-          ${sidebarOpen ? 'left-0' : '-translate-x-full opacity-0'}`}
-        style={{ visibility: sidebarOpen ? 'visible' : 'hidden' }}
-      >
-        <AppSidebar />
-      </div>
+    <div className="h-screen flex">
+      <AppSidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
       
-      {/* Sidebar toggle button */}
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className={`fixed top-4 z-40 transition-all duration-300 ${
-          sidebarOpen ? 'left-[260px]' : 'left-4'
-        }`}
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
-        {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
-      </Button>
-      
-      <MobileNav />
-      
-      <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'ml-0'}`}>
-        <div className="container mx-auto px-4 pt-16">
+      <main className="flex-1 relative">
+        <div className="absolute top-4 right-4 z-50">
+          <AccountButton />
+        </div>
+        <div className="h-full overflow-auto pb-24">
           <Outlet />
         </div>
-      </div>
-      
-      <MusicPlayer />
+        <MusicPlayer />
+      </main>
     </div>
   );
 };
-
-export default Layout;

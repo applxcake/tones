@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,11 @@ const Settings = () => {
   const { user: authUser } = useAuth();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
+  const [preferences, setPreferences] = useState({
+    language: 'en',
+    theme: 'dark'
+  });
+
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -23,7 +26,6 @@ const Settings = () => {
     avatar: '',
   });
   
-  // Fetch current user data when component mounts
   useEffect(() => {
     const fetchUserData = async () => {
       if (authUser) {
@@ -64,7 +66,25 @@ const Settings = () => {
       });
     }
   };
-  
+
+  const handlePreferenceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setPreferences(prev => ({ ...prev, [name]: value }));
+    
+    if (name === 'theme') {
+      document.documentElement.className = value;
+      localStorage.setItem('theme', value);
+    }
+    if (name === 'language') {
+      localStorage.setItem('language', value);
+    }
+    
+    toast({
+      title: "Preferences Updated",
+      description: `Your ${name} preference has been saved.`,
+    });
+  };
+
   if (loading) {
     return (
       <div className="pt-6 pb-24 animate-slide-in">
@@ -180,6 +200,9 @@ const Settings = () => {
             <Label htmlFor="language">Language</Label>
             <select 
               id="language"
+              name="language"
+              value={preferences.language}
+              onChange={handlePreferenceChange}
               className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="en">English</option>
@@ -193,6 +216,9 @@ const Settings = () => {
             <Label htmlFor="theme">Theme</Label>
             <select 
               id="theme"
+              name="theme"
+              value={preferences.theme}
+              onChange={handlePreferenceChange}
               className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="dark">Dark (Default)</option>

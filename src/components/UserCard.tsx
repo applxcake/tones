@@ -16,9 +16,10 @@ interface UserCardProps {
     bio?: string;
     followers: string[];
   };
+  onFollowToggle?: () => void;
 }
 
-const UserCard = ({ user }: UserCardProps) => {
+const UserCard = ({ user, onFollowToggle }: UserCardProps) => {
   const { user: authUser } = useAuth();
   const { toast } = useToast();
   const [isFollowing, setIsFollowing] = useState(false);
@@ -64,10 +65,16 @@ const UserCard = ({ user }: UserCardProps) => {
     try {
       if (isFollowing) {
         const success = await unfollowUser(user.id, authUser.id);
-        if (success) setIsFollowing(false);
+        if (success) {
+          setIsFollowing(false);
+          onFollowToggle?.();
+        }
       } else {
         const success = await followUser(user.id, authUser.id);
-        if (success) setIsFollowing(true);
+        if (success) {
+          setIsFollowing(true);
+          onFollowToggle?.();
+        }
       }
     } catch (error) {
       console.error('Error toggling follow status:', error);

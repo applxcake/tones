@@ -1,12 +1,16 @@
-
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Search, ListMusic, User, Disc3, LogOut, Users } from 'lucide-react';
+import { Home, Search, ListMusic, User, Disc3, LogOut, Users, X, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
-const AppSidebar = () => {
+interface AppSidebarProps {
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+const AppSidebar = ({ isOpen, onToggle }: AppSidebarProps) => {
   const { isAuthenticated, user, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -15,7 +19,21 @@ const AppSidebar = () => {
   };
 
   return (
-    <div className="h-screen w-64 bg-sidebar fixed left-0 top-0 z-30 glass-panel">
+    <div 
+      className={cn(
+        "h-screen w-64 bg-sidebar fixed left-0 top-0 z-30 glass-panel transition-all duration-300 ease-in-out",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}
+    >
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="absolute top-4 right-4 z-40"
+        onClick={onToggle}
+      >
+        {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </Button>
+
       <div className="p-6">
         <div className="flex items-center gap-2 mb-2">
           <Disc3 className="h-8 w-8 text-neon-purple animate-pulse-glow" />

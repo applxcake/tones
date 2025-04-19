@@ -9,11 +9,18 @@ import { AccountButton } from "./AccountButton";
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   return (
     <div className="h-screen flex">
-      <AppSidebar />
+      <AppSidebar 
+        isOpen={isSidebarOpen} 
+        onToggle={toggleSidebar} 
+      />
       
-      <main className="flex-1 relative">
+      <main className={`flex-1 relative transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
         <div className="absolute top-4 right-4 z-50">
           <AccountButton />
         </div>

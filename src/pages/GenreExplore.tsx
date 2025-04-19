@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getTrendingMusic } from '@/services/youtubeService';
+import { getTrendingMusicByGenre } from '@/services/youtubeService';
 import SongTile from '@/components/SongTile';
 import { Link } from 'react-router-dom';
 
@@ -14,7 +14,7 @@ const GenreExplore = () => {
   
   const { data: songs, isLoading, isError } = useQuery({
     queryKey: ['genre', decodedGenre],
-    queryFn: () => getTrendingMusic(decodedGenre),
+    queryFn: () => getTrendingMusicByGenre(decodedGenre),
   });
 
   // Generate a gradient based on genre name

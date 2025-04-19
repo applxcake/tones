@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -69,10 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     const result = await supabase.auth.signInWithPassword({ 
       email, 
-      password,
-      options: {
-        persistSession: rememberMe
-      }
+      password
     });
     setIsLoading(false);
     return result;

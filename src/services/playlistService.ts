@@ -119,7 +119,7 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
   
   try {
     // First check if the song exists in the songs table
-    const { data: existingSong } = await supabase
+    let { data: existingSong } = await supabase
       .from('songs')
       .select('*')
       .eq('id', song.id)
@@ -127,7 +127,7 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
     
     // If song doesn't exist, add it
     if (!existingSong) {
-      await supabase
+      const { error: addSongError } = await supabase
         .from('songs')
         .insert([{
           id: song.id,
@@ -135,6 +135,8 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
           thumbnail_url: song.thumbnailUrl,
           channel_title: song.channelTitle,
         }]);
+        
+      if (addSongError) throw addSongError;
     }
     
     // Check if song is already in playlist
@@ -229,6 +231,15 @@ export const removeSongFromPlaylist = async (playlistId: string, songId: string)
 // Delete a playlist
 export const deletePlaylist = async (playlistId: string) => {
   try {
+    // First delete all playlist songs to avoid foreign key errors
+    const { error: deletePlaylistSongsError } = await supabase
+      .from('playlist_songs')
+      .delete()
+      .eq('playlist_id', playlistId);
+
+    if (deletePlaylistSongsError) throw deletePlaylistSongsError;
+    
+    // Then delete the playlist itself
     const { error } = await supabase
       .from('playlists')
       .delete()

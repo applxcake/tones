@@ -1,5 +1,5 @@
 
-import { SpotifyTrack, SpotifyTrackBasic, searchTracks as spotifySearchTracks } from './spotifyService';
+import { SpotifyTrack, SpotifyTrackBasic, searchTracks as spotifySearchTracks, getTrendingByGenre } from './spotifyService';
 
 // Rename YouTubeVideo to SpotifyTrack to maintain compatibility
 export interface YouTubeVideo extends SpotifyTrack {}
@@ -14,3 +14,8 @@ export const searchVideos = spotifySearchTracks;
 
 // Re-export functions from spotifyService
 export { searchTracks, getTrendingMusic, getNewReleases, getRecommendations } from './spotifyService';
+
+// Function to get trending music by genre
+export const getTrendingMusicByGenre = (genre: string) => {
+  return getTrendingByGenre(genre);
+};

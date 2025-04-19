@@ -59,37 +59,53 @@ export const getCurrentUser = async (userId?: string) => {
 // Get all users
 export const getAllUsers = async () => {
   try {
-    // In a real app, you'd have a users/profiles table
-    // This is simplified - we'll return mock data
-    return [
-      {
-        id: 'user2',
-        username: 'JazzMaster',
-        avatar: 'https://i.pravatar.cc/150?u=jazzmaster',
-        bio: 'Jazz enthusiast and trumpet player',
-        followers: [],
-        following: [],
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 'user3',
-        username: 'ClassicalVibes',
-        avatar: 'https://i.pravatar.cc/150?u=classical',
-        bio: 'Piano and orchestra lover',
-        followers: [],
-        following: [],
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 'user4',
-        username: 'RockStar',
-        avatar: 'https://i.pravatar.cc/150?u=rockstar',
-        bio: 'Living on the edge with rock music',
-        followers: [],
-        following: [],
-        createdAt: new Date().toISOString(),
-      },
-    ];
+    // Get all authenticated users
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+    
+    if (authError || !authUsers) {
+      // Fallback to mock data if admin API access fails
+      return [
+        {
+          id: 'user2',
+          username: 'JazzMaster',
+          avatar: 'https://i.pravatar.cc/150?u=jazzmaster',
+          bio: 'Jazz enthusiast and trumpet player',
+          followers: [],
+          following: [],
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'user3',
+          username: 'ClassicalVibes',
+          avatar: 'https://i.pravatar.cc/150?u=classical',
+          bio: 'Piano and orchestra lover',
+          followers: [],
+          following: [],
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'user4',
+          username: 'RockStar',
+          avatar: 'https://i.pravatar.cc/150?u=rockstar',
+          bio: 'Living on the edge with rock music',
+          followers: [],
+          following: [],
+          createdAt: new Date().toISOString(),
+        },
+      ];
+    }
+    
+    // Map Supabase users to our User format
+    return authUsers.users.map(user => ({
+      id: user.id,
+      username: user.user_metadata?.username || user.email?.split('@')[0] || 'User',
+      email: user.email,
+      avatar: user.user_metadata?.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`,
+      bio: user.user_metadata?.bio || 'Music enthusiast',
+      followers: [],
+      following: [],
+      createdAt: user.created_at,
+    }));
   } catch (error) {
     console.error('Error fetching all users:', error);
     return [];
@@ -98,19 +114,48 @@ export const getAllUsers = async () => {
 
 // Get user by ID
 export const getUserById = async (userId: string) => {
-  if (userId === 'current-user') {
+  if (!userId || userId === 'current-user') {
     return getCurrentUser();
   }
   
   try {
-    // In a real app, you'd fetch from a users/profiles table
-    // This is simplified - we'll return mock data for sample users
-    if (['user2', 'user3', 'user4'].includes(userId)) {
-      const mockUsers = await getAllUsers();
-      return mockUsers.find(user => user.id === userId) || null;
+    // First try to get real users from Supabase
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+    
+    if (userError || !userData?.user) {
+      // Fallback to mock data
+      if (['user2', 'user3', 'user4'].includes(userId)) {
+        const mockUsers = await getAllUsers();
+        return mockUsers.find(user => user.id === userId) || null;
+      }
+      
+      return null;
     }
     
-    return null;
+    const user = userData.user;
+    
+    // Get followers
+    const { data: followers } = await supabase
+      .from('follows')
+      .select('follower_id')
+      .eq('following_id', userId);
+    
+    // Get following
+    const { data: following } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', userId);
+    
+    return {
+      id: user.id,
+      username: user.user_metadata?.username || user.email?.split('@')[0] || 'User',
+      email: user.email,
+      avatar: user.user_metadata?.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`,
+      bio: user.user_metadata?.bio || 'Music enthusiast',
+      followers: followers?.map(f => f.follower_id) || [],
+      following: following?.map(f => f.following_id) || [],
+      createdAt: user.created_at,
+    };
   } catch (error) {
     console.error('Error fetching user:', error);
     return null;
@@ -129,6 +174,17 @@ export const followUser = async (userId: string, currentUserId?: string) => {
   }
   
   try {
+    console.log(`Attempting to follow user: ${userId} by ${currentUserId}`);
+    
+    // Mock implementation for test users
+    if (['user2', 'user3', 'user4'].includes(userId)) {
+      toast({
+        title: "Following",
+        description: `You are now following this user.`,
+      });
+      return true;
+    }
+    
     // Check if already following
     const { data: existingFollow } = await supabase
       .from('follows')
@@ -142,7 +198,7 @@ export const followUser = async (userId: string, currentUserId?: string) => {
         title: "Already Following",
         description: `You are already following this user.`,
       });
-      return false;
+      return true;
     }
     
     // Create follow relationship
@@ -153,7 +209,10 @@ export const followUser = async (userId: string, currentUserId?: string) => {
         following_id: userId,
       }]);
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error following user:', error);
+      throw error;
+    }
     
     toast({
       title: "Following",
@@ -184,6 +243,15 @@ export const unfollowUser = async (userId: string, currentUserId?: string) => {
   }
   
   try {
+    // Mock implementation for test users
+    if (['user2', 'user3', 'user4'].includes(userId)) {
+      toast({
+        title: "Unfollowed",
+        description: `You are no longer following this user.`,
+      });
+      return true;
+    }
+    
     const { error } = await supabase
       .from('follows')
       .delete()

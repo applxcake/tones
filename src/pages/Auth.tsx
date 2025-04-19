@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   
   // Determine which tab to show based on the URL
   const defaultTab = location.pathname === '/signup' ? 'signup' : 'login';
@@ -32,7 +34,7 @@ const Auth = () => {
       return;
     }
 
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(email, password, rememberMe);
     
     if (error) {
       toast({
@@ -129,6 +131,19 @@ const Auth = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="remember-me" 
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                />
+                <label
+                  htmlFor="remember-me"
+                  className="text-sm text-gray-400 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Remember me
+                </label>
               </div>
               <Button 
                 type="submit" 

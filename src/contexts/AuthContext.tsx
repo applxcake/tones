@@ -13,7 +13,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<{
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{
     error: Error | null;
     data: any | null;
   }>;
@@ -65,9 +65,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, rememberMe = true) => {
     setIsLoading(true);
-    const result = await supabase.auth.signInWithPassword({ email, password });
+    const result = await supabase.auth.signInWithPassword({ 
+      email, 
+      password,
+      options: {
+        persistSession: rememberMe
+      }
+    });
     setIsLoading(false);
     return result;
   };

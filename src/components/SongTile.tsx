@@ -14,7 +14,7 @@ interface SongTileProps {
 
 const SongTile = ({ song, className }: SongTileProps) => {
   const { currentTrack, isPlaying, playTrack, togglePlayPause } = usePlayer();
-  const [isHovered, setIsHovered] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   
   const isCurrentTrack = currentTrack?.id === song.id;
   
@@ -34,8 +34,8 @@ const SongTile = ({ song, className }: SongTileProps) => {
         "glass-panel rounded-lg overflow-hidden relative hover-scale",
         className
       )} 
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={() => setShowOptions(true)}
+      onMouseLeave={() => setShowOptions(false)}
     >
       <div className="aspect-square relative">
         <img 
@@ -47,7 +47,7 @@ const SongTile = ({ song, className }: SongTileProps) => {
         <div 
           className={cn(
             "absolute inset-0 flex items-center justify-center bg-black/60 transition-opacity",
-            (isHovered || isCurrentTrack) ? "opacity-100" : "opacity-0"
+            (showOptions || isCurrentTrack) ? "opacity-100" : "opacity-0"
           )}
         >
           <Button 
@@ -64,8 +64,8 @@ const SongTile = ({ song, className }: SongTileProps) => {
           </Button>
         </div>
         
-        {isHovered && (
-          <div className="absolute top-2 right-2">
+        {showOptions && (
+          <div className="absolute top-2 right-2 z-10">
             <SongOptionsMenu song={song} />
           </div>
         )}

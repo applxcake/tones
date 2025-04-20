@@ -45,10 +45,6 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 262 80% 75%;
-    
-    --neon-purple: #9b87f5;
-    --neon-pink: #d946ef;
-    --neon-blue: #0ea5e9;
   }
 }
 
@@ -60,27 +56,6 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
-    overflow-x: hidden;
-  }
-  
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  
-  ::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    background: rgba(155, 135, 245, 0.4);
-    border-radius: 10px;
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(155, 135, 245, 0.6);
   }
 }
 
@@ -107,94 +82,5 @@
 
   .hover-scale {
     @apply transition-all duration-200 hover:scale-105;
-  }
-  
-  /* New animations */
-  .animate-slide-in {
-    animation: slide-in 0.5s ease-out forwards;
-  }
-  
-  .animate-pulse-glow {
-    animation: pulse-glow 3s ease-in-out infinite;
-  }
-  
-  .animate-hover-glow:hover {
-    animation: hover-glow 1.5s ease-in-out infinite;
-  }
-  
-  .animate-bounce-subtle {
-    animation: bounce-subtle 2s ease-in-out infinite;
-  }
-  
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
-  
-  .animate-shimmer {
-    background: linear-gradient(
-      90deg,
-      rgba(255,255,255,0) 0%,
-      rgba(255,255,255,0.05) 50%,
-      rgba(255,255,255,0) 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 2s infinite;
-  }
-}
-
-/* Keyframes for animations */
-@keyframes slide-in {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@keyframes hover-glow {
-  0%, 100% {
-    box-shadow: 0 0 5px rgba(155, 135, 245, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(155, 135, 245, 0.8);
-  }
-}
-
-@keyframes bounce-subtle {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-15px);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
   }
 }

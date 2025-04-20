@@ -1,37 +1,45 @@
 
-import { useState } from "react";
-import { Outlet } from "react-router-dom";
-import AppSidebar from "./AppSidebar";
-import MusicPlayer from "./MusicPlayer";
-import { AccountButton } from "./AccountButton";
+import { useState } from 'react';
+import { Outlet } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import AppSidebar from '@/components/AppSidebar';
+import MusicPlayer from '@/components/MusicPlayer';
+import MobileNav from '@/components/MobileNav';
+import { Button } from '@/components/ui/button';
 
-// Export as both default and named export for backward compatibility
 const Layout = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="h-screen flex">
-      <AppSidebar 
-        isOpen={isSidebarOpen} 
-        onToggle={toggleSidebar} 
-      />
+    <div className="min-h-screen bg-background text-foreground">
+      <div 
+        className={`transition-all duration-300 fixed top-0 bottom-0 z-30 
+          ${sidebarOpen ? 'left-0' : '-left-64'}`}
+      >
+        <AppSidebar />
+      </div>
       
-      <main className={`flex-1 relative transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
-        <div className="absolute top-4 right-4 z-50">
-          <AccountButton />
-        </div>
-        <div className="h-full overflow-auto pb-24">
+      {/* Sidebar toggle button */}
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="fixed top-4 left-4 z-40 md:left-[260px] transition-all duration-300"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+      >
+        {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
+      </Button>
+      
+      <MobileNav />
+      
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'ml-0'}`}>
+        <div className="container mx-auto px-4 pt-16">
           <Outlet />
         </div>
-        <MusicPlayer />
-      </main>
+      </div>
+      
+      <MusicPlayer />
     </div>
   );
 };
 
-export { Layout };
 export default Layout;

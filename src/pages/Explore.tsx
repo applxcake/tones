@@ -19,7 +19,7 @@ const Explore = () => {
       try {
         setLoading(true);
         // Get users
-        const usersList = await getAllUsers();
+        const usersList = getAllUsers();
         setUsers(usersList);
 
         // Get trending music

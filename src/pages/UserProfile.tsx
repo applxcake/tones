@@ -5,87 +5,33 @@ import { getUserById, followUser, unfollowUser, getCurrentUser } from '@/service
 import { Button } from '@/components/ui/button';
 import { User as UserIcon, ArrowLeft, UserPlus, UserMinus } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '@/contexts/AuthContext';
 
 const UserProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user: authUser } = useAuth();
-  const [user, setUser] = useState<any>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(getUserById(id || ''));
+  const currentUser = getCurrentUser();
+  const [isFollowing, setIsFollowing] = useState(
+    currentUser?.following.includes(id || '') || false
+  );
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      if (id) {
-        // Get the profile we're viewing
-        const userData = await getUserById(id);
-        setUser(userData);
-        
-        // Get current user data to check following status
-        if (authUser) {
-          const currentUserData = await getCurrentUser(authUser.id);
-          setCurrentUser(currentUserData);
-          setIsFollowing(currentUserData?.following?.includes(id) || false);
-        }
-      }
-      setLoading(false);
-    };
-    
-    fetchData();
-  }, [id, authUser]);
-
-  useEffect(() => {
-    if (!loading && !user) {
+    if (!user) {
       navigate('/explore');
     }
-  }, [user, navigate, loading]);
-
-  if (loading) {
-    return (
-      <div className="pt-6 pb-24 animate-slide-in">
-        <div className="flex justify-center py-12">
-          <div className="flex gap-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div 
-                key={i}
-                className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
-                style={{ animationDelay: `${i * 0.15}s` }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  }, [user, navigate]);
 
   if (!user) {
     return null;
   }
 
-  const handleFollowToggle = async () => {
-    if (!authUser) return;
-    
+  const handleFollowToggle = () => {
     if (isFollowing) {
-      const success = await unfollowUser(user.id, authUser.id);
-      if (success) setIsFollowing(false);
+      unfollowUser(user.id);
+      setIsFollowing(false);
     } else {
-      const success = await followUser(user.id, authUser.id);
-      if (success) setIsFollowing(true);
-    }
-    
-    // Refresh user data
-    if (id) {
-      const userData = await getUserById(id);
-      setUser(userData);
-    }
-    
-    // Refresh current user data
-    if (authUser) {
-      const currentUserData = await getCurrentUser(authUser.id);
-      setCurrentUser(currentUserData);
+      followUser(user.id);
+      setIsFollowing(true);
     }
   };
 

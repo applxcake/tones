@@ -1,390 +1,146 @@
 
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
-import { YouTubeVideo, YouTubeVideoBasic } from '@/services/youtubeService';
+import { YouTubeVideo } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface PlayerContextType {
   currentTrack: YouTubeVideo | null;
   isPlaying: boolean;
   progress: number;
   volume: number;
-  recentlyPlayed: YouTubeVideoBasic[];
+  recentlyPlayed: YouTubeVideo[];
   queue: YouTubeVideo[];
-  likedSongs: YouTubeVideoBasic[];
   playTrack: (track: YouTubeVideo) => void;
   togglePlayPause: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
   setVolume: (volume: number) => void;
   addToQueue: (track: YouTubeVideo) => void;
-  toggleLike: (track: YouTubeVideo) => Promise<boolean>;
-  isLiked: (trackId: string) => boolean;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
   const [currentTrack, setCurrentTrack] = useState<YouTubeVideo | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [volume, setVolumeState] = useState(0.7);
-  const [recentlyPlayed, setRecentlyPlayed] = useState<YouTubeVideoBasic[]>([]);
+  const [recentlyPlayed, setRecentlyPlayed] = useState<YouTubeVideo[]>([]);
   const [queue, setQueue] = useState<YouTubeVideo[]>([]);
-  const [likedSongs, setLikedSongs] = useState<YouTubeVideoBasic[]>([]);
-  const playerRef = useRef<YT.Player | null>(null);
-  const [playerReady, setPlayerReady] = useState(false);
-  const progressInterval = useRef<NodeJS.Timeout | null>(null);
-  
-  // Set up player progress tracking
+
+  // In a real app, you would use a YouTube Player library
+  // This is a simplified implementation
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
-    if (isPlaying && playerRef.current && playerReady) {
-      // Clear any existing interval
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-      }
+    // Create audio element if it doesn't exist
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
       
-      // Create a new interval to update progress
-      progressInterval.current = setInterval(() => {
-        try {
-          const currentTime = playerRef.current?.getCurrentTime() || 0;
-          const duration = playerRef.current?.getDuration() || 0;
-          
-          if (duration > 0) {
-            const progressPercent = (currentTime / duration) * 100;
-            setProgress(progressPercent);
-          }
-        } catch (error) {
-          console.error('Error updating player progress:', error);
+      // Update progress as the track plays
+      audioRef.current.addEventListener('timeupdate', () => {
+        if (audioRef.current) {
+          const currentProgress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+          setProgress(isNaN(currentProgress) ? 0 : currentProgress);
         }
-      }, 1000);
-    } else if (progressInterval.current) {
-      // Clear interval when not playing
-      clearInterval(progressInterval.current);
+      });
+      
+      // When track ends, play next track
+      audioRef.current.addEventListener('ended', () => {
+        nextTrack();
+      });
     }
     
-    // Cleanup
     return () => {
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-      }
-    };
-  }, [isPlaying, playerReady]);
-  
-  useEffect(() => {
-    // Load YouTube iframe API
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-
-    // Initialize YouTube player when API is ready
-    window.onYouTubeIframeAPIReady = () => {
-      playerRef.current = new window.YT.Player('youtube-player', {
-        height: '0',
-        width: '0',
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          disablekb: 1,
-        },
-        events: {
-          onReady: (event) => {
-            setPlayerReady(true);
-            console.log("YouTube player is ready");
-            event.target.setVolume(volume * 100);
-            
-            // If a track is already set when player becomes ready, load it
-            if (currentTrack) {
-              event.target.loadVideoById(currentTrack.id);
-              if (isPlaying) {
-                event.target.playVideo();
-              } else {
-                event.target.pauseVideo();
-              }
-            }
-          },
-          onStateChange: (event) => {
-            if (event.data === window.YT.PlayerState.ENDED) {
-              nextTrack();
-            }
-            setIsPlaying(event.data === window.YT.PlayerState.PLAYING);
-          },
-          onError: (event) => {
-            console.error('YouTube player error:', event);
-            toast({
-              title: "Playback Error",
-              description: "There was an error playing this track. Trying next track.",
-              variant: "destructive"
-            });
-            nextTrack();
-          },
-        },
-      });
-    };
-
-    return () => {
-      if (playerRef.current) {
-        try {
-          playerRef.current.destroy();
-        } catch (error) {
-          console.error('Error destroying player:', error);
-        }
-      }
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
       }
     };
   }, []);
 
+  // Update audio source when currentTrack changes
   useEffect(() => {
-    if (currentTrack && playerRef.current && playerReady) {
-      try {
-        playerRef.current.loadVideoById(currentTrack.id);
-        if (isPlaying) {
-          playerRef.current.playVideo();
-        } else {
-          playerRef.current.pauseVideo();
-        }
-      } catch (error) {
-        console.error('Error loading video:', error);
-        toast({
-          title: "Playback Error",
-          description: "There was an error playing this track.",
-          variant: "destructive"
+    if (currentTrack && audioRef.current) {
+      // In a real app, you would use the YouTube API to get the audio stream
+      // For demonstration, we'll simulate with a placeholder
+      // audioRef.current.src = `https://example.com/audio/${currentTrack.id}.mp3`;
+      
+      if (isPlaying) {
+        audioRef.current.play().catch(error => {
+          console.error('Failed to play:', error);
+          toast({
+            title: "Demo Mode",
+            description: "This is a demo application. In a real app, you would connect to YouTube's IFrame API for actual playback.",
+            variant: "default"
+          });
         });
       }
     }
-  }, [currentTrack, playerReady]);
+  }, [currentTrack]);
 
+  // Update playing state
   useEffect(() => {
-    if (playerRef.current && playerReady) {
-      try {
-        playerRef.current.setVolume(volume * 100);
-      } catch (error) {
-        console.error('Error setting volume:', error);
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.play().catch(error => {
+          console.error('Failed to play:', error);
+        });
+      } else {
+        audioRef.current.pause();
       }
     }
-  }, [volume, playerReady]);
+  }, [isPlaying]);
 
+  // Update volume
   useEffect(() => {
-    const fetchLikedSongs = async () => {
-      if (!user?.id) {
-        setLikedSongs([]);
-        return;
-      }
-      
-      try {
-        const { data, error } = await supabase
-          .from('liked_songs')
-          .select('songs(*)')
-          .eq('user_id', user.id);
-          
-        if (error) throw error;
-        
-        const songs = data?.map(item => ({
-          id: item.songs.id,
-          title: item.songs.title,
-          thumbnail: item.songs.thumbnail_url || '',
-          channelTitle: item.songs.channel_title || 'Unknown',
-          publishedAt: new Date().toISOString() // Default publishedAt
-        })) || [];
-        
-        setLikedSongs(songs);
-      } catch (error) {
-        console.error('Error loading liked songs:', error);
-      }
-    };
-    
-    fetchLikedSongs();
-  }, [user]);
-  
-  useEffect(() => {
-    const fetchRecentlyPlayed = async () => {
-      if (!user?.id) {
-        setRecentlyPlayed([]);
-        return;
-      }
-      
-      try {
-        const { data, error } = await supabase
-          .from('recently_played')
-          .select('songs(*)')
-          .eq('user_id', user.id)
-          .order('played_at', { ascending: false })
-          .limit(20);
-          
-        if (error) throw error;
-        
-        const songs = data?.map(item => ({
-          id: item.songs.id,
-          title: item.songs.title,
-          thumbnail: item.songs.thumbnail_url || '',
-          channelTitle: item.songs.channel_title || 'Unknown',
-          publishedAt: new Date().toISOString() // Default publishedAt
-        })) || [];
-        
-        setRecentlyPlayed(songs);
-      } catch (error) {
-        console.error('Error loading recently played:', error);
-      }
-    };
-    
-    fetchRecentlyPlayed();
-  }, [user]);
-  
-  const playTrack = async (track: YouTubeVideo) => {
-    if (!track) {
-      console.error("Invalid track:", track);
-      return;
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
     }
-    
-    // Check if YouTube API is ready
-    if (!playerReady) {
-      toast({
-        title: "Player Not Ready",
-        description: "Please wait a moment while the player loads.",
-        variant: "destructive"
+  }, [volume]);
+
+  const playTrack = (track: YouTubeVideo) => {
+    // Add current track to recently played if it exists
+    if (currentTrack) {
+      setRecentlyPlayed(prev => {
+        // Filter out this track if it's already in the list
+        const filtered = prev.filter(item => item.id !== currentTrack.id);
+        // Add it to the beginning and limit to 20 items
+        return [currentTrack, ...filtered].slice(0, 20);
       });
-      return;
     }
     
     setCurrentTrack(track);
     setIsPlaying(true);
-
-    // Save track to recent history if we have a currentTrack and user
-    if (currentTrack && user?.id) {
-      try {
-        const { data: existingSong } = await supabase
-          .from('songs')
-          .select('*')
-          .eq('id', currentTrack.id)
-          .single();
-        
-        if (!existingSong) {
-          await supabase
-            .from('songs')
-            .insert([{
-              id: currentTrack.id,
-              title: currentTrack.title,
-              thumbnail_url: currentTrack.thumbnail,
-              channel_title: currentTrack.channelTitle,
-            }]);
-        }
-        
-        await supabase
-          .from('recently_played')
-          .upsert(
-            {
-              user_id: user.id,
-              song_id: currentTrack.id,
-              played_at: new Date().toISOString()
-            },
-            {
-              onConflict: 'user_id,song_id',
-              ignoreDuplicates: false
-            }
-          );
-          
-        const updatedRecently = [
-          {
-            id: currentTrack.id,
-            title: currentTrack.title,
-            thumbnail: currentTrack.thumbnail,
-            channelTitle: currentTrack.channelTitle,
-            publishedAt: currentTrack.publishedAt
-          },
-          ...recentlyPlayed.filter(item => item.id !== currentTrack.id)
-        ].slice(0, 20);
-        
-        setRecentlyPlayed(updatedRecently);
-      } catch (error) {
-        console.error("Error saving recently played:", error);
-      }
-    }
-    
-    // Save the new track to the database if the user is logged in
-    if (user?.id) {
-      try {
-        const { data: existingSong } = await supabase
-          .from('songs')
-          .select('*')
-          .eq('id', track.id)
-          .single();
-        
-        if (!existingSong) {
-          await supabase
-            .from('songs')
-            .insert([{
-              id: track.id,
-              title: track.title,
-              thumbnail_url: track.thumbnail,
-              channel_title: track.channelTitle,
-            }]);
-        }
-      } catch (error) {
-        console.error("Error saving song:", error);
-      }
-    }
   };
 
   const togglePlayPause = () => {
-    if (!playerRef.current || !playerReady) {
-      toast({
-        title: "Player Not Ready",
-        description: "Please wait a moment while the player loads.",
-      });
-      return;
-    }
-    
-    try {
-      if (isPlaying) {
-        playerRef.current.pauseVideo();
-      } else {
-        playerRef.current.playVideo();
-      }
-      setIsPlaying(!isPlaying);
-    } catch (error) {
-      console.error('Error toggling play/pause:', error);
-      toast({
-        title: "Playback Error",
-        description: "There was an error controlling playback.",
-        variant: "destructive"
-      });
-    }
+    setIsPlaying(!isPlaying);
   };
 
   const nextTrack = () => {
     if (queue.length > 0) {
+      // Play the next track in the queue
       const nextUp = queue[0];
       setQueue(prev => prev.slice(1));
       playTrack(nextUp);
     } else {
+      // No more tracks in queue
       setIsPlaying(false);
-      if (playerRef.current && playerReady) {
-        try {
-          playerRef.current.pauseVideo();
-        } catch (error) {
-          console.error('Error pausing video:', error);
-        }
-      }
     }
   };
 
   const prevTrack = () => {
-    if (recentlyPlayed.length > 0 && currentTrack) {
+    if (recentlyPlayed.length > 0) {
+      // Play the previous track from history
       const prevTrack = recentlyPlayed[0];
-      const prevTrackComplete: YouTubeVideo = {
-        ...prevTrack,
-        description: '',
-        channelTitle: prevTrack.channelTitle || 'Unknown Artist',
-      };
-      
-      setQueue(prev => [currentTrack, ...prev]);
-      playTrack(prevTrackComplete);
       setRecentlyPlayed(prev => prev.slice(1));
+      // Add current track to the beginning of the queue if it exists
+      if (currentTrack) {
+        setQueue(prev => [currentTrack, ...prev]);
+      }
+      setCurrentTrack(prevTrack);
+      setIsPlaying(true);
     }
   };
 
@@ -399,95 +155,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       description: `"${track.title}" added to your queue.`,
     });
   };
-  
-  const toggleLike = async (track: YouTubeVideo) => {
-    if (!user?.id) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to like songs.",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
-    const isCurrentlyLiked = likedSongs.some(song => song.id === track.id);
-    
-    try {
-      const { data: existingSong } = await supabase
-        .from('songs')
-        .select('*')
-        .eq('id', track.id)
-        .single();
-      
-      if (!existingSong) {
-        await supabase
-          .from('songs')
-          .insert([{
-            id: track.id,
-            title: track.title,
-            thumbnail_url: track.thumbnail,
-            channel_title: track.channelTitle,
-          }]);
-      }
-      
-      if (isCurrentlyLiked) {
-        const { error } = await supabase
-          .from('liked_songs')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('song_id', track.id);
-          
-        if (error) throw error;
-        
-        setLikedSongs(prev => prev.filter(song => song.id !== track.id));
-        
-        toast({
-          title: "Removed from Liked Songs",
-          description: `"${track.title}" removed from your liked songs.`,
-        });
-        
-        return false;
-      } else {
-        const { error } = await supabase
-          .from('liked_songs')
-          .insert([{
-            user_id: user.id,
-            song_id: track.id,
-          }]);
-          
-        if (error) throw error;
-        
-        const newLikedSong = {
-          id: track.id,
-          title: track.title,
-          thumbnail: track.thumbnail,
-          channelTitle: track.channelTitle,
-          publishedAt: track.publishedAt
-        };
-        
-        setLikedSongs(prev => [...prev, newLikedSong]);
-        
-        toast({
-          title: "Added to Liked Songs",
-          description: `"${track.title}" added to your liked songs.`,
-        });
-        
-        return true;
-      }
-    } catch (error) {
-      console.error("Error toggling liked song:", error);
-      toast({
-        title: "Error",
-        description: "Could not update liked songs.",
-        variant: "destructive"
-      });
-      return isCurrentlyLiked;
-    }
-  };
-  
-  const isLiked = (trackId: string) => {
-    return likedSongs.some(song => song.id === trackId);
-  };
 
   return (
     <PlayerContext.Provider
@@ -498,15 +165,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         volume,
         recentlyPlayed,
         queue,
-        likedSongs,
         playTrack,
         togglePlayPause,
         nextTrack,
         prevTrack,
         setVolume,
         addToQueue,
-        toggleLike,
-        isLiked,
       }}
     >
       {children}

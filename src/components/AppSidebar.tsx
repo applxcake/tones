@@ -1,70 +1,100 @@
+
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Menu, X, Home, Search, ListMusic, Users, User } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { Home, Search, ListMusic, User, Disc3, LogOut, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
-import SidebarNavItem from './sidebar/SidebarNavItem';
-import SidebarHeader from './sidebar/SidebarHeader';
-import SidebarFooter from './sidebar/SidebarFooter';
 
-interface AppSidebarProps {
-  isOpen: boolean;
-  onToggle: () => void;
-}
-
-const AppSidebar = ({
-  isOpen,
-  onToggle
-}: AppSidebarProps) => {
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  
-  const handleSearch = () => {
-    navigate('/search');
-  };
+const AppSidebar = () => {
+  const { isAuthenticated, user, signOut } = useAuth();
 
   return (
-    <>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onToggle}
-        className={cn(
-          "fixed top-4 left-4 z-40 md:hidden",
-          isOpen && "left-[calc(16rem-3rem)]"
-        )}
-      >
-        {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </Button>
-
-      <div 
-        className={cn(
-          "fixed inset-0 bg-black/50 z-20 transition-opacity duration-300 md:hidden",
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        )}
-        onClick={onToggle}
-      />
-
-      <div className={cn(
-        "h-screen w-64 bg-sidebar fixed left-0 top-0 z-30 glass-panel transition-all duration-300 ease-in-out",
-        isOpen ? "translate-x-0" : "-translate-x-full",
-        "md:translate-x-0",
-        isMobile && !isOpen && "shadow-none"
-      )}>
-        <SidebarHeader onSearch={handleSearch} />
+    <div className="h-screen w-64 bg-sidebar fixed left-0 top-0 z-30 glass-panel">
+      <div className="p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <Disc3 className="h-8 w-8 text-neon-purple animate-pulse-glow" />
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-neon-purple to-neon-pink text-transparent bg-clip-text">
+            Tones
+          </h1>
+        </div>
+        <p className="text-sm text-gray-400 mb-8">Music made free!</p>
         
-        <nav className="space-y-1 px-6">
+        <nav className="space-y-1">
           <SidebarNavItem to="/" icon={<Home className="h-5 w-5" />} label="Home" />
           <SidebarNavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
           <SidebarNavItem to="/playlists" icon={<ListMusic className="h-5 w-5" />} label="Playlists" />
           <SidebarNavItem to="/explore" icon={<Users className="h-5 w-5" />} label="Explore" />
           <SidebarNavItem to="/profile" icon={<User className="h-5 w-5" />} label="Profile" />
         </nav>
-
-        <SidebarFooter />
       </div>
-    </>
+
+      <div className="mt-auto p-4 border-t border-gray-800">
+        {isAuthenticated ? (
+          <div className="flex flex-col">
+            <div className="text-sm text-gray-400 mb-2">
+              <p>Signed in as:</p>
+              <p className="font-medium text-white">{user?.username || user?.email}</p>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="justify-start text-gray-400 hover:text-white"
+              onClick={() => signOut()}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign out
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full" 
+              asChild
+            >
+              <NavLink to="/login">Sign In</NavLink>
+            </Button>
+            <Button 
+              size="sm" 
+              className="w-full bg-neon-purple hover:bg-neon-purple/80" 
+              asChild
+            >
+              <NavLink to="/signup">Sign Up</NavLink>
+            </Button>
+          </div>
+        )}
+        
+        <div className="text-xs text-gray-500 mt-4">
+          <p>© 2025 Tones</p>
+          <p className="mt-1">Music made free!</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface SidebarNavItemProps {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+}
+
+const SidebarNavItem = ({ to, icon, label }: SidebarNavItemProps) => {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) => cn(
+        "flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200",
+        isActive 
+          ? "bg-accent text-accent-foreground neon-glow-purple" 
+          : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+      )}
+    >
+      {icon}
+      <span>{label}</span>
+    </NavLink>
   );
 };
 

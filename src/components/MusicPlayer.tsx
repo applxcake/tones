@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { 
   Play, Pause, SkipBack, SkipForward, Volume2, Volume1, VolumeX, 
   Heart, ListPlus
@@ -18,44 +19,27 @@ const MusicPlayer = () => {
     nextTrack, 
     prevTrack,
     setVolume,
-    addToQueue,
-    toggleLike,
-    isLiked,
+    addToQueue
   } = usePlayer();
   
-  const [visualizerActive, setVisualizerActive] = useState(true);
-  
-  // Keep visualizer active when playing
-  useEffect(() => {
-    if (isPlaying) {
-      setVisualizerActive(true);
-    }
-  }, [isPlaying]);
-  
+  const [liked, setLiked] = useState(false);
+
+  const handleLike = () => {
+    setLiked(!liked);
+  };
+
   // Show nothing if no track is selected
   if (!currentTrack) {
     return null;
   }
-  
-  // Format time (seconds to MM:SS)
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-  };
-  
-  // Calculate current time based on progress percentage
-  const duration = 240; // Default to 4 minutes if actual duration unknown
-  const currentTime = progress * duration / 100;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-black/60 backdrop-blur-lg glass-panel border-t border-white/10 z-50 h-20">
-      <div id="youtube-player" style={{ display: 'none' }} />
       <div className="container mx-auto h-full flex items-center justify-between px-4">
         <div className="flex items-center gap-3 w-1/4 min-w-[200px]">
           <div className="relative w-12 h-12 rounded overflow-hidden neon-border">
             <img 
-              src={currentTrack.thumbnail} 
+              src={currentTrack.thumbnailUrl} 
               alt={currentTrack.title}
               className="w-full h-full object-cover"
             />
@@ -101,14 +85,14 @@ const MusicPlayer = () => {
           </div>
 
           <div className="w-full max-w-md mt-1 px-4 flex items-center gap-2">
-            <span className="text-xs text-gray-400">{formatTime(currentTime)}</span>
+            <span className="text-xs text-gray-400">0:00</span>
             <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-neon-purple rounded-full"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-xs text-gray-400">{formatTime(duration)}</span>
+            <span className="text-xs text-gray-400">3:45</span>
           </div>
         </div>
 
@@ -118,11 +102,11 @@ const MusicPlayer = () => {
             variant="ghost" 
             className={cn(
               "text-gray-400 hover:text-white transition-all", 
-              isLiked(currentTrack.id) && "text-neon-pink neon-glow-pink"
+              liked && "text-neon-pink neon-glow-pink"
             )}
-            onClick={() => toggleLike(currentTrack)}
+            onClick={handleLike}
           >
-            <Heart className={cn("h-5 w-5", isLiked(currentTrack.id) && "fill-neon-pink")} />
+            <Heart className={cn("h-5 w-5", liked && "fill-neon-pink")} />
           </Button>
           
           <Button 
@@ -164,17 +148,16 @@ const MusicPlayer = () => {
         </div>
       </div>
 
-      {/* Audio visualizer waves - independent from progress */}
+      {/* Audio visualizer waves */}
       <div className="absolute bottom-0 left-0 right-0 flex justify-center h-0.5">
         <div className="flex items-end gap-0.5">
-          {isPlaying && visualizerActive && Array.from({ length: 20 }).map((_, i) => (
+          {isPlaying && Array.from({ length: 10 }).map((_, i) => (
             <div
               key={i}
               className="w-0.5 bg-neon-purple rounded-full animate-wave"
               style={{
-                height: `${Math.max(2, Math.random() * 12)}px`,
-                animationDelay: `${Math.random() * 0.5}s`,
-                animationDuration: `${0.5 + Math.random() * 0.5}s`
+                height: `${Math.max(3, Math.random() * 15)}px`,
+                animationDelay: `${i * 0.1}s`
               }}
             />
           ))}

@@ -1,6 +1,14 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js';
+import { toast } from "sonner";
+
+// Initialize Supabase client with the provided credentials
+const supabaseUrl = 'https://rlungwerloclwtawifxq.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsdW5nd2VybG9jbHd0YXdpZnhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ4ODA1NjksImV4cCI6MjA2MDQ1NjU2OX0.rqZrbE338P2S5IjsSeckfPcOaf0E_ixIwsU97N5gkFs';
+
+// Create the Supabase client
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 type User = {
   id: string;
@@ -12,7 +20,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{
+  signIn: (email: string, password: string) => Promise<{
     error: Error | null;
     data: any | null;
   }>;
@@ -64,12 +72,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const signIn = async (email: string, password: string, rememberMe = true) => {
+  const signIn = async (email: string, password: string) => {
     setIsLoading(true);
-    const result = await supabase.auth.signInWithPassword({ 
-      email, 
-      password
-    });
+    const result = await supabase.auth.signInWithPassword({ email, password });
     setIsLoading(false);
     return result;
   };
@@ -85,14 +90,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     });
-    
-    if (!result.error) {
-      toast({
-        title: "Account created successfully",
-        description: "Please check your email to verify your account.",
-      });
-    }
-    
     setIsLoading(false);
     return result;
   };

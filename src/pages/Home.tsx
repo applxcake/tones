@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getTrendingMusic, YouTubeVideo } from '@/services/youtubeService';
+import { getTrendingMusic } from '@/services/youtubeService';
 import SongTile from '@/components/SongTile';
 import ScrollableRow from '@/components/ScrollableRow';
 import SearchBar from '@/components/SearchBar';
@@ -21,30 +21,26 @@ const Home = () => {
     navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
-  const exploreGenre = (genre: string) => {
-    navigate(`/genre/${encodeURIComponent(genre)}`);
-  };
-
   return (
     <div className="pt-6 pb-24 animate-slide-in">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-neon-purple to-neon-pink text-transparent bg-clip-text">Home</h1>
+        <h1 className="text-3xl font-bold">Home</h1>
         <SearchBar onSearch={handleSearch} />
       </div>
 
       {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-xl mb-8 glass-panel neon-border hover-scale transition-all duration-300">
-        <div className="absolute inset-0 bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 animate-pulse-glow" />
+      <div className="relative overflow-hidden rounded-xl mb-8 glass-panel neon-border">
+        <div className="absolute inset-0 bg-gradient-to-r from-neon-blue/20 to-neon-purple/20" />
         <div className="absolute inset-0 bg-[radial-gradient(circle,_transparent_25%,_#000_100%)]" />
         
         <div className="relative p-8 md:p-12 flex flex-col md:flex-row items-center">
           <div className="mb-6 md:mb-0 md:mr-8 max-w-md">
-            <h2 className="text-2xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent">Discover New Music</h2>
+            <h2 className="text-2xl md:text-4xl font-bold mb-2">Discover New Music</h2>
             <p className="text-gray-300 mb-4">
               Explore the latest trending tracks and discover your next favorite song.
             </p>
             <button 
-              className="px-6 py-2 bg-neon-purple rounded-full text-white font-medium neon-glow-purple hover:bg-neon-purple/80 transition-all transform hover:scale-105"
+              className="px-6 py-2 bg-neon-purple rounded-full text-white font-medium neon-glow-purple hover:bg-neon-purple/80 transition-all"
               onClick={() => navigate('/search')}
             >
               Explore Now
@@ -62,7 +58,7 @@ const Home = () => {
       {/* Recently Played */}
       {recentlyPlayed.length > 0 && (
         <ScrollableRow title="Recently Played">
-          {recentlyPlayed.map((song: YouTubeVideo) => (
+          {recentlyPlayed.map((song) => (
             <SongTile key={song.id} song={song} className="w-48" />
           ))}
         </ScrollableRow>
@@ -95,24 +91,21 @@ const Home = () => {
 
       {/* Genres */}
       <div className="mt-12">
-        <h2 className="text-xl font-semibold mb-4 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">Browse by Genre</h2>
+        <h2 className="text-xl font-semibold mb-4">Browse by Genre</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {genres.map((genre) => (
             <div 
               key={genre.name} 
-              className="relative overflow-hidden rounded-lg aspect-square hover-scale glass-panel cursor-pointer transition-all duration-300"
-              onClick={() => exploreGenre(genre.name)}
+              className="relative overflow-hidden rounded-lg aspect-square hover-scale glass-panel cursor-pointer"
               style={{
                 background: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url(${genre.image})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/70 opacity-70 transition-opacity hover:opacity-50" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <h3 className="text-lg font-bold text-white">{genre.name}</h3>
+                <h3 className="text-lg font-bold">{genre.name}</h3>
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-neon-purple to-neon-pink transform scale-x-0 transition-transform duration-300 origin-left group-hover:scale-x-100" />
             </div>
           ))}
         </div>
@@ -129,12 +122,6 @@ const genres = [
   { name: "Electronic", image: "https://source.unsplash.com/random/400x400/?electronic-music" },
   { name: "Jazz", image: "https://source.unsplash.com/random/400x400/?jazz" },
   { name: "Classical", image: "https://source.unsplash.com/random/400x400/?classical-music" },
-  { name: "Blues", image: "https://source.unsplash.com/random/400x400/?blues-music" },
-  { name: "Country", image: "https://source.unsplash.com/random/400x400/?country-music" },
-  { name: "R&B", image: "https://source.unsplash.com/random/400x400/?rnb-music" },
-  { name: "Reggae", image: "https://source.unsplash.com/random/400x400/?reggae-music" },
-  { name: "Indie", image: "https://source.unsplash.com/random/400x400/?indie-music" },
-  { name: "Metal", image: "https://source.unsplash.com/random/400x400/?metal-music" },
 ];
 
 export default Home;

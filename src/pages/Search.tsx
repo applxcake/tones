@@ -17,7 +17,6 @@ const Search = () => {
   const [nextPageToken, setNextPageToken] = useState<string | undefined>();
   const [searchResults, setSearchResults] = useState<YouTubeVideo[]>([]);
   const [userResults, setUserResults] = useState<any[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   // Get search query from URL
   useEffect(() => {
@@ -38,28 +37,17 @@ const Search = () => {
   // Update results when data changes
   useEffect(() => {
     if (data) {
-      setSearchResults(data);
-      setNextPageToken(undefined); // Reset next page token as Spotify doesn't use it
+      setSearchResults(data.items);
+      setNextPageToken(data.nextPageToken);
     }
   }, [data]);
 
   // Search for users when tab is 'users'
   useEffect(() => {
-    const fetchUsers = async () => {
-      if (searchQuery && activeTab === 'users') {
-        setIsLoadingUsers(true);
-        try {
-          const results = await searchUsers(searchQuery);
-          setUserResults(results);
-        } catch (error) {
-          console.error('Error searching users:', error);
-        } finally {
-          setIsLoadingUsers(false);
-        }
-      }
-    };
-    
-    fetchUsers();
+    if (searchQuery && activeTab === 'users') {
+      const results = searchUsers(searchQuery);
+      setUserResults(results);
+    }
   }, [searchQuery, activeTab]);
 
   // Handle search submission
@@ -67,10 +55,13 @@ const Search = () => {
     setSearchQuery(query);
   };
 
-  // Load more results - this is a placeholder since Spotify doesn't use pagination the same way
+  // Load more results
   const loadMore = async () => {
-    // Placeholder for future pagination implementation
-    console.log('Load more requested, but not implemented for Spotify API');
+    if (nextPageToken) {
+      const nextPage = await searchVideos(searchQuery, nextPageToken);
+      setSearchResults((prevResults) => [...prevResults, ...nextPage.items]);
+      setNextPageToken(nextPage.nextPageToken);
+    }
   };
 
   // Change active tab
@@ -142,19 +133,7 @@ const Search = () => {
                 Users matching "{searchQuery}"
               </h2>
 
-              {isLoadingUsers ? (
-                <div className="py-12 flex justify-center">
-                  <div className="flex gap-2">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <div 
-                        key={i}
-                        className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
-                        style={{ animationDelay: `${i * 0.15}s` }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : userResults.length === 0 ? (
+              {userResults.length === 0 ? (
                 <div className="py-12 text-center">
                   <p className="text-gray-400">No users found for "{searchQuery}"</p>
                 </div>

@@ -46,7 +46,7 @@ const SearchBar = ({ onSearch, className }: SearchBarProps) => {
       onSubmit={handleSubmit}
       className={cn(
         "relative transition-all duration-300",
-        "w-full max-w-2xl mx-auto", // Center the search bar
+        "w-full", // Always full width for better UI
         className
       )}
     >

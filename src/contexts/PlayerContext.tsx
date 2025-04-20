@@ -18,7 +18,7 @@ interface YouTubeVideoBasic {
   title: string;
   thumbnailUrl: string;
   channelTitle: string;
-  publishedAt: string; // Changed from optional to required
+  publishedAt?: string;
 }
 
 // YouTube Player Types
@@ -156,24 +156,20 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       try {
         const { data, error } = await supabase
           .from('liked_songs')
-          .select('song_id, songs(*)') // Changed to include song_id and use songs table join
+          .select('songs(*)')
           .eq('user_id', user.id);
           
         if (error) throw error;
         
-        // Fixed the array mapping to properly extract song data
-        const songs = data?.map(item => {
-          if (!item.songs) return null;
-          return {
-            id: item.song_id, // Use song_id directly
-            title: item.songs.title,
-            thumbnailUrl: item.songs.thumbnail_url,
-            channelTitle: item.songs.channel_title,
-            publishedAt: new Date().toISOString(), // Add a default publishedAt
-          };
-        }).filter(Boolean) || [];
+        const songs = data?.map(item => ({
+          id: item.songs.id,
+          title: item.songs.title,
+          thumbnailUrl: item.songs.thumbnail_url,
+          channelTitle: item.songs.channel_title,
+          publishedAt: new Date().toISOString(), // Add a default publishedAt
+        })) || [];
         
-        setLikedSongs(songs as YouTubeVideoBasic[]);
+        setLikedSongs(songs);
       } catch (error) {
         console.error('Error loading liked songs:', error);
       }
@@ -402,16 +398,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     
     if (user?.id) {
       try {
-        // First ensure the song exists in the songs table
-        const { data: existingSong, error: checkError } = await supabase
+        const { data: existingSong } = await supabase
           .from('songs')
-          .select('id')
+          .select('*')
           .eq('id', track.id)
           .single();
         
-        if (checkError || !existingSong) {
-          // If song doesn't exist, insert it
-          const { error: insertError } = await supabase
+        if (!existingSong) {
+          await supabase
             .from('songs')
             .insert([{
               id: track.id,
@@ -419,14 +413,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               thumbnail_url: track.thumbnailUrl,
               channel_title: track.channelTitle,
             }]);
-            
-          if (insertError) {
-            console.error("Error saving song:", insertError);
-            // Don't throw here, just log and continue
-          }
         }
       } catch (error) {
-        console.error("Error checking/saving song:", error);
+        console.error("Error saving song:", error);
       }
     }
     
@@ -455,7 +444,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (currentTrack) {
         setQueue(prev => [currentTrack, ...prev]);
       }
-      // Fixed type conversion by ensuring all required properties are present
       setCurrentTrack({
         id: prevTrack.id,
         title: prevTrack.title,
@@ -492,16 +480,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const isCurrentlyLiked = likedSongs.some(song => song.id === track.id);
     
     try {
-      // First ensure the song exists in the songs table
-      const { data: existingSong, error: checkError } = await supabase
+      const { data: existingSong } = await supabase
         .from('songs')
-        .select('id')
+        .select('*')
         .eq('id', track.id)
         .single();
       
-      if (checkError || !existingSong) {
-        // If song doesn't exist, insert it
-        const { error: insertError } = await supabase
+      if (!existingSong) {
+        await supabase
           .from('songs')
           .insert([{
             id: track.id,
@@ -509,11 +495,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             thumbnail_url: track.thumbnailUrl,
             channel_title: track.channelTitle,
           }]);
-          
-        if (insertError) throw insertError;
       }
       
-      // Now handle the like/unlike operation
       if (isCurrentlyLiked) {
         const { error } = await supabase
           .from('liked_songs')

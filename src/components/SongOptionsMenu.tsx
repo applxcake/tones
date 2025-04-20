@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MoreVertical, ListPlus, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -29,19 +29,16 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
   const [playlists, setPlaylists] = useState<any[]>([]);
   const [liked, setLiked] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
 
-  // Check if song is liked when component mounts or when isOpen changes
-  React.useEffect(() => {
-    if (isOpen) {
-      setLiked(isLiked(song.id));
-    }
-  }, [song.id, isLiked, isOpen]);
+  // Check if song is liked when component mounts
+  useEffect(() => {
+    setLiked(isLiked(song.id));
+  }, [song.id, isLiked]);
 
-  // Fetch user playlists when dropdown is opened
-  React.useEffect(() => {
+  // Fetch user playlists when component mounts
+  useEffect(() => {
     const fetchPlaylists = async () => {
-      if (user && isOpen) {
+      if (user) {
         try {
           setLoading(true);
           const userPlaylists = await getUserPlaylists(user.id);
@@ -55,15 +52,12 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
     };
     
     fetchPlaylists();
-  }, [user, isOpen]);
+  }, [user]);
 
-  const handleLike = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleLike = async () => {
     try {
       const isLikedNow = await toggleLike(song);
       setLiked(isLikedNow);
-      setIsOpen(false); // Close the menu after action
     } catch (error) {
       console.error('Error toggling like:', error);
     }
@@ -73,29 +67,15 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
     if (user) {
       try {
         await addSongToPlaylist(playlistId, song, user.id);
-        setIsOpen(false); // Close the menu after action
       } catch (error) {
         console.error('Error adding song to playlist:', error);
       }
     }
   };
-  
-  const handleAddToQueue = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    addToQueue(song);
-    setIsOpen(false); // Close the menu after action
-  };
 
-  // Prevent click on the button from propagating to parent elements
-  const handleTriggerClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-  };
-  
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild onClick={handleTriggerClick}>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
           size="icon" 
@@ -104,13 +84,8 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
           <MoreVertical className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        side="right" 
-        align="start" 
-        className="w-56"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <DropdownMenuItem onClick={handleAddToQueue}>
+      <DropdownMenuContent side="right" align="start" className="w-56">
+        <DropdownMenuItem onClick={() => addToQueue(song)}>
           <ListPlus className="mr-2 h-4 w-4" />
           Add to Queue
         </DropdownMenuItem>

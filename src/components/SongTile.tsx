@@ -65,7 +65,7 @@ const SongTile = ({ song, className }: SongTileProps) => {
         </div>
         
         {isHovered && (
-          <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute top-2 right-2">
             <SongOptionsMenu song={song} />
           </div>
         )}

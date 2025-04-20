@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { YouTubeVideo, YouTubeVideoBasic } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
@@ -35,6 +36,42 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [likedSongs, setLikedSongs] = useState<YouTubeVideoBasic[]>([]);
   const playerRef = useRef<YT.Player | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
+  const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  
+  // Set up player progress tracking
+  useEffect(() => {
+    if (isPlaying && playerRef.current && playerReady) {
+      // Clear any existing interval
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+      }
+      
+      // Create a new interval to update progress
+      progressInterval.current = setInterval(() => {
+        try {
+          const currentTime = playerRef.current?.getCurrentTime() || 0;
+          const duration = playerRef.current?.getDuration() || 0;
+          
+          if (duration > 0) {
+            const progressPercent = (currentTime / duration) * 100;
+            setProgress(progressPercent);
+          }
+        } catch (error) {
+          console.error('Error updating player progress:', error);
+        }
+      }, 1000);
+    } else if (progressInterval.current) {
+      // Clear interval when not playing
+      clearInterval(progressInterval.current);
+    }
+    
+    // Cleanup
+    return () => {
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+      }
+    };
+  }, [isPlaying, playerReady]);
   
   useEffect(() => {
     // Load YouTube iframe API
@@ -57,6 +94,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           onReady: (event) => {
             setPlayerReady(true);
             console.log("YouTube player is ready");
+            event.target.setVolume(volume * 100);
+            
             // If a track is already set when player becomes ready, load it
             if (currentTrack) {
               event.target.loadVideoById(currentTrack.id);
@@ -65,7 +104,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               } else {
                 event.target.pauseVideo();
               }
-              event.target.setVolume(volume * 100);
             }
           },
           onStateChange: (event) => {
@@ -76,6 +114,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           },
           onError: (event) => {
             console.error('YouTube player error:', event);
+            toast({
+              title: "Playback Error",
+              description: "There was an error playing this track. Trying next track.",
+              variant: "destructive"
+            });
             nextTrack();
           },
         },
@@ -84,7 +127,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     return () => {
       if (playerRef.current) {
-        playerRef.current.destroy();
+        try {
+          playerRef.current.destroy();
+        } catch (error) {
+          console.error('Error destroying player:', error);
+        }
+      }
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
       }
     };
   }, []);
@@ -100,9 +150,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       } catch (error) {
         console.error('Error loading video:', error);
+        toast({
+          title: "Playback Error",
+          description: "There was an error playing this track.",
+          variant: "destructive"
+        });
       }
     }
-  }, [currentTrack, isPlaying, playerReady]);
+  }, [currentTrack, playerReady]);
 
   useEffect(() => {
     if (playerRef.current && playerReady) {
@@ -181,8 +236,25 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [user]);
   
   const playTrack = async (track: YouTubeVideo) => {
+    if (!track) {
+      console.error("Invalid track:", track);
+      return;
+    }
+    
+    // Check if YouTube API is ready
+    if (!playerReady) {
+      toast({
+        title: "Player Not Ready",
+        description: "Please wait a moment while the player loads.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setCurrentTrack(track);
     setIsPlaying(true);
+
+    // Save track to recent history if we have a currentTrack and user
     if (currentTrack && user?.id) {
       try {
         const { data: existingSong } = await supabase
@@ -233,6 +305,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     }
     
+    // Save the new track to the database if the user is logged in
     if (user?.id) {
       try {
         const { data: existingSong } = await supabase
@@ -258,17 +331,28 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const togglePlayPause = () => {
-    if (playerRef.current && playerReady) {
-      try {
-        if (isPlaying) {
-          playerRef.current.pauseVideo();
-        } else {
-          playerRef.current.playVideo();
-        }
-        setIsPlaying(!isPlaying);
-      } catch (error) {
-        console.error('Error toggling play/pause:', error);
+    if (!playerRef.current || !playerReady) {
+      toast({
+        title: "Player Not Ready",
+        description: "Please wait a moment while the player loads.",
+      });
+      return;
+    }
+    
+    try {
+      if (isPlaying) {
+        playerRef.current.pauseVideo();
+      } else {
+        playerRef.current.playVideo();
       }
+      setIsPlaying(!isPlaying);
+    } catch (error) {
+      console.error('Error toggling play/pause:', error);
+      toast({
+        title: "Playback Error",
+        description: "There was an error controlling playback.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -279,6 +363,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       playTrack(nextUp);
     } else {
       setIsPlaying(false);
+      if (playerRef.current && playerReady) {
+        try {
+          playerRef.current.pauseVideo();
+        } catch (error) {
+          console.error('Error pausing video:', error);
+        }
+      }
     }
   };
 
@@ -292,8 +383,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       };
       
       setQueue(prev => [currentTrack, ...prev]);
-      setCurrentTrack(prevTrackComplete);
-      setIsPlaying(true);
+      playTrack(prevTrackComplete);
       setRecentlyPlayed(prev => prev.slice(1));
     }
   };
@@ -351,6 +441,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         
         setLikedSongs(prev => prev.filter(song => song.id !== track.id));
         
+        toast({
+          title: "Removed from Liked Songs",
+          description: `"${track.title}" removed from your liked songs.`,
+        });
+        
         return false;
       } else {
         const { error } = await supabase
@@ -371,6 +466,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         };
         
         setLikedSongs(prev => [...prev, newLikedSong]);
+        
+        toast({
+          title: "Added to Liked Songs",
+          description: `"${track.title}" added to your liked songs.`,
+        });
         
         return true;
       }

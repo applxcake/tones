@@ -8,6 +8,8 @@ declare namespace YT {
     destroy(): void;
     getPlayerState(): number;
     setVolume(volume: number): void;
+    getDuration(): number;
+    getCurrentTime(): number;
   }
 
   interface PlayerOptions {

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { User, Settings, Clock, Heart, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import SongTile from '@/components/SongTile';
 import { getCurrentUser } from '@/services/userService';
+import { YouTubeVideo } from '@/services/youtubeService';
 
 const Profile = () => {
   const { recentlyPlayed, likedSongs } = usePlayer();
@@ -14,6 +16,14 @@ const Profile = () => {
   const navigate = useNavigate();
   const [currentUserData, setCurrentUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Convert YouTubeVideoBasic to YouTubeVideo for SongTile
+  const convertToFullVideo = (basicVideo: any): YouTubeVideo => ({
+    ...basicVideo,
+    description: '',
+    channelTitle: basicVideo.channelTitle || 'Unknown',
+    thumbnailUrl: basicVideo.thumbnail,
+  });
 
   const refreshUserData = async () => {
     if (user) {
@@ -118,10 +128,13 @@ const Profile = () => {
         </TabsList>
         
         <TabsContent value="history">
-          {recentlyPlayed.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          {recentlyPlayed && recentlyPlayed.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {recentlyPlayed.map((song) => (
-                <SongTile key={song.id} song={song as any} />
+                <SongTile 
+                  key={song.id} 
+                  song={convertToFullVideo(song)} 
+                />
               ))}
             </div>
           ) : (
@@ -132,10 +145,13 @@ const Profile = () => {
         </TabsContent>
         
         <TabsContent value="liked">
-          {likedSongs.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          {likedSongs && likedSongs.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {likedSongs.map((song) => (
-                <SongTile key={song.id} song={song as any} />
+                <SongTile 
+                  key={song.id} 
+                  song={convertToFullVideo(song)} 
+                />
               ))}
             </div>
           ) : (

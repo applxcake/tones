@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Play, Pause, SkipBack, SkipForward, Volume2, Volume1, VolumeX, 
   Heart, ListPlus
@@ -22,6 +22,15 @@ const MusicPlayer = () => {
     toggleLike,
     isLiked,
   } = usePlayer();
+  
+  const [visualizerActive, setVisualizerActive] = useState(true);
+  
+  // Keep visualizer active when playing
+  useEffect(() => {
+    if (isPlaying) {
+      setVisualizerActive(true);
+    }
+  }, [isPlaying]);
   
   // Show nothing if no track is selected
   if (!currentTrack) {
@@ -155,16 +164,17 @@ const MusicPlayer = () => {
         </div>
       </div>
 
-      {/* Audio visualizer waves */}
+      {/* Audio visualizer waves - independent from progress */}
       <div className="absolute bottom-0 left-0 right-0 flex justify-center h-0.5">
         <div className="flex items-end gap-0.5">
-          {isPlaying && Array.from({ length: 10 }).map((_, i) => (
+          {isPlaying && visualizerActive && Array.from({ length: 20 }).map((_, i) => (
             <div
               key={i}
               className="w-0.5 bg-neon-purple rounded-full animate-wave"
               style={{
-                height: `${Math.max(3, Math.random() * 15)}px`,
-                animationDelay: `${i * 0.1}s`
+                height: `${Math.max(2, Math.random() * 12)}px`,
+                animationDelay: `${Math.random() * 0.5}s`,
+                animationDuration: `${0.5 + Math.random() * 0.5}s`
               }}
             />
           ))}

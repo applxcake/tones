@@ -28,11 +28,19 @@ const SongTile = ({ song, className }: SongTileProps) => {
       playTrack(song);
     }
   };
+
+  const handleTileClick = () => {
+    if (isCurrentTrack) {
+      togglePlayPause();
+    } else {
+      playTrack(song);
+    }
+  };
   
   return (
     <div 
       className={cn(
-        "glass-panel rounded-lg overflow-hidden relative hover-scale",
+        "glass-panel rounded-lg overflow-hidden relative hover-scale cursor-pointer",
         className
       )} 
       onMouseEnter={() => setShowOptions(true)}
@@ -41,6 +49,7 @@ const SongTile = ({ song, className }: SongTileProps) => {
           setShowOptions(false);
         }
       }}
+      onClick={handleTileClick}
     >
       <div className="aspect-square relative">
         <img 
@@ -77,6 +86,7 @@ const SongTile = ({ song, className }: SongTileProps) => {
               setOptionsActive(false);
               setShowOptions(false);
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <SongOptionsMenu 
               song={song} 

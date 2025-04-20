@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { YouTubeVideo, YouTubeVideoBasic } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
@@ -35,6 +34,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [queue, setQueue] = useState<YouTubeVideo[]>([]);
   const [likedSongs, setLikedSongs] = useState<YouTubeVideoBasic[]>([]);
   const playerRef = useRef<YT.Player | null>(null);
+  const [playerReady, setPlayerReady] = useState(false);
   
   useEffect(() => {
     // Load YouTube iframe API
@@ -54,6 +54,20 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           disablekb: 1,
         },
         events: {
+          onReady: (event) => {
+            setPlayerReady(true);
+            console.log("YouTube player is ready");
+            // If a track is already set when player becomes ready, load it
+            if (currentTrack) {
+              event.target.loadVideoById(currentTrack.id);
+              if (isPlaying) {
+                event.target.playVideo();
+              } else {
+                event.target.pauseVideo();
+              }
+              event.target.setVolume(volume * 100);
+            }
+          },
           onStateChange: (event) => {
             if (event.data === window.YT.PlayerState.ENDED) {
               nextTrack();
@@ -76,21 +90,29 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   useEffect(() => {
-    if (currentTrack && playerRef.current) {
-      playerRef.current.loadVideoById(currentTrack.id);
-      if (isPlaying) {
-        playerRef.current.playVideo();
-      } else {
-        playerRef.current.pauseVideo();
+    if (currentTrack && playerRef.current && playerReady) {
+      try {
+        playerRef.current.loadVideoById(currentTrack.id);
+        if (isPlaying) {
+          playerRef.current.playVideo();
+        } else {
+          playerRef.current.pauseVideo();
+        }
+      } catch (error) {
+        console.error('Error loading video:', error);
       }
     }
-  }, [currentTrack, isPlaying]);
+  }, [currentTrack, isPlaying, playerReady]);
 
   useEffect(() => {
-    if (playerRef.current) {
-      playerRef.current.setVolume(volume * 100);
+    if (playerRef.current && playerReady) {
+      try {
+        playerRef.current.setVolume(volume * 100);
+      } catch (error) {
+        console.error('Error setting volume:', error);
+      }
     }
-  }, [volume]);
+  }, [volume, playerReady]);
 
   useEffect(() => {
     const fetchLikedSongs = async () => {
@@ -236,13 +258,17 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const togglePlayPause = () => {
-    if (playerRef.current) {
-      if (isPlaying) {
-        playerRef.current.pauseVideo();
-      } else {
-        playerRef.current.playVideo();
+    if (playerRef.current && playerReady) {
+      try {
+        if (isPlaying) {
+          playerRef.current.pauseVideo();
+        } else {
+          playerRef.current.playVideo();
+        }
+        setIsPlaying(!isPlaying);
+      } catch (error) {
+        console.error('Error toggling play/pause:', error);
       }
-      setIsPlaying(!isPlaying);
     }
   };
 

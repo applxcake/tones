@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ListMusic, Plus, MoreVertical, Trash, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,31 +20,76 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { getUserPlaylists, createPlaylist, deletePlaylist } from '@/services/playlistService';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Playlists = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [playlistName, setPlaylistName] = useState('');
   const [playlistDescription, setPlaylistDescription] = useState('');
+  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { user } = useAuth();
   
-  const playlists = getUserPlaylists();
+  useEffect(() => {
+    const fetchPlaylists = async () => {
+      if (user) {
+        setLoading(true);
+        try {
+          const userPlaylists = await getUserPlaylists(user.id);
+          setPlaylists(userPlaylists || []);
+        } catch (error) {
+          console.error('Error fetching playlists:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    
+    fetchPlaylists();
+  }, [user]);
 
-  const handleCreatePlaylist = () => {
-    if (playlistName.trim()) {
-      createPlaylist(playlistName.trim(), playlistDescription.trim());
+  const handleCreatePlaylist = async () => {
+    if (playlistName.trim() && user) {
+      const newPlaylist = await createPlaylist(playlistName.trim(), playlistDescription.trim(), user.id);
+      if (newPlaylist) {
+        setPlaylists(prev => [...prev, newPlaylist]);
+      }
       setDialogOpen(false);
       setPlaylistName('');
       setPlaylistDescription('');
     }
   };
 
-  const handleDeletePlaylist = (id: string) => {
-    deletePlaylist(id);
+  const handleDeletePlaylist = async (id: string) => {
+    const success = await deletePlaylist(id);
+    if (success) {
+      setPlaylists(prev => prev.filter(playlist => playlist.id !== id));
+    }
   };
 
   const viewPlaylist = (id: string) => {
     navigate(`/playlists/${id}`);
   };
+
+  if (loading) {
+    return (
+      <div className="pt-6 pb-24 animate-slide-in">
+        <h1 className="text-3xl font-bold mb-8">Your Playlists</h1>
+        <div className="flex justify-center py-12">
+          <div className="flex gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div 
+                key={i}
+                className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-6 pb-24 animate-slide-in">

@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import AppSidebar from '@/components/AppSidebar';
@@ -8,7 +8,16 @@ import MobileNav from '@/components/MobileNav';
 import { Button } from '@/components/ui/button';
 
 const Layout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    // Check localStorage for saved preference
+    const saved = localStorage.getItem('sidebar-open');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  // Save sidebar state to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('sidebar-open', JSON.stringify(sidebarOpen));
+  }, [sidebarOpen]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">

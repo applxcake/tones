@@ -1,9 +1,10 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MoreVertical, ListPlus, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { getUserPlaylists, addSongToPlaylist } from '@/services/playlistService';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,16 +25,52 @@ interface SongOptionsMenuProps {
 
 const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
   const { addToQueue, toggleLike, isLiked } = usePlayer();
-  const playlists = getUserPlaylists();
-  const [liked, setLiked] = useState(isLiked(song.id));
+  const { user } = useAuth();
+  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [liked, setLiked] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleLike = () => {
-    const isLikedNow = toggleLike(song);
-    setLiked(isLikedNow);
+  // Check if song is liked when component mounts
+  useEffect(() => {
+    setLiked(isLiked(song.id));
+  }, [song.id, isLiked]);
+
+  // Fetch user playlists when component mounts
+  useEffect(() => {
+    const fetchPlaylists = async () => {
+      if (user) {
+        try {
+          setLoading(true);
+          const userPlaylists = await getUserPlaylists(user.id);
+          setPlaylists(userPlaylists || []);
+        } catch (error) {
+          console.error('Error fetching playlists:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    
+    fetchPlaylists();
+  }, [user]);
+
+  const handleLike = async () => {
+    try {
+      const isLikedNow = await toggleLike(song);
+      setLiked(isLikedNow);
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
   };
 
-  const handleAddToPlaylist = (playlistId: string) => {
-    addSongToPlaylist(playlistId, song);
+  const handleAddToPlaylist = async (playlistId: string) => {
+    if (user) {
+      try {
+        await addSongToPlaylist(playlistId, song, user.id);
+      } catch (error) {
+        console.error('Error adding song to playlist:', error);
+      }
+    }
   };
 
   return (
@@ -66,7 +103,11 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
             Add to Playlist
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            {playlists.length > 0 ? (
+            {loading ? (
+              <DropdownMenuLabel className="text-sm text-muted-foreground">
+                Loading playlists...
+              </DropdownMenuLabel>
+            ) : playlists.length > 0 ? (
               playlists.map((playlist) => (
                 <DropdownMenuItem 
                   key={playlist.id}

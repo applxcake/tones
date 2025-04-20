@@ -1,21 +1,100 @@
 
-import { SpotifyTrack, SpotifyTrackBasic, searchTracks as spotifySearchTracks, getTrendingByGenre } from './spotifyService';
+import axios from 'axios';
 
-// Rename YouTubeVideo to SpotifyTrack to maintain compatibility
-export interface YouTubeVideo extends SpotifyTrack {}
+const API_KEY = 'AIzaSyDw396jNgBIcbQljAB-C0EHBtHw6OLdy3A';
+const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
-// Use SpotifyTrackBasic for the YouTubeVideoBasic type but ensure publishedAt is required
-export interface YouTubeVideoBasic extends Omit<SpotifyTrackBasic, 'publishedAt'> {
-  publishedAt: string;  // Make publishedAt required to match YouTubeVideo
+export interface YouTubeVideo {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+  publishedAt: string;
+  channelTitle: string;
 }
 
-// Export searchVideos function that wraps searchTracks from spotifyService
-export const searchVideos = spotifySearchTracks;
+export interface YouTubeVideoBasic {
+  id: string;
+  title: string;
+  thumbnail: string;
+  publishedAt: string;
+}
 
-// Re-export functions from spotifyService
-export { searchTracks, getTrendingMusic, getNewReleases, getRecommendations } from './spotifyService';
+export const searchVideos = async (query: string): Promise<YouTubeVideo[]> => {
+  try {
+    const response = await axios.get(`${BASE_URL}/search`, {
+      params: {
+        part: 'snippet',
+        maxResults: 20,
+        q: query,
+        type: 'video',
+        key: API_KEY
+      }
+    });
 
-// Function to get trending music by genre
-export const getTrendingMusicByGenre = (genre: string) => {
-  return getTrendingByGenre(genre);
+    return response.data.items.map((item: any) => ({
+      id: item.id.videoId,
+      title: item.snippet.title,
+      description: item.snippet.description,
+      thumbnail: item.snippet.thumbnails.medium.url,
+      publishedAt: item.snippet.publishedAt,
+      channelTitle: item.snippet.channelTitle
+    }));
+  } catch (error) {
+    console.error('Error searching videos:', error);
+    throw new Error('Failed to search videos');
+  }
 };
+
+export const getTrendingMusic = async (): Promise<YouTubeVideo[]> => {
+  try {
+    const response = await axios.get(`${BASE_URL}/videos`, {
+      params: {
+        part: 'snippet',
+        chart: 'mostPopular',
+        videoCategoryId: '10', // Music category
+        maxResults: 20,
+        key: API_KEY
+      }
+    });
+
+    return response.data.items.map((item: any) => ({
+      id: item.id,
+      title: item.snippet.title,
+      description: item.snippet.description,
+      thumbnail: item.snippet.thumbnails.medium.url,
+      publishedAt: item.snippet.publishedAt,
+      channelTitle: item.snippet.channelTitle
+    }));
+  } catch (error) {
+    console.error('Error fetching trending music:', error);
+    throw new Error('Failed to get trending music');
+  }
+};
+
+export const getRecommendations = async (videoId: string): Promise<YouTubeVideo[]> => {
+  try {
+    const response = await axios.get(`${BASE_URL}/search`, {
+      params: {
+        part: 'snippet',
+        relatedToVideoId: videoId,
+        type: 'video',
+        maxResults: 20,
+        key: API_KEY
+      }
+    });
+
+    return response.data.items.map((item: any) => ({
+      id: item.id.videoId,
+      title: item.snippet.title,
+      description: item.snippet.description,
+      thumbnail: item.snippet.thumbnails.medium.url,
+      publishedAt: item.snippet.publishedAt,
+      channelTitle: item.snippet.channelTitle
+    }));
+  } catch (error) {
+    console.error('Error fetching recommendations:', error);
+    throw new Error('Failed to get recommendations');
+  }
+};
+

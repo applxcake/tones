@@ -25,7 +25,7 @@ import {
 const PlaylistDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { playTrack, addToQueue } = usePlayer();
+  const { playTrack, addToQueue, isPlaying, currentTrack, togglePlayPause } = usePlayer();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [playlist, setPlaylist] = useState(getPlaylistById(id || ''));
   

@@ -21,6 +21,14 @@ const UserProfile = () => {
     }
   }, [user, navigate]);
 
+  // Refresh user data when followings change
+  useEffect(() => {
+    if (id) {
+      setUser(getUserById(id));
+      setIsFollowing(currentUser?.following.includes(id) || false);
+    }
+  }, [id, currentUser?.following]);
+
   if (!user) {
     return null;
   }
@@ -33,6 +41,8 @@ const UserProfile = () => {
       followUser(user.id);
       setIsFollowing(true);
     }
+    // Refresh user data
+    setUser(getUserById(user.id));
   };
 
   return (

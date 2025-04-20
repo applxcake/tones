@@ -1,261 +1,167 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { ArrowLeft, User, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useNavigate } from 'react-router-dom';
 import { getCurrentUser, updateUserProfile } from '@/services/userService';
-import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/components/ui/use-toast';
 
 const Settings = () => {
+  const navigate = useNavigate();
   const currentUser = getCurrentUser();
-  const { user } = useAuth();
   
   const [formData, setFormData] = useState({
     username: currentUser?.username || '',
+    email: currentUser?.email || '',
     bio: currentUser?.bio || '',
-    email: user?.email || '',
+    avatar: currentUser?.avatar || '',
   });
-
-  const [preferences, setPreferences] = useState({
-    theme: 'dark',
-    autoplay: true,
-    notifications: true,
-    quality: 'high',
-  });
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
-
-  const handlePreferenceChange = (key: string, value: any) => {
-    setPreferences({ ...preferences, [key]: value });
-  };
-
-  const handleProfileSave = () => {
-    updateUserProfile({
-      username: formData.username,
-      bio: formData.bio,
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateUserProfile(formData);
+    toast({
+      title: "Settings saved",
+      description: "Your profile has been updated successfully.",
     });
   };
-
-  const handlePreferencesSave = () => {
-    // In a real app, save these to user preferences
-    // For now just show a toast via the updateUserProfile method
-    updateUserProfile({});
-  };
-
+  
   return (
     <div className="pt-6 pb-24 animate-slide-in">
-      <h1 className="text-3xl font-bold mb-8">Settings</h1>
+      <Button 
+        variant="ghost" 
+        className="flex items-center mb-6"
+        onClick={() => navigate(-1)}
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back
+      </Button>
       
-      <Tabs defaultValue="account" className="w-full">
-        <TabsList className="mb-8">
-          <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
-          <TabsTrigger value="privacy">Privacy</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="account" className="space-y-6">
-          <div className="glass-panel rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-6">Profile Information</h2>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Settings</h1>
+      </div>
+      
+      <div className="glass-panel rounded-lg p-6 max-w-2xl mx-auto">
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="md:w-1/3 flex justify-center">
+                <div className="relative">
+                  <div className="w-32 h-32 rounded-full glass-panel flex items-center justify-center overflow-hidden">
+                    {formData.avatar ? (
+                      <img src={formData.avatar} alt={formData.username} className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-16 h-16 text-white/70" />
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="md:w-2/3 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input 
+                    id="username"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input 
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="avatar">Avatar URL</Label>
+                  <Input 
+                    id="avatar"
+                    name="avatar"
+                    type="url"
+                    placeholder="https://example.com/avatar.jpg"
+                    value={formData.avatar}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+            </div>
             
-            <div className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="username">Username</Label>
-                <Input 
-                  id="username" 
-                  name="username"
-                  value={formData.username} 
-                  onChange={handleInputChange}
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  name="email"
-                  value={formData.email} 
-                  onChange={handleInputChange}
-                  readOnly
-                />
-                <p className="text-xs text-muted-foreground">
-                  Email cannot be changed. Contact support for assistance.
-                </p>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea 
-                  id="bio" 
-                  name="bio"
-                  value={formData.bio} 
-                  onChange={handleInputChange}
-                  placeholder="Tell others about yourself..."
-                  rows={4}
-                />
-              </div>
-
-              <Button onClick={handleProfileSave}>
+            <div className="space-y-2">
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea 
+                id="bio"
+                name="bio"
+                placeholder="Tell us about yourself"
+                value={formData.bio}
+                onChange={handleChange}
+                rows={4}
+              />
+            </div>
+            
+            <div className="pt-4">
+              <Button type="submit" className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
                 Save Changes
               </Button>
             </div>
           </div>
-
-          <div className="glass-panel rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-6 text-red-500">Danger Zone</h2>
-            
-            <div className="space-y-4">
-              <Button 
-                variant="destructive" 
-                className="w-full sm:w-auto"
-              >
-                Delete Account
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                This action is irreversible. All your data will be permanently deleted.
-              </p>
-            </div>
-          </div>
-        </TabsContent>
+        </form>
+      </div>
+      
+      <div className="mt-8 glass-panel rounded-lg p-6 max-w-2xl mx-auto">
+        <h2 className="text-xl font-semibold mb-4">Preferences</h2>
         
-        <TabsContent value="preferences" className="space-y-6">
-          <div className="glass-panel rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-6">App Preferences</h2>
-            
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Theme</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Choose your preferred theme
-                  </p>
-                </div>
-                <Select 
-                  value={preferences.theme} 
-                  onValueChange={(value) => handlePreferenceChange('theme', value)}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Select theme" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dark">Dark</SelectItem>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="system">System</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Autoplay</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Automatically play songs when selected
-                  </p>
-                </div>
-                <Switch 
-                  checked={preferences.autoplay}
-                  onCheckedChange={(checked) => handlePreferenceChange('autoplay', checked)}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Notifications</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Receive notifications about new followers and comments
-                  </p>
-                </div>
-                <Switch 
-                  checked={preferences.notifications}
-                  onCheckedChange={(checked) => handlePreferenceChange('notifications', checked)}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Streaming Quality</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Select your preferred audio quality
-                  </p>
-                </div>
-                <Select 
-                  value={preferences.quality} 
-                  onValueChange={(value) => handlePreferenceChange('quality', value)}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Select quality" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <Button onClick={handlePreferencesSave}>
-                Save Preferences
-              </Button>
-            </div>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="language">Language</Label>
+            <select 
+              id="language"
+              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+            </select>
           </div>
-        </TabsContent>
+          
+          <div className="space-y-2">
+            <Label htmlFor="theme">Theme</Label>
+            <select 
+              id="theme"
+              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="dark">Dark (Default)</option>
+              <option value="light">Light</option>
+              <option value="system">System Preference</option>
+            </select>
+          </div>
+        </div>
         
-        <TabsContent value="privacy" className="space-y-6">
-          <div className="glass-panel rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-6">Privacy Settings</h2>
-            
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Profile Visibility</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Who can see your profile
-                  </p>
-                </div>
-                <Select defaultValue="public">
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="public">Public</SelectItem>
-                    <SelectItem value="followers">Followers Only</SelectItem>
-                    <SelectItem value="private">Private</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Playlist Visibility</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Who can see your playlists
-                  </p>
-                </div>
-                <Select defaultValue="public">
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="public">Public</SelectItem>
-                    <SelectItem value="followers">Followers Only</SelectItem>
-                    <SelectItem value="private">Private</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <Button>
-                Save Privacy Settings
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+        <div className="pt-4">
+          <Button variant="outline" className="w-full">
+            Save Preferences
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };

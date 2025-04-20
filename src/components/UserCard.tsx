@@ -35,12 +35,14 @@ const UserCard = ({ user }: UserCardProps) => {
   return (
     <div className="glass-panel rounded-lg p-4 hover-scale">
       <div className="flex items-center gap-4">
-        <Avatar className="h-12 w-12">
-          <AvatarImage src={user.avatar} alt={user.username} />
-          <AvatarFallback>
-            <UserIcon className="h-6 w-6" />
-          </AvatarFallback>
-        </Avatar>
+        <Link to={`/users/${user.id}`}>
+          <Avatar className="h-12 w-12 cursor-pointer hover:neon-glow-blue">
+            <AvatarImage src={user.avatar} alt={user.username} />
+            <AvatarFallback>
+              <UserIcon className="h-6 w-6" />
+            </AvatarFallback>
+          </Avatar>
+        </Link>
         
         <div className="flex-1 min-w-0">
           <Link 

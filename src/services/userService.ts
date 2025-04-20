@@ -10,6 +10,7 @@ export interface User {
   followers: string[];
   following: string[];
   createdAt: string;
+  likedSongs?: string[];
 }
 
 // Mock users data - in a real app, this would be in a database
@@ -23,6 +24,7 @@ let users: User[] = [
     followers: ['user2', 'user3'],
     following: ['user2'],
     createdAt: new Date().toISOString(),
+    likedSongs: [],
   },
   {
     id: 'user2',
@@ -32,6 +34,7 @@ let users: User[] = [
     followers: ['current-user'],
     following: ['current-user', 'user3'],
     createdAt: new Date().toISOString(),
+    likedSongs: [],
   },
   {
     id: 'user3',
@@ -41,6 +44,7 @@ let users: User[] = [
     followers: ['current-user'],
     following: [],
     createdAt: new Date().toISOString(),
+    likedSongs: [],
   },
   {
     id: 'user4',
@@ -50,6 +54,7 @@ let users: User[] = [
     followers: [],
     following: [],
     createdAt: new Date().toISOString(),
+    likedSongs: [],
   },
 ];
 
@@ -172,8 +177,10 @@ export const searchUsers = (query: string) => {
   
   const normalizedQuery = query.toLowerCase();
   return users.filter(user => 
-    user.username.toLowerCase().includes(normalizedQuery) || 
-    (user.bio && user.bio.toLowerCase().includes(normalizedQuery))
+    user.id !== 'current-user' && (
+      user.username.toLowerCase().includes(normalizedQuery) || 
+      (user.bio && user.bio.toLowerCase().includes(normalizedQuery))
+    )
   );
 };
 

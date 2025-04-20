@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Play, Pause, SkipBack, SkipForward, Volume2, Volume1, VolumeX, 
   Heart, ListPlus
@@ -19,19 +19,26 @@ const MusicPlayer = () => {
     nextTrack, 
     prevTrack,
     setVolume,
-    addToQueue
+    addToQueue,
+    toggleLike,
+    isLiked,
   } = usePlayer();
   
-  const [liked, setLiked] = useState(false);
-
-  const handleLike = () => {
-    setLiked(!liked);
-  };
-
   // Show nothing if no track is selected
   if (!currentTrack) {
     return null;
   }
+  
+  // Format time (seconds to MM:SS)
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+  };
+  
+  // Calculate current time based on progress percentage
+  const duration = 240; // Default to 4 minutes if actual duration unknown
+  const currentTime = progress * duration / 100;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-black/60 backdrop-blur-lg glass-panel border-t border-white/10 z-50 h-20">
@@ -85,14 +92,14 @@ const MusicPlayer = () => {
           </div>
 
           <div className="w-full max-w-md mt-1 px-4 flex items-center gap-2">
-            <span className="text-xs text-gray-400">0:00</span>
+            <span className="text-xs text-gray-400">{formatTime(currentTime)}</span>
             <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-neon-purple rounded-full"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-xs text-gray-400">3:45</span>
+            <span className="text-xs text-gray-400">{formatTime(duration)}</span>
           </div>
         </div>
 
@@ -102,11 +109,11 @@ const MusicPlayer = () => {
             variant="ghost" 
             className={cn(
               "text-gray-400 hover:text-white transition-all", 
-              liked && "text-neon-pink neon-glow-pink"
+              isLiked(currentTrack.id) && "text-neon-pink neon-glow-pink"
             )}
-            onClick={handleLike}
+            onClick={() => toggleLike(currentTrack)}
           >
-            <Heart className={cn("h-5 w-5", liked && "fill-neon-pink")} />
+            <Heart className={cn("h-5 w-5", isLiked(currentTrack.id) && "fill-neon-pink")} />
           </Button>
           
           <Button 

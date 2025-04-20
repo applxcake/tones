@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { Home, Search, ListMusic, User, Disc3, LogOut, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +8,11 @@ import { Button } from '@/components/ui/button';
 
 const AppSidebar = () => {
   const { isAuthenticated, user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSearch = () => {
+    navigate('/search');
+  };
 
   return (
     <div className="h-screen w-64 bg-sidebar fixed left-0 top-0 z-30 glass-panel">
@@ -19,6 +24,15 @@ const AppSidebar = () => {
           </h1>
         </div>
         <p className="text-sm text-gray-400 mb-8">Music made free!</p>
+        
+        <Button 
+          variant="outline" 
+          className="w-full flex items-center justify-start gap-2 mb-4"
+          onClick={handleSearch}
+        >
+          <Search className="h-4 w-4" />
+          Search...
+        </Button>
         
         <nav className="space-y-1">
           <SidebarNavItem to="/" icon={<Home className="h-5 w-5" />} label="Home" />

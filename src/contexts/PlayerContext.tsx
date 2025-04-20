@@ -257,6 +257,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const prevTrackComplete: YouTubeVideo = {
         ...prevTrack,
         description: '',
+        channelTitle: prevTrack.channelTitle || 'Unknown Artist',
       };
       
       setQueue(prev => [currentTrack, ...prev]);

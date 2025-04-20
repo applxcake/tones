@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { YouTubeVideo, YouTubeVideoBasic } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
@@ -44,7 +45,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Initialize YouTube player when API is ready
     window.onYouTubeIframeAPIReady = () => {
-      playerRef.current = new YT.Player('youtube-player', {
+      playerRef.current = new window.YT.Player('youtube-player', {
         height: '0',
         width: '0',
         playerVars: {
@@ -54,10 +55,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         },
         events: {
           onStateChange: (event) => {
-            if (event.data === YT.PlayerState.ENDED) {
+            if (event.data === window.YT.PlayerState.ENDED) {
               nextTrack();
             }
-            setIsPlaying(event.data === YT.PlayerState.PLAYING);
+            setIsPlaying(event.data === window.YT.PlayerState.PLAYING);
           },
           onError: (event) => {
             console.error('YouTube player error:', event);

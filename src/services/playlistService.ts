@@ -1,4 +1,3 @@
-
 import { toast } from '@/components/ui/use-toast';
 import { YouTubeVideo, YouTubeVideoBasic } from './youtubeService';
 import { supabase } from '@/integrations/supabase/client';
@@ -132,7 +131,7 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
         .insert([{
           id: song.id,
           title: song.title,
-          thumbnail_url: song.thumbnailUrl,
+          thumbnail_url: song.thumbnail,
           channel_title: song.channelTitle,
         }]);
         

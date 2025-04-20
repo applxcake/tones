@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { YouTubeVideo, YouTubeVideoBasic } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
@@ -36,7 +35,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [likedSongs, setLikedSongs] = useState<YouTubeVideoBasic[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  // Effect to initialize audio element
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
@@ -83,7 +81,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const songs = data?.map(item => ({
           id: item.songs.id,
           title: item.songs.title,
-          thumbnailUrl: item.songs.thumbnail_url || '',
+          thumbnail: item.songs.thumbnail_url || '',
           channelTitle: item.songs.channel_title || 'Unknown',
           publishedAt: new Date().toISOString() // Default publishedAt
         })) || [];
@@ -117,7 +115,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const songs = data?.map(item => ({
           id: item.songs.id,
           title: item.songs.title,
-          thumbnailUrl: item.songs.thumbnail_url || '',
+          thumbnail: item.songs.thumbnail_url || '',
           channelTitle: item.songs.channel_title || 'Unknown',
           publishedAt: new Date().toISOString() // Default publishedAt
         })) || [];
@@ -131,15 +129,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     fetchRecentlyPlayed();
   }, [user]);
   
-  // Effect to handle play/pause state
   useEffect(() => {
     if (currentTrack) {
       if (isPlaying && audioRef.current) {
-        // Use a Spotify preview URL (limited but available)
-        // In a real app, you'd use the actual streaming service
         const audioUrl = `https://open.spotify.com/embed/track/${currentTrack.id}`;
         
-        // Play audio if available
         if (audioRef.current.src !== audioUrl) {
           audioRef.current.src = audioUrl;
         }
@@ -151,7 +145,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             description: "Preview not available. Spotify API limitations apply.",
             variant: "destructive"
           });
-          // Skip to next track if playback fails
           nextTrack();
         });
       } else if (audioRef.current) {
@@ -160,7 +153,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [currentTrack, isPlaying]);
   
-  // Effect to handle volume changes
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
@@ -168,29 +160,25 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [volume]);
 
   const playTrack = async (track: YouTubeVideo) => {
-    // Save currently playing track to recently played
     if (currentTrack && user?.id) {
       try {
-        // Check if track exists in songs table
         const { data: existingSong } = await supabase
           .from('songs')
           .select('*')
           .eq('id', currentTrack.id)
           .single();
         
-        // Add track to songs table if it doesn't exist
         if (!existingSong) {
           await supabase
             .from('songs')
             .insert([{
               id: currentTrack.id,
               title: currentTrack.title,
-              thumbnail_url: currentTrack.thumbnailUrl,
+              thumbnail_url: currentTrack.thumbnail,
               channel_title: currentTrack.channelTitle,
             }]);
         }
         
-        // Update recently_played table
         await supabase
           .from('recently_played')
           .upsert(
@@ -205,12 +193,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }
           );
           
-        // Update recently played state
         const updatedRecently = [
           {
             id: currentTrack.id,
             title: currentTrack.title,
-            thumbnailUrl: currentTrack.thumbnailUrl,
+            thumbnail: currentTrack.thumbnail,
             channelTitle: currentTrack.channelTitle,
             publishedAt: currentTrack.publishedAt
           },
@@ -223,7 +210,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     }
     
-    // Add new track to songs table if needed
     if (user?.id) {
       try {
         const { data: existingSong } = await supabase
@@ -238,7 +224,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             .insert([{
               id: track.id,
               title: track.title,
-              thumbnail_url: track.thumbnailUrl,
+              thumbnail_url: track.thumbnail,
               channel_title: track.channelTitle,
             }]);
         }
@@ -247,7 +233,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     }
     
-    // Play the new track
     setCurrentTrack(track);
     setIsPlaying(true);
   };
@@ -268,20 +253,15 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const prevTrack = () => {
     if (recentlyPlayed.length > 0 && currentTrack) {
-      // Get the most recent track from history
-      const prevTrack = {
-        ...recentlyPlayed[0],
-        publishedAt: recentlyPlayed[0].publishedAt || new Date().toISOString()
+      const prevTrack = recentlyPlayed[0];
+      const prevTrackComplete: YouTubeVideo = {
+        ...prevTrack,
+        description: '',
       };
       
-      // Add current track to the beginning of the queue
       setQueue(prev => [currentTrack, ...prev]);
-      
-      // Play previous track
-      setCurrentTrack(prevTrack);
+      setCurrentTrack(prevTrackComplete);
       setIsPlaying(true);
-      
-      // Remove it from recently played
       setRecentlyPlayed(prev => prev.slice(1));
     }
   };
@@ -311,27 +291,24 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const isCurrentlyLiked = likedSongs.some(song => song.id === track.id);
     
     try {
-      // Check if song exists in songs table
       const { data: existingSong } = await supabase
         .from('songs')
         .select('*')
         .eq('id', track.id)
         .single();
       
-      // Add song if it doesn't exist
       if (!existingSong) {
         await supabase
           .from('songs')
           .insert([{
             id: track.id,
             title: track.title,
-            thumbnail_url: track.thumbnailUrl,
+            thumbnail_url: track.thumbnail,
             channel_title: track.channelTitle,
           }]);
       }
       
       if (isCurrentlyLiked) {
-        // Remove from liked_songs table
         const { error } = await supabase
           .from('liked_songs')
           .delete()
@@ -340,16 +317,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           
         if (error) throw error;
         
-        // Remove from liked songs state
         setLikedSongs(prev => prev.filter(song => song.id !== track.id));
         
-        toast({
-          title: "Removed from Liked Songs",
-          description: `"${track.title}" removed from your liked songs.`,
-        });
         return false;
       } else {
-        // Add to liked_songs table
         const { error } = await supabase
           .from('liked_songs')
           .insert([{
@@ -359,21 +330,16 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           
         if (error) throw error;
         
-        // Add to liked songs state
         const newLikedSong = {
           id: track.id,
           title: track.title,
-          thumbnailUrl: track.thumbnailUrl,
+          thumbnail: track.thumbnail,
           channelTitle: track.channelTitle,
           publishedAt: track.publishedAt
         };
         
         setLikedSongs(prev => [...prev, newLikedSong]);
         
-        toast({
-          title: "Added to Liked Songs",
-          description: `"${track.title}" added to your liked songs.`,
-        });
         return true;
       }
     } catch (error) {

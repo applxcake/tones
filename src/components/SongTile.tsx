@@ -39,7 +39,7 @@ const SongTile = ({ song, className }: SongTileProps) => {
     >
       <div className="aspect-square relative">
         <img 
-          src={song.thumbnailUrl} 
+          src={song.thumbnail} 
           alt={song.title}
           className="w-full h-full object-cover"
           loading="lazy"

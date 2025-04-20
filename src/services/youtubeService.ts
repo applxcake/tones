@@ -9,6 +9,7 @@ export interface YouTubeVideo {
   title: string;
   description: string;
   thumbnail: string;
+  thumbnailUrl?: string; // Add this for backward compatibility
   publishedAt: string;
   channelTitle: string;
 }
@@ -17,7 +18,9 @@ export interface YouTubeVideoBasic {
   id: string;
   title: string;
   thumbnail: string;
+  thumbnailUrl?: string; // Add this for backward compatibility
   publishedAt: string;
+  channelTitle?: string;
 }
 
 export const searchVideos = async (query: string): Promise<YouTubeVideo[]> => {
@@ -37,6 +40,7 @@ export const searchVideos = async (query: string): Promise<YouTubeVideo[]> => {
       title: item.snippet.title,
       description: item.snippet.description,
       thumbnail: item.snippet.thumbnails.medium.url,
+      thumbnailUrl: item.snippet.thumbnails.medium.url, // Add this for backward compatibility
       publishedAt: item.snippet.publishedAt,
       channelTitle: item.snippet.channelTitle
     }));
@@ -63,6 +67,7 @@ export const getTrendingMusic = async (): Promise<YouTubeVideo[]> => {
       title: item.snippet.title,
       description: item.snippet.description,
       thumbnail: item.snippet.thumbnails.medium.url,
+      thumbnailUrl: item.snippet.thumbnails.medium.url, // Add this for backward compatibility
       publishedAt: item.snippet.publishedAt,
       channelTitle: item.snippet.channelTitle
     }));
@@ -89,6 +94,7 @@ export const getRecommendations = async (videoId: string): Promise<YouTubeVideo[
       title: item.snippet.title,
       description: item.snippet.description,
       thumbnail: item.snippet.thumbnails.medium.url,
+      thumbnailUrl: item.snippet.thumbnails.medium.url, // Add this for backward compatibility
       publishedAt: item.snippet.publishedAt,
       channelTitle: item.snippet.channelTitle
     }));
@@ -98,3 +104,31 @@ export const getRecommendations = async (videoId: string): Promise<YouTubeVideo[
   }
 };
 
+// Add the getTrendingMusicByGenre function since it's missing but used in GenreExplore.tsx
+export const getTrendingMusicByGenre = async (genre: string): Promise<YouTubeVideo[]> => {
+  try {
+    const response = await axios.get(`${BASE_URL}/search`, {
+      params: {
+        part: 'snippet',
+        q: `${genre} music`,
+        type: 'video',
+        videoCategoryId: '10', // Music category
+        maxResults: 20,
+        key: API_KEY
+      }
+    });
+
+    return response.data.items.map((item: any) => ({
+      id: item.id.videoId,
+      title: item.snippet.title,
+      description: item.snippet.description,
+      thumbnail: item.snippet.thumbnails.medium.url,
+      thumbnailUrl: item.snippet.thumbnails.medium.url, // Add this for backward compatibility
+      publishedAt: item.snippet.publishedAt,
+      channelTitle: item.snippet.channelTitle
+    }));
+  } catch (error) {
+    console.error(`Error fetching ${genre} music:`, error);
+    throw new Error(`Failed to get ${genre} music`);
+  }
+};

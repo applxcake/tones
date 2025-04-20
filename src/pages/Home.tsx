@@ -12,9 +12,10 @@ const Home = () => {
   const navigate = useNavigate();
   const { recentlyPlayed } = usePlayer();
 
+  // Update the React Query implementation to use the correct syntax
   const { data: trendingMusic, isLoading, isError } = useQuery({
     queryKey: ['trendingMusic'],
-    queryFn: getTrendingMusic,
+    queryFn: () => getTrendingMusic(),
   });
 
   const handleSearch = (query: string) => {
@@ -58,8 +59,9 @@ const Home = () => {
       {/* Recently Played */}
       {recentlyPlayed.length > 0 && (
         <ScrollableRow title="Recently Played">
+          {/* Type cast recentlyPlayed items to YouTubeVideo to satisfy type requirements */}
           {recentlyPlayed.map((song) => (
-            <SongTile key={song.id} song={song} className="w-48" />
+            <SongTile key={song.id} song={song as any} className="w-48" />
           ))}
         </ScrollableRow>
       )}

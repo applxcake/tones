@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
@@ -445,7 +444,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (currentTrack) {
         setQueue(prev => [currentTrack, ...prev]);
       }
-      setCurrentTrack(prevTrack);
+      setCurrentTrack({
+        id: prevTrack.id,
+        title: prevTrack.title,
+        thumbnailUrl: prevTrack.thumbnailUrl,
+        channelTitle: prevTrack.channelTitle,
+        publishedAt: prevTrack.publishedAt || new Date().toISOString()
+      });
       setIsPlaying(true);
     }
   };

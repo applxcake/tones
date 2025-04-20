@@ -14,7 +14,7 @@ export interface YouTubeVideoBasic {
   title: string;
   thumbnailUrl: string;
   channelTitle: string;
-  publishedAt: string;
+  publishedAt: string; // Changed from optional to required to match YouTubeVideo
 }
 
 // YouTube API key - NOTE: In production, this should be stored in environment variables
@@ -88,6 +88,46 @@ export const searchYouTubeVideos = async (query: string, maxResults = 20): Promi
   } catch (error) {
     console.error('Error searching YouTube videos:', error);
     return [];
+  }
+};
+
+// Add the missing searchVideos function that is imported in Search.tsx
+export const searchVideos = async (query: string, pageToken?: string) => {
+  try {
+    const params = new URLSearchParams({
+      part: 'snippet',
+      q: query,
+      type: 'video',
+      videoCategoryId: '10', // Music category
+      maxResults: '20',
+      key: YOUTUBE_API_KEY
+    });
+    
+    if (pageToken) {
+      params.append('pageToken', pageToken);
+    }
+    
+    const response = await fetch(`${YOUTUBE_API_URL}/search?${params.toString()}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to search videos');
+    }
+    
+    const data = await response.json();
+    
+    return {
+      items: data.items.map((item: any) => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        thumbnailUrl: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
+        channelTitle: item.snippet.channelTitle,
+        publishedAt: item.snippet.publishedAt
+      })),
+      nextPageToken: data.nextPageToken
+    };
+  } catch (error) {
+    console.error('Error searching videos:', error);
+    return { items: [], nextPageToken: undefined };
   }
 };
 

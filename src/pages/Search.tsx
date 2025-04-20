@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -45,8 +44,11 @@ const Search = () => {
   // Search for users when tab is 'users'
   useEffect(() => {
     if (searchQuery && activeTab === 'users') {
-      const results = searchUsers(searchQuery);
-      setUserResults(results);
+      const fetchUsers = async () => {
+        const results = await searchUsers(searchQuery);
+        setUserResults(results);
+      };
+      fetchUsers();
     }
   }, [searchQuery, activeTab]);
 

@@ -15,6 +15,7 @@ interface SongTileProps {
 const SongTile = ({ song, className }: SongTileProps) => {
   const { currentTrack, isPlaying, playTrack, togglePlayPause } = usePlayer();
   const [showOptions, setShowOptions] = useState(false);
+  const [optionsActive, setOptionsActive] = useState(false);
   
   const isCurrentTrack = currentTrack?.id === song.id;
   
@@ -35,7 +36,11 @@ const SongTile = ({ song, className }: SongTileProps) => {
         className
       )} 
       onMouseEnter={() => setShowOptions(true)}
-      onMouseLeave={() => setShowOptions(false)}
+      onMouseLeave={() => {
+        if (!optionsActive) {
+          setShowOptions(false);
+        }
+      }}
     >
       <div className="aspect-square relative">
         <img 
@@ -64,9 +69,19 @@ const SongTile = ({ song, className }: SongTileProps) => {
           </Button>
         </div>
         
-        {showOptions && (
-          <div className="absolute top-2 right-2 z-10">
-            <SongOptionsMenu song={song} />
+        {(showOptions || optionsActive) && (
+          <div 
+            className="absolute top-2 right-2 z-10"
+            onMouseEnter={() => setOptionsActive(true)}
+            onMouseLeave={() => {
+              setOptionsActive(false);
+              setShowOptions(false);
+            }}
+          >
+            <SongOptionsMenu 
+              song={song} 
+              onOpenChange={(open) => setOptionsActive(open)}
+            />
           </div>
         )}
       </div>

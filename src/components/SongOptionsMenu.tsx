@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { MoreVertical, ListPlus, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,9 +22,10 @@ import { YouTubeVideo } from '@/services/youtubeService';
 
 interface SongOptionsMenuProps {
   song: YouTubeVideo;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
+const SongOptionsMenu = ({ song, onOpenChange }: SongOptionsMenuProps) => {
   const { addToQueue, toggleLike, isLiked } = usePlayer();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -56,6 +58,11 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
     
     fetchPlaylists();
   }, [user, open]);
+
+  // Invoke onOpenChange when open state changes
+  useEffect(() => {
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
 
   const handleLike = async () => {
     if (!user) {

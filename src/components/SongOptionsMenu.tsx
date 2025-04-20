@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { MoreVertical, ListPlus, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -100,7 +99,11 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
         <Button 
           variant="ghost" 
           size="icon" 
-          className="h-8 w-8 p-0 hover:bg-white/10 bg-black/50 backdrop-blur-sm"
+          className={cn(
+            "h-8 w-8 p-0 bg-black/50 backdrop-blur-sm transition-all",
+            open ? "bg-white/20" : "hover:bg-white/10"
+          )}
+          style={{ opacity: open ? 1 : undefined }}
         >
           <MoreVertical className="h-4 w-4" />
         </Button>

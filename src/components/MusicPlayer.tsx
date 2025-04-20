@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Play, Pause, SkipBack, SkipForward, Volume2, Volume1, VolumeX, 
@@ -42,6 +41,7 @@ const MusicPlayer = () => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-black/60 backdrop-blur-lg glass-panel border-t border-white/10 z-50 h-20">
+      <div id="youtube-player" style={{ display: 'none' }} />
       <div className="container mx-auto h-full flex items-center justify-between px-4">
         <div className="flex items-center gap-3 w-1/4 min-w-[200px]">
           <div className="relative w-12 h-12 rounded overflow-hidden neon-border">

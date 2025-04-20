@@ -33,36 +33,64 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [recentlyPlayed, setRecentlyPlayed] = useState<YouTubeVideoBasic[]>([]);
   const [queue, setQueue] = useState<YouTubeVideo[]>([]);
   const [likedSongs, setLikedSongs] = useState<YouTubeVideoBasic[]>([]);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playerRef = useRef<YT.Player | null>(null);
   
   useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-      audioRef.current.volume = volume;
-      
-      audioRef.current.addEventListener('ended', () => {
-        nextTrack();
+    // Load YouTube iframe API
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+
+    // Initialize YouTube player when API is ready
+    window.onYouTubeIframeAPIReady = () => {
+      playerRef.current = new YT.Player('youtube-player', {
+        height: '0',
+        width: '0',
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          disablekb: 1,
+        },
+        events: {
+          onStateChange: (event) => {
+            if (event.data === YT.PlayerState.ENDED) {
+              nextTrack();
+            }
+            setIsPlaying(event.data === YT.PlayerState.PLAYING);
+          },
+          onError: (event) => {
+            console.error('YouTube player error:', event);
+            nextTrack();
+          },
+        },
       });
-      
-      audioRef.current.addEventListener('timeupdate', () => {
-        const duration = audioRef.current?.duration || 0;
-        const currentTime = audioRef.current?.currentTime || 0;
-        if (duration > 0) {
-          setProgress((currentTime / duration) * 100);
-        }
-      });
-    }
-    
+    };
+
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.removeEventListener('ended', () => {});
-        audioRef.current.removeEventListener('timeupdate', () => {});
-        audioRef.current = null;
+      if (playerRef.current) {
+        playerRef.current.destroy();
       }
     };
   }, []);
-  
+
+  useEffect(() => {
+    if (currentTrack && playerRef.current) {
+      playerRef.current.loadVideoById(currentTrack.id);
+      if (isPlaying) {
+        playerRef.current.playVideo();
+      } else {
+        playerRef.current.pauseVideo();
+      }
+    }
+  }, [currentTrack, isPlaying]);
+
+  useEffect(() => {
+    if (playerRef.current) {
+      playerRef.current.setVolume(volume * 100);
+    }
+  }, [volume]);
+
   useEffect(() => {
     const fetchLikedSongs = async () => {
       if (!user?.id) {
@@ -129,37 +157,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     fetchRecentlyPlayed();
   }, [user]);
   
-  useEffect(() => {
-    if (currentTrack) {
-      if (isPlaying && audioRef.current) {
-        const audioUrl = `https://open.spotify.com/embed/track/${currentTrack.id}`;
-        
-        if (audioRef.current.src !== audioUrl) {
-          audioRef.current.src = audioUrl;
-        }
-        
-        audioRef.current.play().catch(error => {
-          console.error('Error playing audio:', error);
-          toast({
-            title: "Playback Error",
-            description: "Preview not available. Spotify API limitations apply.",
-            variant: "destructive"
-          });
-          nextTrack();
-        });
-      } else if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    }
-  }, [currentTrack, isPlaying]);
-  
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
-  }, [volume]);
-
   const playTrack = async (track: YouTubeVideo) => {
+    setCurrentTrack(track);
+    setIsPlaying(true);
     if (currentTrack && user?.id) {
       try {
         const { data: existingSong } = await supabase
@@ -232,13 +232,17 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         console.error("Error saving song:", error);
       }
     }
-    
-    setCurrentTrack(track);
-    setIsPlaying(true);
   };
 
   const togglePlayPause = () => {
-    setIsPlaying(!isPlaying);
+    if (playerRef.current) {
+      if (isPlaying) {
+        playerRef.current.pauseVideo();
+      } else {
+        playerRef.current.playVideo();
+      }
+      setIsPlaying(!isPlaying);
+    }
   };
 
   const nextTrack = () => {

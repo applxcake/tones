@@ -39,6 +39,8 @@ function App() {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/login" element={<Auth />} /> 
+              <Route path="/signup" element={<Auth defaultTab="signup" />} />
               
               <Route element={<Layout />}>
                 <Route path="/home" element={<Home />} />

@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -9,7 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const Auth = () => {
+interface AuthProps {
+  defaultTab?: 'login' | 'signup';
+}
+
+const Auth = ({ defaultTab = 'login' }: AuthProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, signUp, isLoading } = useAuth();
@@ -18,8 +22,15 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   
-  // Determine which tab to show based on the URL
-  const defaultTab = location.pathname === '/signup' ? 'signup' : 'login';
+  // Determine which tab to show based on the URL or prop
+  const initialTab = location.pathname === '/signup' || defaultTab === 'signup' ? 'signup' : 'login';
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  // Update tab when URL changes
+  useEffect(() => {
+    const tabFromPath = location.pathname === '/signup' ? 'signup' : 'login';
+    setActiveTab(tabFromPath);
+  }, [location.pathname]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +56,7 @@ const Auth = () => {
         title: "Welcome back!",
         description: "You've been successfully logged in.",
       });
-      navigate('/');
+      navigate('/home');
     }
   };
 
@@ -60,7 +71,10 @@ const Auth = () => {
       return;
     }
 
-    const { error, data } = await signUp(email, password, username);
+    // Ensure username is provided for signup
+    const usernameToUse = username.trim() || email.split('@')[0];
+    
+    const { error, data } = await signUp(email, password, usernameToUse);
     
     if (error) {
       toast({
@@ -75,12 +89,13 @@ const Auth = () => {
       });
       // On some Supabase configurations, users might be automatically signed in
       if (data.session) {
-        navigate('/');
+        navigate('/home');
       }
     }
   };
 
   const handleTabChange = (value: string) => {
+    setActiveTab(value);
     navigate(value === 'signup' ? '/signup' : '/login');
   };
 
@@ -100,7 +115,7 @@ const Auth = () => {
           </p>
         </div>
 
-        <Tabs defaultValue={defaultTab} onValueChange={handleTabChange} className="w-full">
+        <Tabs defaultValue={activeTab} value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Login</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -154,13 +169,14 @@ const Auth = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="username">Username (optional)</Label>
+                <Label htmlFor="username">Username</Label>
                 <Input 
                   id="username" 
                   type="text" 
                   placeholder="music_lover" 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  required
                 />
               </div>
               <div className="space-y-2">

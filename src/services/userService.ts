@@ -1,4 +1,3 @@
-
 import { toast } from '@/components/ui/use-toast';
 import { executeQuery, generateId } from '@/integrations/tidb/client';
 
@@ -74,37 +73,52 @@ export const getCurrentUser = async (userId?: string) => {
 // Get all users
 export const getAllUsers = async () => {
   try {
-    // In a real app with TiDB, we'd query the users table
-    // This is simplified - we'll return mock data
-    return [
-      {
-        id: 'user2',
-        username: 'JazzMaster',
-        avatar: 'https://i.pravatar.cc/150?u=jazzmaster',
-        bio: 'Jazz enthusiast and trumpet player',
-        followers: [],
-        following: [],
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 'user3',
-        username: 'ClassicalVibes',
-        avatar: 'https://i.pravatar.cc/150?u=classical',
-        bio: 'Piano and orchestra lover',
-        followers: [],
-        following: [],
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 'user4',
-        username: 'RockStar',
-        avatar: 'https://i.pravatar.cc/150?u=rockstar',
-        bio: 'Living on the edge with rock music',
-        followers: [],
-        following: [],
-        createdAt: new Date().toISOString(),
-      },
-    ];
+    // Query all users from the database
+    const users = await executeQuery<any[]>(`SELECT * FROM users`);
+    
+    // If no users in database, return sample users
+    if (!users || users.length === 0) {
+      return [
+        {
+          id: 'user2',
+          username: 'JazzMaster',
+          avatar: 'https://i.pravatar.cc/150?u=jazzmaster',
+          bio: 'Jazz enthusiast and trumpet player',
+          followers: [],
+          following: [],
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'user3',
+          username: 'ClassicalVibes',
+          avatar: 'https://i.pravatar.cc/150?u=classical',
+          bio: 'Piano and orchestra lover',
+          followers: [],
+          following: [],
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'user4',
+          username: 'RockStar',
+          avatar: 'https://i.pravatar.cc/150?u=rockstar',
+          bio: 'Living on the edge with rock music',
+          followers: [],
+          following: [],
+          createdAt: new Date().toISOString(),
+        },
+      ];
+    }
+    
+    // Process database users
+    return users.map(user => ({
+      id: user.id,
+      username: user.username,
+      avatar: user.avatar || `https://i.pravatar.cc/150?u=${user.username}`,
+      bio: user.bio || '',
+      followers: [],  // Will be populated when needed
+      following: [], // Will be populated when needed
+      createdAt: user.created_at,
+    }));
   } catch (error) {
     console.error('Error fetching all users:', error);
     return [];
@@ -249,11 +263,29 @@ export const searchUsers = async (query: string) => {
   if (!query) return [];
   
   try {
-    // In a real app, you would query the database here
-    // For now, we'll filter the mock users
-    const allUsers = await getAllUsers();
+    // First try to search in the database
     const normalizedQuery = query.toLowerCase();
     
+    // Search in database users
+    const dbUsers = await executeQuery<any[]>(
+      `SELECT * FROM users WHERE LOWER(username) LIKE ? OR LOWER(bio) LIKE ?`,
+      [`%${normalizedQuery}%`, `%${normalizedQuery}%`]
+    );
+    
+    if (dbUsers && dbUsers.length > 0) {
+      return dbUsers.map(user => ({
+        id: user.id,
+        username: user.username,
+        avatar: user.avatar || `https://i.pravatar.cc/150?u=${user.username}`,
+        bio: user.bio || '',
+        followers: [],
+        following: [],
+        createdAt: user.created_at,
+      }));
+    }
+    
+    // Fallback to mock users if no results from database
+    const allUsers = await getAllUsers();
     return allUsers.filter(user => 
       user.username.toLowerCase().includes(normalizedQuery) || 
       (user.bio && user.bio.toLowerCase().includes(normalizedQuery))

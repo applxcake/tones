@@ -35,7 +35,7 @@ const AppSidebar = () => {
         </Button>
         
         <nav className="space-y-1">
-          <SidebarNavItem to="/" icon={<Home className="h-5 w-5" />} label="Home" />
+          <SidebarNavItem to="/home" icon={<Home className="h-5 w-5" />} label="Home" />
           <SidebarNavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
           <SidebarNavItem to="/playlists" icon={<ListMusic className="h-5 w-5" />} label="Playlists" />
           <SidebarNavItem to="/explore" icon={<Users className="h-5 w-5" />} label="Explore" />

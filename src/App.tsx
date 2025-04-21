@@ -1,5 +1,4 @@
 
-import { useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -40,14 +39,14 @@ function App() {
               <Route path="/auth" element={<Auth />} />
               
               <Route element={<Layout />}>
-                <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-                <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-                <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                <Route path="/playlists" element={<ProtectedRoute><Playlists /></ProtectedRoute>} />
-                <Route path="/playlists/:id" element={<ProtectedRoute><PlaylistDetails /></ProtectedRoute>} />
-                <Route path="/users/:id" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                <Route path="/home" element={<Home />} />
+                <Route path="/search" element={<Search />} />
+                <Route path="/explore" element={<Explore />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/playlists" element={<Playlists />} />
+                <Route path="/playlists/:id" element={<PlaylistDetails />} />
+                <Route path="/users/:id" element={<UserProfile />} />
               </Route>
               
               <Route path="*" element={<NotFound />} />

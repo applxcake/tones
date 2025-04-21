@@ -4,20 +4,18 @@ import { toast } from '@/components/ui/use-toast';
 
 const TiDBInitializer = () => {
   const [initialized, setInitialized] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const showBrowserWarning = () => {
-      console.warn('TiDB connection cannot be established directly from the browser due to security restrictions.');
+      console.log('Using mock TiDB data in browser environment');
       toast({
         title: "Database Notice",
-        description: "TiDB connections require a server environment. Features will use mock data in browser preview.",
+        description: "Using mock data for preview. All features are functional with sample data.",
         variant: "default"
       });
-      setInitialized(true); // Mark as initialized so the app continues
+      setInitialized(true);
     };
 
-    // In browser environment, show warning and use mock data
     showBrowserWarning();
   }, []);
 

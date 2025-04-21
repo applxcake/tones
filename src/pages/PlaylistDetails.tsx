@@ -5,6 +5,7 @@ import { Play, MoreVertical, ArrowLeft, Trash, ListPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getPlaylistById, removeSongFromPlaylist, deletePlaylist } from '@/services/playlistService';
 import { usePlayer } from '@/contexts/PlayerContext';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,9 +35,14 @@ const PlaylistDetails = () => {
     const loadPlaylist = async () => {
       if (id) {
         setLoading(true);
-        const playlistData = await getPlaylistById(id);
-        setPlaylist(playlistData);
-        setLoading(false);
+        try {
+          const playlistData = await getPlaylistById(id);
+          setPlaylist(playlistData);
+        } catch (error) {
+          console.error('Error fetching playlist:', error);
+        } finally {
+          setLoading(false);
+        }
       }
     };
     
@@ -76,15 +82,17 @@ const PlaylistDetails = () => {
   };
 
   const handleRemoveSong = async (songId: string) => {
-    await removeSongFromPlaylist(playlist.id, songId);
-    // Refresh playlist data
-    const updatedPlaylist = await getPlaylistById(playlist.id);
-    setPlaylist(updatedPlaylist);
+    if (await removeSongFromPlaylist(playlist.id, songId)) {
+      // Refresh playlist data
+      const updatedPlaylist = await getPlaylistById(playlist.id);
+      setPlaylist(updatedPlaylist);
+    }
   };
 
   const handleDeletePlaylist = async () => {
-    await deletePlaylist(playlist.id);
-    navigate('/playlists');
+    if (await deletePlaylist(playlist.id)) {
+      navigate('/playlists');
+    }
   };
 
   const handleBackClick = () => {
@@ -107,7 +115,7 @@ const PlaylistDetails = () => {
     <div className="pt-6 pb-24 animate-slide-in">
       <Button 
         variant="ghost" 
-        className="flex items-center mb-6"
+        className="flex items-center mb-6 animate-fade-in"
         onClick={handleBackClick}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
@@ -116,7 +124,7 @@ const PlaylistDetails = () => {
 
       <div className="mb-8">
         <div className="flex justify-between items-start">
-          <div>
+          <div className="animate-fade-in">
             <h1 className="text-3xl font-bold">{playlist.name}</h1>
             {playlist.description && (
               <p className="mt-2 text-gray-400">{playlist.description}</p>
@@ -126,11 +134,11 @@ const PlaylistDetails = () => {
             </p>
           </div>
 
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <Button 
               onClick={handlePlayAll}
               disabled={playlist.songs.length === 0}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 hover-scale"
             >
               <Play className="h-4 w-4" />
               Play All
@@ -138,13 +146,13 @@ const PlaylistDetails = () => {
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" className="hover-scale">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
+              <DropdownMenuContent className="animate-scale-in">
                 <DropdownMenuItem 
-                  className="text-red-500"
+                  className="text-red-500 hover-scale"
                   onClick={() => setDeleteDialogOpen(true)}
                 >
                   <Trash className="mr-2 h-4 w-4" />
@@ -158,10 +166,14 @@ const PlaylistDetails = () => {
 
       {playlist.songs.length > 0 ? (
         <div className="space-y-2">
-          {playlist.songs.map((song: any) => (
+          {playlist.songs.map((song: any, index: number) => (
             <div 
               key={song.id} 
-              className="flex items-center justify-between p-3 rounded-lg glass-panel hover:neon-glow-purple"
+              className={cn(
+                "flex items-center justify-between p-3 rounded-lg glass-panel hover:neon-glow-purple animate-fade-in",
+                { "neon-glow-blue": currentTrack?.id === song.id && isPlaying }
+              )}
+              style={{ animationDelay: `${0.1 * (index % 10)}s` }}
             >
               <div className="flex items-center flex-1 min-w-0">
                 <img 
@@ -180,6 +192,7 @@ const PlaylistDetails = () => {
                   size="icon" 
                   variant="ghost" 
                   onClick={() => handlePlaySong(song)}
+                  className="hover-scale"
                 >
                   <Play className="h-4 w-4" />
                 </Button>
@@ -188,6 +201,7 @@ const PlaylistDetails = () => {
                   size="icon" 
                   variant="ghost" 
                   onClick={() => addToQueue(song)}
+                  className="hover-scale"
                 >
                   <ListPlus className="h-4 w-4" />
                 </Button>
@@ -195,7 +209,7 @@ const PlaylistDetails = () => {
                 <Button 
                   size="icon" 
                   variant="ghost" 
-                  className="text-red-500" 
+                  className="text-red-500 hover-scale" 
                   onClick={() => handleRemoveSong(song.id)}
                 >
                   <Trash className="h-4 w-4" />
@@ -205,14 +219,14 @@ const PlaylistDetails = () => {
           ))}
         </div>
       ) : (
-        <div className="py-12 text-center glass-panel rounded-lg">
+        <div className="py-12 text-center glass-panel rounded-lg animate-fade-in">
           <p className="text-gray-400">This playlist is empty. Add songs from the search page!</p>
         </div>
       )}
 
       {/* Delete Playlist Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="animate-scale-in">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Playlist</AlertDialogTitle>
             <AlertDialogDescription>
@@ -220,10 +234,10 @@ const PlaylistDetails = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="hover-scale">Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeletePlaylist}
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-red-500 hover:bg-red-600 hover-scale"
             >
               Delete
             </AlertDialogAction>

@@ -109,9 +109,31 @@ export const createPlaylist = async (name: string, description = '', userId?: st
 
 // Add a song to a playlist
 export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, userId?: string) => {
-  if (!userId) return false;
+  if (!userId) {
+    toast({
+      title: "Error adding song",
+      description: "You must be logged in to add songs to playlists.",
+      variant: "destructive"
+    });
+    return false;
+  }
   
   try {
+    // Verify the playlist exists and belongs to the user
+    const playlist = await executeQuery<any[]>(
+      `SELECT * FROM playlists WHERE id = ? AND user_id = ?`,
+      [playlistId, userId]
+    );
+    
+    if (!playlist.length) {
+      toast({
+        title: "Error adding song",
+        description: "You don't have permission to add to this playlist.",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
     // First check if the song exists in the songs table
     const existingSong = await executeQuery<any[]>(
       `SELECT * FROM songs WHERE id = ?`,
@@ -138,7 +160,7 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
         title: "Already Added",
         description: "This song is already in the playlist.",
       });
-      return false;
+      return true; // Already exists, but we consider it a success
     }
     
     // Get highest position in playlist
@@ -157,14 +179,14 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
     );
     
     // Get playlist name for toast
-    const playlist = await executeQuery<any[]>(
+    const playlistInfo = await executeQuery<any[]>(
       `SELECT name FROM playlists WHERE id = ?`,
       [playlistId]
     );
     
     toast({
       title: "Song Added",
-      description: `Added to ${playlist[0]?.name || 'playlist'}`,
+      description: `Added to ${playlistInfo[0]?.name || 'playlist'}`,
     });
     
     return true;
@@ -207,6 +229,13 @@ export const removeSongFromPlaylist = async (playlistId: string, songId: string)
 // Delete a playlist
 export const deletePlaylist = async (playlistId: string) => {
   try {
+    // First delete all playlist songs
+    await executeQuery(
+      `DELETE FROM playlist_songs WHERE playlist_id = ?`,
+      [playlistId]
+    );
+    
+    // Then delete the playlist itself
     await executeQuery(
       `DELETE FROM playlists WHERE id = ?`,
       [playlistId]

@@ -8,7 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import SongTile from '@/components/SongTile';
 import { getCurrentUser } from '@/services/userService';
-import { YouTubeVideoBasic } from '@/services/youtubeService';
+import { executeQuery } from '@/integrations/tidb/client';
+import { YouTubeVideo } from '@/services/youtubeService';
 
 const Profile = () => {
   const { recentlyPlayed, likedSongs } = usePlayer();
@@ -86,7 +87,23 @@ const Profile = () => {
       {/* User Info */}
       <div className="glass-panel rounded-lg p-6 mb-8 flex flex-col md:flex-row items-center gap-6 animate-scale-in">
         <div className="w-24 h-24 rounded-full glass-panel flex items-center justify-center neon-glow-blue hover-scale">
-          <User className="w-12 h-12 text-white/70" />
+          {currentUserData?.avatar ? (
+            <img 
+              src={currentUserData.avatar} 
+              alt={currentUserData.username}
+              className="w-full h-full object-cover rounded-full"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  parent.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white/70"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+                }
+              }}
+            />
+          ) : (
+            <User className="w-12 h-12 text-white/70" />
+          )}
         </div>
         
         <div className="text-center md:text-left">
@@ -97,15 +114,15 @@ const Profile = () => {
           )}
           
           <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-            <div className="text-center hover-scale">
+            <div className="text-center hover-scale animate-fade-in" style={{ animationDelay: '0.1s' }}>
               <p className="text-xl font-bold">2</p>
               <p className="text-sm text-gray-400">Playlists</p>
             </div>
-            <div className="text-center hover-scale">
+            <div className="text-center hover-scale animate-fade-in" style={{ animationDelay: '0.2s' }}>
               <p className="text-xl font-bold">{currentUserData?.followers?.length || 0}</p>
               <p className="text-sm text-gray-400">Followers</p>
             </div>
-            <div className="text-center hover-scale">
+            <div className="text-center hover-scale animate-fade-in" style={{ animationDelay: '0.3s' }}>
               <p className="text-xl font-bold">{currentUserData?.following?.length || 0}</p>
               <p className="text-sm text-gray-400">Following</p>
             </div>

@@ -62,11 +62,11 @@ const Profile = () => {
   return (
     <div className="pt-6 pb-24 animate-slide-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-        <h1 className="text-3xl font-bold">Profile</h1>
-        <div className="flex gap-2 mt-4 md:mt-0">
+        <h1 className="text-3xl font-bold animate-fade-in">Profile</h1>
+        <div className="flex gap-2 mt-4 md:mt-0 animate-fade-in">
           <Button 
             variant="outline" 
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 hover-scale"
             onClick={() => navigate('/settings')}
           >
             <Settings className="h-4 w-4" />
@@ -74,7 +74,7 @@ const Profile = () => {
           </Button>
           <Button 
             variant="destructive" 
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 hover-scale"
             onClick={handleLogout}
           >
             <LogOut className="h-4 w-4" />
@@ -84,25 +84,28 @@ const Profile = () => {
       </div>
       
       {/* User Info */}
-      <div className="glass-panel rounded-lg p-6 mb-8 flex flex-col md:flex-row items-center gap-6">
-        <div className="w-24 h-24 rounded-full glass-panel flex items-center justify-center neon-glow-blue">
+      <div className="glass-panel rounded-lg p-6 mb-8 flex flex-col md:flex-row items-center gap-6 animate-scale-in">
+        <div className="w-24 h-24 rounded-full glass-panel flex items-center justify-center neon-glow-blue hover-scale">
           <User className="w-12 h-12 text-white/70" />
         </div>
         
         <div className="text-center md:text-left">
-          <h2 className="text-2xl font-bold mb-1">{user?.username || 'User'}</h2>
-          <p className="text-gray-400 mb-4">{user?.email}</p>
+          <h2 className="text-2xl font-bold mb-1">{currentUserData?.username || 'User'}</h2>
+          <p className="text-gray-400 mb-1">{user?.email}</p>
+          {currentUserData?.bio && (
+            <p className="text-gray-300 mb-4">{currentUserData.bio}</p>
+          )}
           
           <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-            <div className="text-center">
+            <div className="text-center hover-scale">
               <p className="text-xl font-bold">2</p>
               <p className="text-sm text-gray-400">Playlists</p>
             </div>
-            <div className="text-center">
+            <div className="text-center hover-scale">
               <p className="text-xl font-bold">{currentUserData?.followers?.length || 0}</p>
               <p className="text-sm text-gray-400">Followers</p>
             </div>
-            <div className="text-center">
+            <div className="text-center hover-scale">
               <p className="text-xl font-bold">{currentUserData?.following?.length || 0}</p>
               <p className="text-sm text-gray-400">Following</p>
             </div>
@@ -111,7 +114,7 @@ const Profile = () => {
       </div>
       
       {/* User Activity */}
-      <Tabs defaultValue="history" className="w-full">
+      <Tabs defaultValue="history" className="w-full animate-fade-in">
         <TabsList className="mb-4">
           <TabsTrigger value="history" className="flex items-center gap-2">
             <Clock className="h-4 w-4" /> 
@@ -123,7 +126,7 @@ const Profile = () => {
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="history">
+        <TabsContent value="history" className="animate-slide-in">
           {recentlyPlayed.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {recentlyPlayed.map((song) => (
@@ -137,7 +140,7 @@ const Profile = () => {
           )}
         </TabsContent>
         
-        <TabsContent value="liked">
+        <TabsContent value="liked" className="animate-slide-in">
           {likedSongs.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {likedSongs.map((song) => (

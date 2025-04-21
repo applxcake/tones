@@ -75,6 +75,7 @@ interface PlayerContextType {
   isPlaying: boolean;
   progress: number;
   volume: number;
+  duration: number;
   recentlyPlayed: YouTubeVideoBasic[];
   queue: YouTubeVideo[];
   likedSongs: YouTubeVideoBasic[];
@@ -86,6 +87,7 @@ interface PlayerContextType {
   addToQueue: (track: YouTubeVideo) => void;
   toggleLike: (track: YouTubeVideo) => Promise<boolean>;
   isLiked: (trackId: string) => boolean;
+  seekToPosition: (progressPercent: number) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -96,6 +98,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [volume, setVolumeState] = useState(0.7);
+  const [duration, setDuration] = useState(240);
   const [recentlyPlayed, setRecentlyPlayed] = useState<YouTubeVideoBasic[]>([]);
   const [queue, setQueue] = useState<YouTubeVideo[]>([]);
   const [likedSongs, setLikedSongs] = useState<YouTubeVideoBasic[]>([]);
@@ -236,12 +239,28 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                   if (isPlaying) {
                     event.target.playVideo();
                   }
+                  try {
+                    const videoDuration = event.target.getDuration();
+                    if (videoDuration && !isNaN(videoDuration)) {
+                      setDuration(videoDuration);
+                    }
+                  } catch (error) {
+                    console.error('Error getting video duration:', error);
+                  }
                 },
                 onStateChange: (event) => {
                   if (event.data === window.YT.PlayerState.ENDED) {
                     nextTrack();
                   }
                   if (event.data === window.YT.PlayerState.PLAYING) {
+                    try {
+                      const videoDuration = event.target.getDuration();
+                      if (videoDuration && !isNaN(videoDuration)) {
+                        setDuration(videoDuration);
+                      }
+                    } catch (error) {
+                      console.error('Error getting video duration:', error);
+                    }
                     startProgressInterval();
                   }
                   if (event.data === window.YT.PlayerState.PAUSED) {
@@ -534,6 +553,18 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return likedSongs.some(song => song.id === trackId);
   };
 
+  const seekToPosition = (progressPercent: number) => {
+    if (playerRef.current && typeof playerRef.current.seekTo === 'function' && duration) {
+      try {
+        const timeToSeekTo = (progressPercent / 100) * duration;
+        playerRef.current.seekTo(timeToSeekTo, true);
+        setProgress(progressPercent);
+      } catch (error) {
+        console.error("Error seeking:", error);
+      }
+    }
+  };
+
   return (
     <PlayerContext.Provider
       value={{
@@ -541,6 +572,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isPlaying,
         progress,
         volume,
+        duration,
         recentlyPlayed,
         queue,
         likedSongs,
@@ -552,6 +584,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addToQueue,
         toggleLike,
         isLiked,
+        seekToPosition,
       }}
     >
       {children}

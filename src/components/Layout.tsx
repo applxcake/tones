@@ -35,7 +35,7 @@ const Layout = () => {
         size="icon" 
         className={`fixed top-4 z-40 transition-all duration-300 ${
           sidebarOpen ? 'left-[260px]' : 'left-4'
-        }`}
+        } animate-fade-in`}
         onClick={() => setSidebarOpen(!sidebarOpen)}
       >
         {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
@@ -44,7 +44,7 @@ const Layout = () => {
       <MobileNav />
       
       <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'ml-0'}`}>
-        <div className="container mx-auto px-4 pt-16">
+        <div className="container mx-auto px-4 pt-16 animate-fade-in">
           <Outlet />
         </div>
       </div>

@@ -75,10 +75,10 @@ const UserCard = ({ user }: UserCardProps) => {
   }
 
   return (
-    <div className="glass-panel rounded-lg p-4 hover-scale">
+    <div className="glass-panel rounded-lg p-4 hover-scale animate-fade-in">
       <div className="flex items-center gap-4">
         <Link to={`/users/${user.id}`}>
-          <Avatar className="h-12 w-12 cursor-pointer hover:neon-glow-blue">
+          <Avatar className="h-12 w-12 cursor-pointer hover:neon-glow-blue animate-scale-in">
             <AvatarImage src={user.avatar} alt={user.username} />
             <AvatarFallback>
               <UserIcon className="h-6 w-6" />
@@ -101,7 +101,7 @@ const UserCard = ({ user }: UserCardProps) => {
         <Button 
           variant={isFollowing ? "outline" : "default"}
           size="sm"
-          className={isFollowing ? "" : "bg-neon-purple hover:bg-neon-purple/80"}
+          className={isFollowing ? "animate-scale-in" : "bg-neon-purple hover:bg-neon-purple/80 animate-scale-in"}
           onClick={handleFollowToggle}
         >
           {isFollowing ? (
@@ -114,7 +114,7 @@ const UserCard = ({ user }: UserCardProps) => {
       </div>
 
       {user.bio && (
-        <p className="mt-2 text-sm text-gray-300 line-clamp-2">{user.bio}</p>
+        <p className="mt-2 text-sm text-gray-300 line-clamp-2 animate-fade-in">{user.bio}</p>
       )}
     </div>
   );

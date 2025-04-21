@@ -46,6 +46,36 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 262 80% 75%;
   }
+
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+  }
 }
 
 @layer base {
@@ -62,6 +92,10 @@
 @layer utilities {
   .glass-panel {
     @apply backdrop-blur-md bg-black/40 border border-white/10 shadow-lg;
+  }
+  
+  .light .glass-panel {
+    @apply backdrop-blur-md bg-white/60 border border-gray-200 shadow-lg;
   }
   
   .neon-border {
@@ -82,5 +116,115 @@
 
   .hover-scale {
     @apply transition-all duration-200 hover:scale-105;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-neon-purple to-neon-pink;
+  }
+  
+  .text-gradient-rock {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-orange-500;
+  }
+  
+  .text-gradient-pop {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-purple-500;
+  }
+  
+  .text-gradient-hiphop {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-cyan-500;
+  }
+  
+  .text-gradient-jazz {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-amber-500 to-yellow-500;
+  }
+  
+  .text-gradient-classical {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-green-500 to-emerald-500;
+  }
+  
+  .text-gradient-electronic {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-violet-500 to-fuchsia-500;
+  }
+  
+  .text-gradient-country {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-amber-500;
+  }
+  
+  .text-gradient-rnb {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-indigo-500;
+  }
+}
+
+/* Animation keyframes */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes wave {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.5);
+  }
+}
+
+/* Animation classes */
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.5s ease-out forwards;
+}
+
+.animate-wave {
+  animation: wave 1s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px rgba(155, 135, 245, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(155, 135, 245, 0.8));
   }
 }

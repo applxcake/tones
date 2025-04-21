@@ -31,7 +31,7 @@ const SongTile = ({ song, className }: SongTileProps) => {
   return (
     <div 
       className={cn(
-        "glass-panel rounded-lg overflow-hidden relative hover-scale",
+        "glass-panel rounded-lg overflow-hidden relative hover-scale animate-fade-in",
         className
       )} 
       onMouseEnter={() => setIsHovered(true)}
@@ -53,7 +53,7 @@ const SongTile = ({ song, className }: SongTileProps) => {
           <Button 
             size="icon" 
             variant="secondary" 
-            className="rounded-full bg-neon-purple/80 hover:bg-neon-purple text-white neon-glow-purple h-12 w-12"
+            className="rounded-full bg-neon-purple/80 hover:bg-neon-purple text-white neon-glow-purple h-12 w-12 animate-scale-in"
             onClick={handlePlayClick}
           >
             {(isCurrentTrack && isPlaying) ? (
@@ -64,11 +64,9 @@ const SongTile = ({ song, className }: SongTileProps) => {
           </Button>
         </div>
         
-        {isHovered && (
-          <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
-            <SongOptionsMenu song={song} />
-          </div>
-        )}
+        <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
+          <SongOptionsMenu song={song} />
+        </div>
       </div>
       <div className="p-3">
         <h3 className="font-medium truncate" title={song.title}>

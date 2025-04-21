@@ -39,6 +39,20 @@ const mockUsers = [
     avatar: 'https://i.pravatar.cc/150?u=jazzmaster',
     bio: 'Jazz enthusiast and trumpet player',
     created_at: new Date().toISOString()
+  },
+  {
+    id: 'user3',
+    username: 'ClassicalVibes',
+    avatar: 'https://i.pravatar.cc/150?u=classical',
+    bio: 'Piano and orchestra lover',
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'user4',
+    username: 'RockStar',
+    avatar: 'https://i.pravatar.cc/150?u=rockstar',
+    bio: 'Living on the edge with rock music',
+    created_at: new Date().toISOString()
   }
 ];
 
@@ -218,9 +232,9 @@ export const executeQuery = async <T>(
           id: params[0],
           username: params[1],
           email: null,
-          avatar: null,
-          bio: null,
-          created_at: params[2]
+          avatar: params[2] || null,
+          bio: params[3] || null,
+          created_at: params[4] || new Date().toISOString()
         };
         mockDb.users.push(newUser);
       }
@@ -327,6 +341,7 @@ export const executeQuery = async <T>(
 // Initialize TiDB tables (mocked in browser)
 export const initializeTables = async () => {
   console.log('Mock TiDB tables initialized');
+  // In a real environment, this would create tables if they don't exist
   return true;
 };
 

@@ -91,6 +91,7 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
   const handleTriggerClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    setIsOpen(!isOpen); // Toggle menu open state
   };
 
   return (

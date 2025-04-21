@@ -139,79 +139,15 @@ export const executeQuery = async <T>(
   // This is a simplified version that handles basic SELECT, INSERT, UPDATE, DELETE operations
   try {
     if (query.toLowerCase().includes('select * from songs')) {
-      if (query.toLowerCase().includes('join liked_songs')) {
-        // Fetch liked songs for a user
-        const userId = params[0];
-        const likedSongIds = mockDb.liked_songs
-          .filter(ls => ls.user_id === userId)
-          .map(ls => ls.song_id);
-        
-        const likedSongs = mockDb.songs.filter(s => likedSongIds.includes(s.id));
-        return likedSongs as unknown as T;
-      }
-      
-      if (query.toLowerCase().includes('join recently_played')) {
-        // Fetch recently played songs for a user
-        const userId = params[0];
-        const recentSongIds = mockDb.recently_played
-          .filter(rp => rp.user_id === userId)
-          .sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
-          .map(rp => rp.song_id);
-        
-        const recentSongs = [];
-        for (const songId of recentSongIds) {
-          const song = mockDb.songs.find(s => s.id === songId);
-          if (song) recentSongs.push(song);
-        }
-        
-        return recentSongs as unknown as T;
-      }
-      
-      if (query.toLowerCase().includes('join playlist_songs')) {
-        // Fetch songs for a specific playlist
-        const playlistId = params[0];
-        const playlistSongIds = mockDb.playlist_songs
-          .filter(ps => ps.playlist_id === playlistId)
-          .sort((a, b) => a.position - b.position)
-          .map(ps => ps.song_id);
-        
-        const playlistSongs = [];
-        for (const songId of playlistSongIds) {
-          const song = mockDb.songs.find(s => s.id === songId);
-          if (song) playlistSongs.push(song);
-        }
-        
-        return playlistSongs as unknown as T;
-      }
-      
-      if (params.length > 0) {
-        const songId = params[0];
-        const song = mockDb.songs.find(s => s.id === songId);
-        return song ? [song] as unknown as T : [] as unknown as T;
-      }
-      
       return mockDb.songs as unknown as T;
     }
     
-    if (query.toLowerCase().includes('select * from users where id')) {
-      const userId = params[0];
-      const user = mockDb.users.find(u => u.id === userId);
-      return user ? [user] as unknown as T : [] as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select * from users where lower(username)')) {
-      const searchTerm = params[0].replace(/%/g, '').toLowerCase();
-      const bioSearchTerm = params[1].replace(/%/g, '').toLowerCase();
-      
-      const matchedUsers = mockDb.users.filter(u => {
-        return u.username.toLowerCase().includes(searchTerm) || 
-               (u.bio && u.bio.toLowerCase().includes(bioSearchTerm));
-      });
-      
-      return matchedUsers as unknown as T;
-    }
-    
     if (query.toLowerCase().includes('select * from users')) {
+      if (params.length > 0) {
+        const userId = params[0];
+        const user = mockDb.users.find(u => u.id === userId);
+        return user ? [user] as unknown as T : [] as unknown as T;
+      }
       return mockDb.users as unknown as T;
     }
     
@@ -227,17 +163,10 @@ export const executeQuery = async <T>(
       return playlist ? [playlist] as unknown as T : [] as unknown as T;
     }
     
-    if (query.toLowerCase().includes('select name from playlists where id')) {
-      const playlistId = params[0];
-      const playlist = mockDb.playlists.find(p => p.id === playlistId);
-      return playlist ? [{ name: playlist.name }] as unknown as T : [] as unknown as T;
-    }
-    
     if (query.toLowerCase().includes('select s.* from songs s join playlist_songs ps')) {
       const playlistId = params[0];
       const playlistSongIds = mockDb.playlist_songs
         .filter(ps => ps.playlist_id === playlistId)
-        .sort((a, b) => a.position - b.position)
         .map(ps => ps.song_id);
       
       const songs = mockDb.songs.filter(s => playlistSongIds.includes(s.id));
@@ -247,22 +176,19 @@ export const executeQuery = async <T>(
     if (query.toLowerCase().includes('insert into')) {
       // Mock insert operation
       if (query.toLowerCase().includes('insert into songs')) {
-        const existingSong = mockDb.songs.find(s => s.id === params[0]);
-        if (!existingSong) {
-          const newSong = {
-            id: params[0],
-            title: params[1],
-            thumbnail_url: params[2],
-            channel_title: params[3],
-            duration_seconds: params[4] || null
-          };
-          mockDb.songs.push(newSong);
-        }
+        const newSong = {
+          id: params[0],
+          title: params[1],
+          thumbnail_url: params[2],
+          channel_title: params[3],
+          duration_seconds: params[4] || null
+        };
+        mockDb.songs.push(newSong);
       } else if (query.toLowerCase().includes('insert into playlists')) {
         const newPlaylist = {
           id: params[0],
           name: params[1],
-          description: params[2] || null,
+          description: params[2],
           user_id: params[3],
           created_at: params[4],
           image_url: null
@@ -278,41 +204,22 @@ export const executeQuery = async <T>(
         };
         mockDb.playlist_songs.push(newPlaylistSong);
       } else if (query.toLowerCase().includes('insert into liked_songs')) {
-        // Check if already exists
-        const existingLike = mockDb.liked_songs.find(
-          ls => ls.user_id === params[1] && ls.song_id === params[2]
-        );
-        
-        if (!existingLike) {
-          const newLike = {
-            id: params[0],
-            user_id: params[1],
-            song_id: params[2],
-            liked_at: params[3]
-          };
-          mockDb.liked_songs.push(newLike);
-        }
+        const newLike = {
+          id: params[0],
+          user_id: params[1],
+          song_id: params[2],
+          liked_at: params[3]
+        };
+        mockDb.liked_songs.push(newLike);
       } else if (query.toLowerCase().includes('insert into follows')) {
-        // Check if already following
-        const existingFollow = mockDb.follows.find(
-          f => f.follower_id === params[1] && f.following_id === params[2]
-        );
-        
-        if (!existingFollow) {
-          const newFollow = {
-            id: params[0],
-            follower_id: params[1],
-            following_id: params[2],
-            created_at: params[3]
-          };
-          mockDb.follows.push(newFollow);
-        }
+        const newFollow = {
+          id: params[0],
+          follower_id: params[1],
+          following_id: params[2],
+          created_at: params[3]
+        };
+        mockDb.follows.push(newFollow);
       } else if (query.toLowerCase().includes('insert into recently_played')) {
-        // Remove old entry if exists
-        mockDb.recently_played = mockDb.recently_played.filter(
-          rp => !(rp.user_id === params[1] && rp.song_id === params[2])
-        );
-        
         const newRecent = {
           id: params[0],
           user_id: params[1],
@@ -321,22 +228,15 @@ export const executeQuery = async <T>(
         };
         mockDb.recently_played.push(newRecent);
       } else if (query.toLowerCase().includes('insert into users')) {
-        const existingUser = mockDb.users.find(u => u.id === params[0]);
-        
-        if (!existingUser) {
-          const newUser = {
-            id: params[0],
-            username: params[1],
-            email: params[2] || null,
-            bio: params[3] || null,
-            avatar: params[4] || null,
-            created_at: params[5] || new Date().toISOString()
-          };
-          mockDb.users.push(newUser);
-        } else if (query.toLowerCase().includes('on duplicate key update')) {
-          // Update existing user
-          existingUser.username = params[1] || existingUser.username;
-        }
+        const newUser = {
+          id: params[0],
+          username: params[1],
+          email: null,
+          avatar: params[2] || null,
+          bio: params[3] || null,
+          created_at: params[4] || new Date().toISOString()
+        };
+        mockDb.users.push(newUser);
       }
       return { affectedRows: 1 } as unknown as T;
     }
@@ -384,14 +284,6 @@ export const executeQuery = async <T>(
       return mockDb.liked_songs as unknown as T;
     }
     
-    if (query.toLowerCase().includes('select song_id from liked_songs')) {
-      const userId = params[0];
-      const likedSongIds = mockDb.liked_songs
-        .filter(ls => ls.user_id === userId)
-        .map(ls => ({ song_id: ls.song_id }));
-      return likedSongIds as unknown as T;
-    }
-    
     if (query.toLowerCase().includes('select follower_id from follows')) {
       const userId = params[0];
       const followers = mockDb.follows
@@ -408,18 +300,6 @@ export const executeQuery = async <T>(
       return following as unknown as T;
     }
     
-    if (query.toLowerCase().includes('select count(*) as count from follows')) {
-      if (query.toLowerCase().includes('where following_id')) {
-        const userId = params[0];
-        const count = mockDb.follows.filter(f => f.following_id === userId).length;
-        return [{ count }] as unknown as T;
-      } else if (query.toLowerCase().includes('where follower_id')) {
-        const userId = params[0];
-        const count = mockDb.follows.filter(f => f.follower_id === userId).length;
-        return [{ count }] as unknown as T;
-      }
-    }
-    
     if (query.toLowerCase().includes('select * from follows')) {
       if (params.length >= 2) {
         const followerId = params[0];
@@ -434,34 +314,20 @@ export const executeQuery = async <T>(
     
     if (query.toLowerCase().includes('update users')) {
       const username = params[0];
-      const email = params[1];
-      const bio = params[2];
-      const avatar = params[3];
-      const userId = params[4];
+      const bio = params[1];
+      const avatar = params[2];
+      const userId = params[3];
       
       const userIndex = mockDb.users.findIndex(u => u.id === userId);
       if (userIndex >= 0) {
         mockDb.users[userIndex] = {
           ...mockDb.users[userIndex],
           username: username || mockDb.users[userIndex].username,
-          email: email || mockDb.users[userIndex].email,
           bio: bio || mockDb.users[userIndex].bio,
           avatar: avatar || mockDb.users[userIndex].avatar
         };
       }
       return { affectedRows: 1 } as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select position from playlist_songs')) {
-      const playlistId = params[0];
-      const playlistSongs = mockDb.playlist_songs
-        .filter(ps => ps.playlist_id === playlistId)
-        .sort((a, b) => b.position - a.position);
-        
-      if (playlistSongs.length > 0) {
-        return [{ position: playlistSongs[0].position }] as unknown as T;
-      }
-      return [] as unknown as T;
     }
     
     // Default return empty array for unhandled queries

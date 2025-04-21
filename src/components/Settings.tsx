@@ -81,28 +81,18 @@ const Settings = () => {
     const fetchUserData = async () => {
       if (authUser) {
         setLoading(true);
-        try {
-          const userData = await getCurrentUser(authUser.id);
-          setCurrentUser(userData);
-          
-          if (userData) {
-            setFormData({
-              username: userData.username || '',
-              email: userData.email || '',
-              bio: userData.bio || '',
-              avatar: userData.avatar || '',
-            });
-          }
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-          toast({
-            title: "Error loading profile",
-            description: "Could not load your profile data. Please try again.",
-            variant: "destructive"
+        const userData = await getCurrentUser(authUser.id);
+        setCurrentUser(userData);
+        
+        if (userData) {
+          setFormData({
+            username: userData.username || '',
+            email: userData.email || '',
+            bio: userData.bio || '',
+            avatar: userData.avatar || '',
           });
-        } finally {
-          setLoading(false);
         }
+        setLoading(false);
       }
     };
     
@@ -128,26 +118,11 @@ const Settings = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (authUser) {
-      setLoading(true);
-      try {
-        const updatedUser = await updateUserProfile(formData, authUser.id);
-        if (updatedUser) {
-          setCurrentUser(updatedUser);
-          toast({
-            title: "Settings saved",
-            description: "Your profile has been updated successfully.",
-          });
-        }
-      } catch (error) {
-        console.error('Error updating profile:', error);
-        toast({
-          title: "Error saving settings",
-          description: "Could not update your profile. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
+      await updateUserProfile(formData, authUser.id);
+      toast({
+        title: "Settings saved",
+        description: "Your profile has been updated successfully.",
+      });
     }
   };
 
@@ -256,7 +231,7 @@ const Settings = () => {
     <div className="pt-6 pb-24 animate-slide-in">
       <Button 
         variant="ghost" 
-        className="flex items-center mb-6 hover-scale animate-fade-in"
+        className="flex items-center mb-6 hover-scale"
         onClick={() => navigate(-1)}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
@@ -264,7 +239,7 @@ const Settings = () => {
       </Button>
       
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold animate-fade-in">{t.settings}</h1>
+        <h1 className="text-3xl font-bold">{t.settings}</h1>
       </div>
       
       <div className="glass-panel rounded-lg p-6 max-w-2xl mx-auto animate-fade-in">
@@ -273,25 +248,9 @@ const Settings = () => {
             <div className="flex flex-col md:flex-row gap-6">
               <div className="md:w-1/3 flex justify-center">
                 <div className="relative">
-                  <div className="w-32 h-32 rounded-full glass-panel flex items-center justify-center overflow-hidden hover-scale animate-scale-in">
+                  <div className="w-32 h-32 rounded-full glass-panel flex items-center justify-center overflow-hidden hover-scale">
                     {formData.avatar ? (
-                      <img 
-                        src={formData.avatar} 
-                        alt={formData.username} 
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Fallback to user icon if image fails to load
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.style.display = 'none';
-                          const parent = e.currentTarget.parentElement;
-                          if (parent) {
-                            const iconEl = document.createElement('div');
-                            iconEl.className = 'w-full h-full flex items-center justify-center';
-                            iconEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white/70"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
-                            parent.appendChild(iconEl);
-                          }
-                        }}
-                      />
+                      <img src={formData.avatar} alt={formData.username} className="w-full h-full object-cover" />
                     ) : (
                       <User className="w-16 h-16 text-white/70" />
                     )}
@@ -300,17 +259,18 @@ const Settings = () => {
               </div>
               
               <div className="md:w-2/3 space-y-4">
-                <div className="space-y-2 animate-fade-in">
+                <div className="space-y-2">
                   <Label htmlFor="username">{t.username}</Label>
                   <Input 
                     id="username"
                     name="username"
                     value={formData.username}
                     onChange={handleChange}
+                    className="animate-fade-in"
                   />
                 </div>
                 
-                <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                <div className="space-y-2">
                   <Label htmlFor="email">{t.email}</Label>
                   <Input 
                     id="email"
@@ -318,10 +278,11 @@ const Settings = () => {
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
+                    className="animate-fade-in"
                   />
                 </div>
                 
-                <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+                <div className="space-y-2">
                   <Label htmlFor="avatar">{t.avatarUrl}</Label>
                   <Input 
                     id="avatar"
@@ -330,12 +291,13 @@ const Settings = () => {
                     placeholder="https://example.com/avatar.jpg"
                     value={formData.avatar}
                     onChange={handleChange}
+                    className="animate-fade-in"
                   />
                 </div>
               </div>
             </div>
             
-            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+            <div className="space-y-2">
               <Label htmlFor="bio">{t.bio}</Label>
               <Textarea 
                 id="bio"
@@ -344,34 +306,21 @@ const Settings = () => {
                 value={formData.bio}
                 onChange={handleChange}
                 rows={4}
+                className="animate-fade-in"
               />
             </div>
             
-            <div className="pt-4 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-              <Button type="submit" className="flex items-center gap-2 hover-scale" disabled={loading}>
-                {loading ? (
-                  <div className="flex gap-2">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <div 
-                        key={i}
-                        className="w-1 h-1 bg-white rounded-full animate-pulse"
-                        style={{ animationDelay: `${i * 0.15}s` }}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    {t.saveChanges}
-                  </>
-                )}
+            <div className="pt-4">
+              <Button type="submit" className="flex items-center gap-2 hover-scale">
+                <Save className="h-4 w-4" />
+                {t.saveChanges}
               </Button>
             </div>
           </div>
         </form>
       </div>
       
-      <div className="mt-8 glass-panel rounded-lg p-6 max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '0.5s' }}>
+      <div className="mt-8 glass-panel rounded-lg p-6 max-w-2xl mx-auto animate-fade-in">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           {t.preferences}
         </h2>

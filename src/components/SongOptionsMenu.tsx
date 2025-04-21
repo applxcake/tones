@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MoreVertical, ListPlus, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -32,14 +32,14 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   // Check if song is liked when component mounts or when isOpen changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       setLiked(isLiked(song.id));
     }
   }, [song.id, isLiked, isOpen]);
 
   // Fetch user playlists when dropdown is opened
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchPlaylists = async () => {
       if (user && isOpen) {
         try {
@@ -53,7 +53,7 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
         }
       }
     };
-    
+
     fetchPlaylists();
   }, [user, isOpen]);
 
@@ -79,7 +79,7 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
       }
     }
   };
-  
+
   const handleAddToQueue = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -92,21 +92,21 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
     e.stopPropagation();
     e.preventDefault();
   };
-  
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild onClick={handleTriggerClick}>
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           className="h-8 w-8 p-0 hover:bg-white/10"
         >
           <MoreVertical className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        side="right" 
-        align="start" 
+      <DropdownMenuContent
+        side="right"
+        align="start"
         className="w-56"
         onClick={(e) => e.stopPropagation()}
       >
@@ -114,14 +114,14 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
           <ListPlus className="mr-2 h-4 w-4" />
           Add to Queue
         </DropdownMenuItem>
-        
+
         <DropdownMenuItem onClick={handleLike}>
           <Heart className={cn("mr-2 h-4 w-4", liked && "fill-neon-pink text-neon-pink")} />
           {liked ? 'Remove from Liked Songs' : 'Add to Liked Songs'}
         </DropdownMenuItem>
-        
+
         <DropdownMenuSeparator />
-        
+
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <ListPlus className="mr-2 h-4 w-4" />
@@ -134,7 +134,7 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
               </DropdownMenuLabel>
             ) : playlists.length > 0 ? (
               playlists.map((playlist) => (
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   key={playlist.id}
                   onClick={() => handleAddToPlaylist(playlist.id)}
                 >
@@ -154,3 +154,4 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
 };
 
 export default SongOptionsMenu;
+

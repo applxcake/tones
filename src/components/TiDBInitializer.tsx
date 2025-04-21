@@ -1,6 +1,5 @@
 
 import { useEffect, useState } from 'react';
-import { initializeTables } from '@/integrations/tidb/client';
 import { toast } from '@/components/ui/use-toast';
 
 const TiDBInitializer = () => {
@@ -8,23 +7,18 @@ const TiDBInitializer = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const initialize = async () => {
-      try {
-        await initializeTables();
-        setInitialized(true);
-        console.log('TiDB tables initialized successfully');
-      } catch (err) {
-        console.error('Failed to initialize TiDB tables:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        toast({
-          title: "Database Error",
-          description: "Could not connect to TiDB. Some features may not work properly.",
-          variant: "destructive"
-        });
-      }
+    const showBrowserWarning = () => {
+      console.warn('TiDB connection cannot be established directly from the browser due to security restrictions.');
+      toast({
+        title: "Database Notice",
+        description: "TiDB connections require a server environment. Features will use mock data in browser preview.",
+        variant: "default"
+      });
+      setInitialized(true); // Mark as initialized so the app continues
     };
 
-    initialize();
+    // In browser environment, show warning and use mock data
+    showBrowserWarning();
   }, []);
 
   // This component doesn't render anything visible

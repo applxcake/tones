@@ -23,8 +23,9 @@ const Layout = () => {
     <div className="min-h-screen bg-background text-foreground">
       {/* Sidebar with transition */}
       <div 
-        className={`fixed top-0 bottom-0 z-30 transition-all duration-300 transform
-          ${sidebarOpen ? 'left-0' : '-translate-x-full'}`}
+        className={`fixed top-0 bottom-0 z-30 transition-all duration-300 ${
+          sidebarOpen ? 'left-0' : '-translate-x-full'
+        }`}
       >
         <AppSidebar />
       </div>

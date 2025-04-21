@@ -56,7 +56,7 @@ const Home = () => {
       
       <section className="mb-10 animate-slide-in">
         <h2 className="text-2xl font-bold mb-6">Trending Now</h2>
-        <ScrollableRow>
+        <ScrollableRow title="Trending Songs">
           {trendingSongs.map((song) => (
             <SongTile key={song.id} song={song} className="min-w-[200px] max-w-[200px]" />
           ))}
@@ -65,7 +65,7 @@ const Home = () => {
       
       <section className="mb-10 animate-slide-in">
         <h2 className="text-2xl font-bold mb-6">New Releases</h2>
-        <ScrollableRow>
+        <ScrollableRow title="New Releases">
           {newReleases.map((song) => (
             <SongTile key={song.id} song={song} className="min-w-[200px] max-w-[200px]" />
           ))}

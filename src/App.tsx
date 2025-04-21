@@ -1,6 +1,7 @@
 
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState } from 'react';
 
 // Pages
 import Index from '@/pages/Index';
@@ -25,9 +26,10 @@ import TiDBInitializer from '@/components/TiDBInitializer';
 import { PlayerProvider } from '@/contexts/PlayerContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 
-const queryClient = new QueryClient();
-
 function App() {
+  // Create a new QueryClient instance within the component
+  const [queryClient] = useState(() => new QueryClient());
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

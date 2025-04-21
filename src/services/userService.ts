@@ -1,3 +1,4 @@
+
 import { toast } from '@/components/ui/use-toast';
 import { executeQuery, generateId } from '@/integrations/tidb/client';
 
@@ -54,6 +55,12 @@ export const getCurrentUser = async (userId?: string) => {
       [userId]
     );
     
+    // Get liked songs
+    const likedSongs = await executeQuery<any[]>(
+      `SELECT song_id FROM liked_songs WHERE user_id = ?`,
+      [userId]
+    );
+    
     return {
       id: users[0].id,
       username: users[0].username,
@@ -62,6 +69,7 @@ export const getCurrentUser = async (userId?: string) => {
       bio: users[0].bio || '',
       followers: followers.map(f => f.follower_id) || [],
       following: following.map(f => f.following_id) || [],
+      likedSongs: likedSongs.map(ls => ls.song_id) || [],
       createdAt: users[0].created_at,
     };
   } catch (error) {
@@ -127,20 +135,61 @@ export const getAllUsers = async () => {
 
 // Get user by ID
 export const getUserById = async (userId: string) => {
-  if (userId === 'current-user') {
-    return getCurrentUser();
-  }
+  if (!userId) return null;
   
   try {
-    // In a real app, you'd fetch from the users table
-    // This is simplified - we'll return mock data for sample users
-    if (['user2', 'user3', 'user4'].includes(userId)) {
-      const mockUsers = await getAllUsers();
-      return mockUsers.find(user => user.id === userId) || null;
+    // Get users from database
+    const users = await executeQuery<any[]>(
+      `SELECT * FROM users WHERE id = ?`, 
+      [userId]
+    );
+
+    if (users && users.length > 0) {
+      // User exists in the database
+      // Get followers
+      const followers = await executeQuery<any[]>(
+        `SELECT follower_id FROM follows WHERE following_id = ?`, 
+        [userId]
+      );
+      
+      // Get following
+      const following = await executeQuery<any[]>(
+        `SELECT following_id FROM follows WHERE follower_id = ?`, 
+        [userId]
+      );
+
+      // Return user with followers and following
+      return {
+        id: users[0].id,
+        username: users[0].username,
+        email: users[0].email,
+        avatar: users[0].avatar,
+        bio: users[0].bio || '',
+        followers: followers.map(f => f.follower_id) || [],
+        following: following.map(f => f.following_id) || [],
+        createdAt: users[0].created_at,
+      };
     }
     
-    // Try to get a real user
-    return getCurrentUser(userId);
+    // If not found in database, check if it's one of our sample users
+    if (['user2', 'user3', 'user4'].includes(userId)) {
+      const mockUsers = await getAllUsers();
+      const mockUser = mockUsers.find(user => user.id === userId);
+      
+      if (mockUser) {
+        // Create the mock user in the database for persistence
+        await executeQuery(
+          `INSERT INTO users (id, username, avatar, bio, created_at) 
+           VALUES (?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE username = VALUES(username)`,
+          [mockUser.id, mockUser.username, mockUser.avatar, mockUser.bio, mockUser.createdAt]
+        );
+        
+        return mockUser;
+      }
+    }
+    
+    return null;
   } catch (error) {
     console.error('Error fetching user:', error);
     return null;
@@ -159,32 +208,16 @@ export const followUser = async (userId: string, currentUserId?: string) => {
   }
   
   try {
-    // Check if users exist
-    const userExists = await executeQuery<any[]>(
-      `SELECT id FROM users WHERE id = ?`, 
-      [userId]
-    );
+    // First, ensure the user to follow exists
+    const userToFollow = await getUserById(userId);
     
-    if (!userExists.length) {
-      // Create the user if they don't exist (for mock users)
-      if (['user2', 'user3', 'user4'].includes(userId)) {
-        const mockUsers = await getAllUsers();
-        const mockUser = mockUsers.find(user => user.id === userId);
-        
-        if (mockUser) {
-          await executeQuery(
-            `INSERT INTO users (id, username, avatar, bio, created_at) VALUES (?, ?, ?, ?, ?)`,
-            [mockUser.id, mockUser.username, mockUser.avatar, mockUser.bio, mockUser.createdAt]
-          );
-        }
-      } else {
-        toast({
-          title: "Error",
-          description: "User not found.",
-          variant: "destructive"
-        });
-        return false;
-      }
+    if (!userToFollow) {
+      toast({
+        title: "Error",
+        description: "User not found.",
+        variant: "destructive"
+      });
+      return false;
     }
     
     // Check if already following
@@ -209,7 +242,7 @@ export const followUser = async (userId: string, currentUserId?: string) => {
       
     toast({
       title: "Following",
-      description: `You are now following this user.`,
+      description: `You are now following ${userToFollow.username}.`,
     });
     
     return true;
@@ -236,6 +269,9 @@ export const unfollowUser = async (userId: string, currentUserId?: string) => {
   }
   
   try {
+    // Get user info for the toast message
+    const userToUnfollow = await getUserById(userId);
+    
     await executeQuery(
       `DELETE FROM follows WHERE follower_id = ? AND following_id = ?`,
       [currentUserId, userId]
@@ -243,7 +279,7 @@ export const unfollowUser = async (userId: string, currentUserId?: string) => {
       
     toast({
       title: "Unfollowed",
-      description: `You are no longer following this user.`,
+      description: userToUnfollow ? `You are no longer following ${userToUnfollow.username}.` : `You are no longer following this user.`,
     });
     
     return true;
@@ -263,24 +299,38 @@ export const searchUsers = async (query: string) => {
   if (!query) return [];
   
   try {
-    // First try to search in the database
+    // Search in database users
     const normalizedQuery = query.toLowerCase();
     
-    // Search in database users
     const dbUsers = await executeQuery<any[]>(
       `SELECT * FROM users WHERE LOWER(username) LIKE ? OR LOWER(bio) LIKE ?`,
       [`%${normalizedQuery}%`, `%${normalizedQuery}%`]
     );
     
     if (dbUsers && dbUsers.length > 0) {
-      return dbUsers.map(user => ({
-        id: user.id,
-        username: user.username,
-        avatar: user.avatar || `https://i.pravatar.cc/150?u=${user.username}`,
-        bio: user.bio || '',
-        followers: [],
-        following: [],
-        createdAt: user.created_at,
+      return Promise.all(dbUsers.map(async (user) => {
+        // Get followers and following counts
+        const followers = await executeQuery<any[]>(
+          `SELECT COUNT(*) as count FROM follows WHERE following_id = ?`, 
+          [user.id]
+        );
+        
+        const following = await executeQuery<any[]>(
+          `SELECT COUNT(*) as count FROM follows WHERE follower_id = ?`, 
+          [user.id]
+        );
+        
+        return {
+          id: user.id,
+          username: user.username,
+          avatar: user.avatar || `https://i.pravatar.cc/150?u=${user.username}`,
+          bio: user.bio || '',
+          followers: [],
+          following: [],
+          followersCount: followers[0]?.count || 0,
+          followingCount: following[0]?.count || 0,
+          createdAt: user.created_at,
+        };
       }));
     }
     
@@ -316,22 +366,26 @@ export const updateUserProfile = async (profile: Partial<User>, userId?: string)
     if (!userExists.length) {
       // Create user if they don't exist
       await executeQuery(
-        `INSERT INTO users (id, username, created_at) VALUES (?, ?, ?)`,
-        [userId, profile.username || `User_${userId.substring(0, 5)}`, new Date().toISOString()]
+        `INSERT INTO users (id, username, email, bio, avatar, created_at) 
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          userId, 
+          profile.username || `User_${userId.substring(0, 5)}`, 
+          profile.email || null,
+          profile.bio || null,
+          profile.avatar || null,
+          new Date().toISOString()
+        ]
       );
     } else {
       // Update existing user
       await executeQuery(
-        `UPDATE users SET username = ?, bio = ?, avatar = ? WHERE id = ?`,
-        [profile.username, profile.bio, profile.avatar, userId]
+        `UPDATE users SET username = ?, email = ?, bio = ?, avatar = ? WHERE id = ?`,
+        [profile.username, profile.email, profile.bio, profile.avatar, userId]
       );
     }
     
-    toast({
-      title: "Profile Updated",
-      description: "Your profile has been updated.",
-    });
-    
+    // Return updated user data
     return getCurrentUser(userId);
   } catch (error) {
     console.error('Error updating profile:', error);

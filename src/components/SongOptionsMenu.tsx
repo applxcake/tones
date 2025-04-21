@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { YouTubeVideo } from '@/services/youtubeService';
+import { toast } from '@/components/ui/use-toast';
 
 interface SongOptionsMenuProps {
   song: YouTubeVideo;
@@ -72,11 +73,25 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
   const handleAddToPlaylist = async (playlistId: string) => {
     if (user) {
       try {
-        await addSongToPlaylist(playlistId, song, user.id);
+        const result = await addSongToPlaylist(playlistId, song, user.id);
         setIsOpen(false); // Close the menu after action
+        return result;
       } catch (error) {
         console.error('Error adding song to playlist:', error);
+        toast({
+          title: "Error",
+          description: "Failed to add song to playlist. Please try again.",
+          variant: "destructive"
+        });
+        return false;
       }
+    } else {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to add songs to playlists.",
+        variant: "destructive"
+      });
+      return false;
     }
   };
 
@@ -100,7 +115,7 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 p-0 hover:bg-white/10"
+          className="h-8 w-8 p-0 hover:bg-white/10 animate-fade-in"
         >
           <MoreVertical className="h-4 w-4" />
         </Button>
@@ -108,15 +123,15 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
       <DropdownMenuContent
         side="right"
         align="start"
-        className="w-56"
+        className="w-56 animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <DropdownMenuItem onClick={handleAddToQueue}>
+        <DropdownMenuItem onClick={handleAddToQueue} className="hover-scale">
           <ListPlus className="mr-2 h-4 w-4" />
           Add to Queue
         </DropdownMenuItem>
 
-        <DropdownMenuItem onClick={handleLike}>
+        <DropdownMenuItem onClick={handleLike} className="hover-scale">
           <Heart className={cn("mr-2 h-4 w-4", liked && "fill-neon-pink text-neon-pink")} />
           {liked ? 'Remove from Liked Songs' : 'Add to Liked Songs'}
         </DropdownMenuItem>
@@ -124,20 +139,35 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
         <DropdownMenuSeparator />
 
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger className="hover-scale">
             <ListPlus className="mr-2 h-4 w-4" />
             Add to Playlist
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
+          <DropdownMenuSubContent className="animate-fade-in">
             {loading ? (
               <DropdownMenuLabel className="text-sm text-muted-foreground">
-                Loading playlists...
+                <div className="flex justify-center py-2">
+                  <div className="flex gap-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div 
+                        key={i}
+                        className="w-1 h-1 bg-primary rounded-full animate-pulse"
+                        style={{ animationDelay: `${i * 0.15}s` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </DropdownMenuLabel>
+            ) : !user ? (
+              <DropdownMenuLabel className="text-sm text-muted-foreground">
+                Sign in to add to playlist
               </DropdownMenuLabel>
             ) : playlists.length > 0 ? (
               playlists.map((playlist) => (
                 <DropdownMenuItem
                   key={playlist.id}
                   onClick={() => handleAddToPlaylist(playlist.id)}
+                  className="hover-scale"
                 >
                   {playlist.name}
                 </DropdownMenuItem>

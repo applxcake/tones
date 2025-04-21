@@ -1,8 +1,7 @@
 
 import { toast } from '@/components/ui/use-toast';
 import { YouTubeVideo } from './youtubeService';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { executeQuery, generateId } from '@/integrations/tidb/client';
 
 export interface Playlist {
   id: string;
@@ -19,29 +18,33 @@ export const getUserPlaylists = async (userId?: string) => {
   if (!userId) return [];
 
   try {
-    const { data: playlists, error } = await supabase
-      .from('playlists')
-      .select('*')
-      .eq('user_id', userId);
-    
-    if (error) throw error;
+    const playlists = await executeQuery<any[]>(
+      `SELECT * FROM playlists WHERE user_id = ?`,
+      [userId]
+    );
     
     // Get songs for each playlist
     const playlistsWithSongs = await Promise.all(playlists.map(async (playlist) => {
-      const { data: playlistSongs, error } = await supabase
-        .from('playlist_songs')
-        .select('songs(*)')
-        .eq('playlist_id', playlist.id)
-        .order('position', { ascending: true });
-        
-      if (error) throw error;
+      const playlistSongs = await executeQuery<any[]>(
+        `SELECT s.* FROM songs s 
+         JOIN playlist_songs ps ON s.id = ps.song_id 
+         WHERE ps.playlist_id = ? 
+         ORDER BY ps.position ASC`,
+        [playlist.id]
+      );
       
       return {
         id: playlist.id,
         name: playlist.name,
         description: playlist.description || '',
         imageUrl: playlist.image_url || undefined,
-        songs: playlistSongs?.map(item => item.songs) || [],
+        songs: playlistSongs?.map(song => ({
+          id: song.id,
+          title: song.title,
+          thumbnailUrl: song.thumbnail_url,
+          channelTitle: song.channel_title,
+          publishedAt: new Date().toISOString(), // Default value for publishedAt
+        })) || [],
         createdAt: playlist.created_at,
         userId: playlist.user_id,
       };
@@ -71,15 +74,14 @@ export const createPlaylist = async (name: string, description = '', userId?: st
   }
 
   try {
-    const { data, error } = await supabase
-      .from('playlists')
-      .insert([
-        { name, description, user_id: userId }
-      ])
-      .select()
-      .single();
+    const playlistId = generateId();
+    const now = new Date().toISOString();
     
-    if (error) throw error;
+    await executeQuery(
+      `INSERT INTO playlists (id, name, description, user_id, created_at) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [playlistId, name, description, userId, now]
+    );
     
     toast({
       title: "Playlist Created",
@@ -87,12 +89,12 @@ export const createPlaylist = async (name: string, description = '', userId?: st
     });
 
     return {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
+      id: playlistId,
+      name,
+      description: description || '',
       songs: [],
-      createdAt: data.created_at,
-      userId: data.user_id,
+      createdAt: now,
+      userId,
     };
   } catch (error) {
     console.error('Error creating playlist:', error);
@@ -111,33 +113,27 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
   
   try {
     // First check if the song exists in the songs table
-    const { data: existingSong } = await supabase
-      .from('songs')
-      .select('*')
-      .eq('id', song.id)
-      .single();
+    const existingSong = await executeQuery<any[]>(
+      `SELECT * FROM songs WHERE id = ?`,
+      [song.id]
+    );
     
     // If song doesn't exist, add it
-    if (!existingSong) {
-      await supabase
-        .from('songs')
-        .insert([{
-          id: song.id,
-          title: song.title,
-          thumbnail_url: song.thumbnailUrl,
-          channel_title: song.channelTitle,
-        }]);
+    if (!existingSong.length) {
+      await executeQuery(
+        `INSERT INTO songs (id, title, thumbnail_url, channel_title) 
+         VALUES (?, ?, ?, ?)`,
+        [song.id, song.title, song.thumbnailUrl, song.channelTitle]
+      );
     }
     
     // Check if song is already in playlist
-    const { data: existingPlaylistSong } = await supabase
-      .from('playlist_songs')
-      .select('*')
-      .eq('playlist_id', playlistId)
-      .eq('song_id', song.id)
-      .single();
+    const existingPlaylistSong = await executeQuery<any[]>(
+      `SELECT * FROM playlist_songs WHERE playlist_id = ? AND song_id = ?`,
+      [playlistId, song.id]
+    );
       
-    if (existingPlaylistSong) {
+    if (existingPlaylistSong.length) {
       toast({
         title: "Already Added",
         description: "This song is already in the playlist.",
@@ -146,36 +142,29 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
     }
     
     // Get highest position in playlist
-    const { data: positionData } = await supabase
-      .from('playlist_songs')
-      .select('position')
-      .eq('playlist_id', playlistId)
-      .order('position', { ascending: false })
-      .limit(1);
+    const positionData = await executeQuery<any[]>(
+      `SELECT position FROM playlist_songs WHERE playlist_id = ? ORDER BY position DESC LIMIT 1`,
+      [playlistId]
+    );
       
-    const position = positionData && positionData.length > 0 ? positionData[0].position + 1 : 0;
+    const position = positionData.length > 0 ? positionData[0].position + 1 : 0;
     
     // Add song to playlist
-    const { error } = await supabase
-      .from('playlist_songs')
-      .insert([{
-        playlist_id: playlistId,
-        song_id: song.id,
-        position: position,
-      }]);
-    
-    if (error) throw error;
+    await executeQuery(
+      `INSERT INTO playlist_songs (id, playlist_id, song_id, position, added_at) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [generateId(), playlistId, song.id, position, new Date().toISOString()]
+    );
     
     // Get playlist name for toast
-    const { data: playlist } = await supabase
-      .from('playlists')
-      .select('name')
-      .eq('id', playlistId)
-      .single();
+    const playlist = await executeQuery<any[]>(
+      `SELECT name FROM playlists WHERE id = ?`,
+      [playlistId]
+    );
     
     toast({
       title: "Song Added",
-      description: `Added to ${playlist?.name || 'playlist'}`,
+      description: `Added to ${playlist[0]?.name || 'playlist'}`,
     });
     
     return true;
@@ -193,13 +182,10 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
 // Remove a song from a playlist
 export const removeSongFromPlaylist = async (playlistId: string, songId: string) => {
   try {
-    const { error } = await supabase
-      .from('playlist_songs')
-      .delete()
-      .eq('playlist_id', playlistId)
-      .eq('song_id', songId);
-    
-    if (error) throw error;
+    await executeQuery(
+      `DELETE FROM playlist_songs WHERE playlist_id = ? AND song_id = ?`,
+      [playlistId, songId]
+    );
     
     toast({
       title: "Song Removed",
@@ -221,12 +207,10 @@ export const removeSongFromPlaylist = async (playlistId: string, songId: string)
 // Delete a playlist
 export const deletePlaylist = async (playlistId: string) => {
   try {
-    const { error } = await supabase
-      .from('playlists')
-      .delete()
-      .eq('id', playlistId);
-    
-    if (error) throw error;
+    await executeQuery(
+      `DELETE FROM playlists WHERE id = ?`,
+      [playlistId]
+    );
     
     toast({
       title: "Playlist Deleted",
@@ -248,36 +232,38 @@ export const deletePlaylist = async (playlistId: string) => {
 // Get a single playlist by ID
 export const getPlaylistById = async (playlistId: string) => {
   try {
-    const { data: playlist, error } = await supabase
-      .from('playlists')
-      .select('*')
-      .eq('id', playlistId)
-      .single();
+    const playlist = await executeQuery<any[]>(
+      `SELECT * FROM playlists WHERE id = ?`,
+      [playlistId]
+    );
     
-    if (error) throw error;
+    if (!playlist.length) {
+      throw new Error('Playlist not found');
+    }
     
     // Get songs for the playlist
-    const { data: playlistSongs, error: songsError } = await supabase
-      .from('playlist_songs')
-      .select('songs(*)')
-      .eq('playlist_id', playlistId)
-      .order('position', { ascending: true });
+    const playlistSongs = await executeQuery<any[]>(
+      `SELECT s.* FROM songs s 
+       JOIN playlist_songs ps ON s.id = ps.song_id 
+       WHERE ps.playlist_id = ? 
+       ORDER BY ps.position ASC`,
+      [playlistId]
+    );
       
-    if (songsError) throw songsError;
-    
     return {
-      id: playlist.id,
-      name: playlist.name,
-      description: playlist.description || '',
-      imageUrl: playlist.image_url || undefined,
-      songs: playlistSongs?.map(item => ({
-        id: item.songs.id,
-        title: item.songs.title,
-        thumbnailUrl: item.songs.thumbnail_url,
-        channelTitle: item.songs.channel_title,
+      id: playlist[0].id,
+      name: playlist[0].name,
+      description: playlist[0].description || '',
+      imageUrl: playlist[0].image_url || undefined,
+      songs: playlistSongs?.map(song => ({
+        id: song.id,
+        title: song.title,
+        thumbnailUrl: song.thumbnail_url,
+        channelTitle: song.channel_title,
+        publishedAt: new Date().toISOString(), // Default value for publishedAt
       })) || [],
-      createdAt: playlist.created_at,
-      userId: playlist.user_id,
+      createdAt: playlist[0].created_at,
+      userId: playlist[0].user_id,
     };
   } catch (error) {
     console.error('Error fetching playlist:', error);

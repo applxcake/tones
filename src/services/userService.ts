@@ -1,7 +1,6 @@
 
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { executeQuery, generateId } from '@/integrations/tidb/client';
 
 export interface User {
   id: string;
@@ -20,36 +19,51 @@ export const getCurrentUser = async (userId?: string) => {
   if (!userId) return null;
   
   try {
-    // Get followers
-    const { data: followers, error: followersError } = await supabase
-      .from('follows')
-      .select('follower_id')
-      .eq('following_id', userId);
+    // Get user
+    const users = await executeQuery<any[]>(
+      `SELECT * FROM users WHERE id = ?`, 
+      [userId]
+    );
+    
+    if (!users.length) {
+      // User doesn't exist yet, create a new user
+      const username = `User_${userId.substring(0, 5)}`;
+      await executeQuery(
+        `INSERT INTO users (id, username, created_at) VALUES (?, ?, ?)`,
+        [userId, username, new Date().toISOString()]
+      );
       
-    if (followersError) throw followersError;
+      return {
+        id: userId,
+        username,
+        bio: '',
+        followers: [],
+        following: [],
+        createdAt: new Date().toISOString(),
+      };
+    }
+    
+    // Get followers
+    const followers = await executeQuery<any[]>(
+      `SELECT follower_id FROM follows WHERE following_id = ?`, 
+      [userId]
+    );
     
     // Get following
-    const { data: following, error: followingError } = await supabase
-      .from('follows')
-      .select('following_id')
-      .eq('follower_id', userId);
-      
-    if (followingError) throw followingError;
-    
-    // Get user from auth (need to create a user profile table in a real app)
-    const { data: authUser } = await supabase.auth.getUser();
-    
-    if (!authUser?.user) return null;
+    const following = await executeQuery<any[]>(
+      `SELECT following_id FROM follows WHERE follower_id = ?`, 
+      [userId]
+    );
     
     return {
-      id: authUser.user.id,
-      username: authUser.user.user_metadata?.username || authUser.user.email?.split('@')[0] || 'User',
-      email: authUser.user.email,
-      avatar: authUser.user.user_metadata?.avatar_url,
-      bio: authUser.user.user_metadata?.bio || '',
-      followers: followers?.map(f => f.follower_id) || [],
-      following: following?.map(f => f.following_id) || [],
-      createdAt: authUser.user.created_at || new Date().toISOString(),
+      id: users[0].id,
+      username: users[0].username,
+      email: users[0].email,
+      avatar: users[0].avatar,
+      bio: users[0].bio || '',
+      followers: followers.map(f => f.follower_id) || [],
+      following: following.map(f => f.following_id) || [],
+      createdAt: users[0].created_at,
     };
   } catch (error) {
     console.error('Error fetching current user:', error);
@@ -60,7 +74,7 @@ export const getCurrentUser = async (userId?: string) => {
 // Get all users
 export const getAllUsers = async () => {
   try {
-    // In a real app, you'd have a users/profiles table
+    // In a real app with TiDB, we'd query the users table
     // This is simplified - we'll return mock data
     return [
       {
@@ -104,14 +118,15 @@ export const getUserById = async (userId: string) => {
   }
   
   try {
-    // In a real app, you'd fetch from a users/profiles table
+    // In a real app, you'd fetch from the users table
     // This is simplified - we'll return mock data for sample users
     if (['user2', 'user3', 'user4'].includes(userId)) {
       const mockUsers = await getAllUsers();
       return mockUsers.find(user => user.id === userId) || null;
     }
     
-    return null;
+    // Try to get a real user
+    return getCurrentUser(userId);
   } catch (error) {
     console.error('Error fetching user:', error);
     return null;
@@ -130,15 +145,41 @@ export const followUser = async (userId: string, currentUserId?: string) => {
   }
   
   try {
+    // Check if users exist
+    const userExists = await executeQuery<any[]>(
+      `SELECT id FROM users WHERE id = ?`, 
+      [userId]
+    );
+    
+    if (!userExists.length) {
+      // Create the user if they don't exist (for mock users)
+      if (['user2', 'user3', 'user4'].includes(userId)) {
+        const mockUsers = await getAllUsers();
+        const mockUser = mockUsers.find(user => user.id === userId);
+        
+        if (mockUser) {
+          await executeQuery(
+            `INSERT INTO users (id, username, avatar, bio, created_at) VALUES (?, ?, ?, ?, ?)`,
+            [mockUser.id, mockUser.username, mockUser.avatar, mockUser.bio, mockUser.createdAt]
+          );
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "User not found.",
+          variant: "destructive"
+        });
+        return false;
+      }
+    }
+    
     // Check if already following
-    const { data: existingFollow } = await supabase
-      .from('follows')
-      .select('*')
-      .eq('follower_id', currentUserId)
-      .eq('following_id', userId)
-      .single();
+    const existingFollow = await executeQuery<any[]>(
+      `SELECT * FROM follows WHERE follower_id = ? AND following_id = ?`,
+      [currentUserId, userId]
+    );
       
-    if (existingFollow) {
+    if (existingFollow.length) {
       toast({
         title: "Already Following",
         description: `You are already following this user.`,
@@ -147,15 +188,11 @@ export const followUser = async (userId: string, currentUserId?: string) => {
     }
     
     // Create follow relationship
-    const { error } = await supabase
-      .from('follows')
-      .insert([{
-        follower_id: currentUserId,
-        following_id: userId,
-      }]);
+    await executeQuery(
+      `INSERT INTO follows (id, follower_id, following_id, created_at) VALUES (?, ?, ?, ?)`,
+      [generateId(), currentUserId, userId, new Date().toISOString()]
+    );
       
-    if (error) throw error;
-    
     toast({
       title: "Following",
       description: `You are now following this user.`,
@@ -185,14 +222,11 @@ export const unfollowUser = async (userId: string, currentUserId?: string) => {
   }
   
   try {
-    const { error } = await supabase
-      .from('follows')
-      .delete()
-      .eq('follower_id', currentUserId)
-      .eq('following_id', userId);
+    await executeQuery(
+      `DELETE FROM follows WHERE follower_id = ? AND following_id = ?`,
+      [currentUserId, userId]
+    );
       
-    if (error) throw error;
-    
     toast({
       title: "Unfollowed",
       description: `You are no longer following this user.`,
@@ -242,15 +276,24 @@ export const updateUserProfile = async (profile: Partial<User>, userId?: string)
   }
   
   try {
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        username: profile.username,
-        bio: profile.bio,
-        avatar_url: profile.avatar
-      }
-    });
+    const userExists = await executeQuery<any[]>(
+      `SELECT id FROM users WHERE id = ?`, 
+      [userId]
+    );
     
-    if (error) throw error;
+    if (!userExists.length) {
+      // Create user if they don't exist
+      await executeQuery(
+        `INSERT INTO users (id, username, created_at) VALUES (?, ?, ?)`,
+        [userId, profile.username || `User_${userId.substring(0, 5)}`, new Date().toISOString()]
+      );
+    } else {
+      // Update existing user
+      await executeQuery(
+        `UPDATE users SET username = ?, bio = ?, avatar = ? WHERE id = ?`,
+        [profile.username, profile.bio, profile.avatar, userId]
+      );
+    }
     
     toast({
       title: "Profile Updated",

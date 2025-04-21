@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { executeQuery, generateId } from '@/integrations/tidb/client';
 
-// Define YouTube Player API types
 declare global {
   interface Window {
     YT: typeof YT;
@@ -12,16 +11,14 @@ declare global {
   }
 }
 
-// Define YouTubeVideoBasic type for videos from database with fewer properties
 interface YouTubeVideoBasic {
   id: string;
   title: string;
   thumbnailUrl: string;
   channelTitle: string;
-  publishedAt: string; // Changed from optional to required
+  publishedAt: string;
 }
 
-// YouTube Player Types
 declare namespace YT {
   class Player {
     constructor(elementId: string | HTMLElement, options: PlayerOptions);
@@ -104,11 +101,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [likedSongs, setLikedSongs] = useState<YouTubeVideoBasic[]>([]);
   const [isApiReady, setIsApiReady] = useState(false);
   
-  // YouTube Player integration
   const playerRef = useRef<YT.Player | null>(null);
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
   
-  // Load YouTube IFrame API
   useEffect(() => {
     if (!window.YT) {
       const tag = document.createElement('script');
@@ -154,26 +149,22 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       
       try {
-        const { data, error } = await supabase
-          .from('liked_songs')
-          .select('song_id, songs(*)') // Changed to include song_id and use songs table join
-          .eq('user_id', user.id);
-          
-        if (error) throw error;
+        const likedSongsData = await executeQuery<any[]>(
+          `SELECT s.* FROM songs s 
+           JOIN liked_songs ls ON s.id = ls.song_id 
+           WHERE ls.user_id = ?`,
+          [user.id]
+        );
         
-        // Fixed the array mapping to properly extract song data
-        const songs = data?.map(item => {
-          if (!item.songs) return null;
-          return {
-            id: item.song_id, // Use song_id directly
-            title: item.songs.title,
-            thumbnailUrl: item.songs.thumbnail_url,
-            channelTitle: item.songs.channel_title,
-            publishedAt: new Date().toISOString(), // Add a default publishedAt
-          };
-        }).filter(Boolean) || [];
+        const songs = likedSongsData?.map(song => ({
+          id: song.id,
+          title: song.title,
+          thumbnailUrl: song.thumbnail_url,
+          channelTitle: song.channel_title,
+          publishedAt: new Date().toISOString(),
+        })) || [];
         
-        setLikedSongs(songs as YouTubeVideoBasic[]);
+        setLikedSongs(songs);
       } catch (error) {
         console.error('Error loading liked songs:', error);
       }
@@ -190,21 +181,21 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       
       try {
-        const { data, error } = await supabase
-          .from('recently_played')
-          .select('songs(*)')
-          .eq('user_id', user.id)
-          .order('played_at', { ascending: false })
-          .limit(20);
-          
-        if (error) throw error;
+        const recentlyPlayedData = await executeQuery<any[]>(
+          `SELECT s.* FROM songs s 
+           JOIN recently_played rp ON s.id = rp.song_id 
+           WHERE rp.user_id = ? 
+           ORDER BY rp.played_at DESC 
+           LIMIT 20`,
+          [user.id]
+        );
         
-        const songs = data?.map(item => ({
-          id: item.songs.id,
-          title: item.songs.title,
-          thumbnailUrl: item.songs.thumbnail_url,
-          channelTitle: item.songs.channel_title,
-          publishedAt: new Date().toISOString(), // Add a default publishedAt
+        const songs = recentlyPlayedData?.map(song => ({
+          id: song.id,
+          title: song.title,
+          thumbnailUrl: song.thumbnail_url,
+          channelTitle: song.channel_title,
+          publishedAt: new Date().toISOString(),
         })) || [];
         
         setRecentlyPlayed(songs);
@@ -351,38 +342,37 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const playTrack = async (track: YouTubeVideo) => {
     if (currentTrack && user?.id) {
       try {
-        const { data: existingSong } = await supabase
-          .from('songs')
-          .select('*')
-          .eq('id', currentTrack.id)
-          .single();
+        const existingSong = await executeQuery<any[]>(
+          `SELECT * FROM songs WHERE id = ?`,
+          [currentTrack.id]
+        );
         
-        if (!existingSong) {
-          await supabase
-            .from('songs')
-            .insert([{
-              id: currentTrack.id,
-              title: currentTrack.title,
-              thumbnail_url: currentTrack.thumbnailUrl,
-              channel_title: currentTrack.channelTitle,
-            }]);
+        if (!existingSong.length) {
+          await executeQuery(
+            `INSERT INTO songs (id, title, thumbnail_url, channel_title) 
+             VALUES (?, ?, ?, ?)`,
+            [currentTrack.id, currentTrack.title, currentTrack.thumbnailUrl, currentTrack.channelTitle]
+          );
         }
         
-        await supabase
-          .from('recently_played')
-          .upsert(
-            {
-              user_id: user.id,
-              song_id: currentTrack.id,
-              played_at: new Date().toISOString()
-            },
-            {
-              onConflict: 'user_id,song_id',
-              ignoreDuplicates: false
-            }
+        const recentEntryExists = await executeQuery<any[]>(
+          `SELECT * FROM recently_played WHERE user_id = ? AND song_id = ?`,
+          [user.id, currentTrack.id]
+        );
+        
+        if (recentEntryExists.length) {
+          await executeQuery(
+            `UPDATE recently_played SET played_at = ? WHERE user_id = ? AND song_id = ?`,
+            [new Date().toISOString(), user.id, currentTrack.id]
           );
+        } else {
+          await executeQuery(
+            `INSERT INTO recently_played (id, user_id, song_id, played_at) 
+             VALUES (?, ?, ?, ?)`,
+            [generateId(), user.id, currentTrack.id, new Date().toISOString()]
+          );
+        }
           
-        // Update recently played in state
         const updatedRecently = [
           {
             id: currentTrack.id,
@@ -402,28 +392,17 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     
     if (user?.id) {
       try {
-        // First ensure the song exists in the songs table
-        const { data: existingSong, error: checkError } = await supabase
-          .from('songs')
-          .select('id')
-          .eq('id', track.id)
-          .single();
+        const existingSong = await executeQuery<any[]>(
+          `SELECT id FROM songs WHERE id = ?`,
+          [track.id]
+        );
         
-        if (checkError || !existingSong) {
-          // If song doesn't exist, insert it
-          const { error: insertError } = await supabase
-            .from('songs')
-            .insert([{
-              id: track.id,
-              title: track.title,
-              thumbnail_url: track.thumbnailUrl,
-              channel_title: track.channelTitle,
-            }]);
-            
-          if (insertError) {
-            console.error("Error saving song:", insertError);
-            // Don't throw here, just log and continue
-          }
+        if (!existingSong.length) {
+          await executeQuery(
+            `INSERT INTO songs (id, title, thumbnail_url, channel_title) 
+             VALUES (?, ?, ?, ?)`,
+            [track.id, track.title, track.thumbnailUrl, track.channelTitle]
+          );
         }
       } catch (error) {
         console.error("Error checking/saving song:", error);
@@ -455,7 +434,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (currentTrack) {
         setQueue(prev => [currentTrack, ...prev]);
       }
-      // Fixed type conversion by ensuring all required properties are present
       setCurrentTrack({
         id: prevTrack.id,
         title: prevTrack.title,
@@ -492,36 +470,24 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const isCurrentlyLiked = likedSongs.some(song => song.id === track.id);
     
     try {
-      // First ensure the song exists in the songs table
-      const { data: existingSong, error: checkError } = await supabase
-        .from('songs')
-        .select('id')
-        .eq('id', track.id)
-        .single();
+      const existingSong = await executeQuery<any[]>(
+        `SELECT id FROM songs WHERE id = ?`,
+        [track.id]
+      );
       
-      if (checkError || !existingSong) {
-        // If song doesn't exist, insert it
-        const { error: insertError } = await supabase
-          .from('songs')
-          .insert([{
-            id: track.id,
-            title: track.title,
-            thumbnail_url: track.thumbnailUrl,
-            channel_title: track.channelTitle,
-          }]);
-          
-        if (insertError) throw insertError;
+      if (!existingSong.length) {
+        await executeQuery(
+          `INSERT INTO songs (id, title, thumbnail_url, channel_title) 
+           VALUES (?, ?, ?, ?)`,
+          [track.id, track.title, track.thumbnailUrl, track.channelTitle]
+        );
       }
       
-      // Now handle the like/unlike operation
       if (isCurrentlyLiked) {
-        const { error } = await supabase
-          .from('liked_songs')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('song_id', track.id);
-          
-        if (error) throw error;
+        await executeQuery(
+          `DELETE FROM liked_songs WHERE user_id = ? AND song_id = ?`,
+          [user.id, track.id]
+        );
         
         setLikedSongs(prev => prev.filter(song => song.id !== track.id));
         
@@ -531,22 +497,18 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         });
         return false;
       } else {
-        const { error } = await supabase
-          .from('liked_songs')
-          .insert([{
-            user_id: user.id,
-            song_id: track.id,
-          }]);
-          
-        if (error) throw error;
+        await executeQuery(
+          `INSERT INTO liked_songs (id, user_id, song_id, liked_at) 
+           VALUES (?, ?, ?, ?)`,
+          [generateId(), user.id, track.id, new Date().toISOString()]
+        );
         
-        // Add to liked songs state
         const newLikedSong = {
           id: track.id,
           title: track.title,
           thumbnailUrl: track.thumbnailUrl,
           channelTitle: track.channelTitle,
-          publishedAt: track.publishedAt || new Date().toISOString(),
+          publishedAt: new Date().toISOString(),
         };
         
         setLikedSongs(prev => [...prev, newLikedSong]);

@@ -25,12 +25,22 @@ const Layout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Sidebar with transition */}
+    <div className="min-h-screen bg-background text-foreground overflow-hidden relative">
+      {/* Overlay for mobile when sidebar is open */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-20 md:hidden" 
+          onClick={toggleSidebar}
+          aria-hidden="true"
+        />
+      )}
+      
+      {/* Sidebar */}
       <div 
-        className={`fixed top-0 bottom-0 z-30 transition-all duration-300 ${
-          sidebarOpen ? 'left-0' : '-left-64'
-        } md:${sidebarOpen ? 'left-0' : '-left-64'}`}
+        className={`fixed top-0 bottom-0 w-64 z-30 transform transition-transform duration-300 ease-in-out ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        style={{ willChange: 'transform' }}
       >
         <AppSidebar onToggleSidebar={toggleSidebar} />
       </div>

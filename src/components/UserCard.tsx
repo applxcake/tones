@@ -22,6 +22,7 @@ const UserCard = ({ user }: UserCardProps) => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [currentUserData, setCurrentUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   // Fetch current user data to check following status
   useEffect(() => {
@@ -37,6 +38,8 @@ const UserCard = ({ user }: UserCardProps) => {
         } finally {
           setLoading(false);
         }
+      } else {
+        setLoading(false);
       }
     };
     
@@ -59,6 +62,10 @@ const UserCard = ({ user }: UserCardProps) => {
     }
   };
 
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
   if (loading) {
     return (
       <div className="glass-panel rounded-lg p-4 hover-scale animate-pulse">
@@ -79,10 +86,17 @@ const UserCard = ({ user }: UserCardProps) => {
       <div className="flex items-center gap-4">
         <Link to={`/users/${user.id}`}>
           <Avatar className="h-12 w-12 cursor-pointer hover:neon-glow-blue animate-scale-in">
-            <AvatarImage src={user.avatar} alt={user.username} />
-            <AvatarFallback>
-              <UserIcon className="h-6 w-6" />
-            </AvatarFallback>
+            {!imageError && user.avatar ? (
+              <AvatarImage 
+                src={user.avatar} 
+                alt={user.username} 
+                onError={handleImageError}
+              />
+            ) : (
+              <AvatarFallback>
+                <UserIcon className="h-6 w-6" />
+              </AvatarFallback>
+            )}
           </Avatar>
         </Link>
         
@@ -98,19 +112,21 @@ const UserCard = ({ user }: UserCardProps) => {
           </p>
         </div>
         
-        <Button 
-          variant={isFollowing ? "outline" : "default"}
-          size="sm"
-          className={isFollowing ? "animate-scale-in" : "bg-neon-purple hover:bg-neon-purple/80 animate-scale-in"}
-          onClick={handleFollowToggle}
-        >
-          {isFollowing ? (
-            <UserMinus className="h-4 w-4 mr-1" />
-          ) : (
-            <UserPlus className="h-4 w-4 mr-1" />
-          )}
-          {isFollowing ? 'Unfollow' : 'Follow'}
-        </Button>
+        {authUser && authUser.id !== user.id && (
+          <Button 
+            variant={isFollowing ? "outline" : "default"}
+            size="sm"
+            className={isFollowing ? "animate-scale-in" : "bg-neon-purple hover:bg-neon-purple/80 animate-scale-in"}
+            onClick={handleFollowToggle}
+          >
+            {isFollowing ? (
+              <UserMinus className="h-4 w-4 mr-1" />
+            ) : (
+              <UserPlus className="h-4 w-4 mr-1" />
+            )}
+            {isFollowing ? 'Unfollow' : 'Follow'}
+          </Button>
+        )}
       </div>
 
       {user.bio && (

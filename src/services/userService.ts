@@ -61,11 +61,25 @@ export const getCurrentUser = async (userId?: string) => {
       [userId]
     );
     
+    // Get profile picture from user_profiles table (if exists)
+    const profileData = await executeQuery<any[]>(
+      `SELECT * FROM user_profiles WHERE user_id = ?`,
+      [userId]
+    );
+    
+    // If profile picture exists in user_profiles but not in users table, update users table
+    if (profileData.length > 0 && profileData[0].profile_picture_url && !users[0].avatar) {
+      await executeQuery(
+        `UPDATE users SET avatar = ? WHERE id = ?`,
+        [profileData[0].profile_picture_url, userId]
+      );
+    }
+    
     return {
       id: users[0].id,
       username: users[0].username,
       email: users[0].email,
-      avatar: users[0].avatar,
+      avatar: users[0].avatar || (profileData.length > 0 ? profileData[0].profile_picture_url : undefined),
       bio: users[0].bio || '',
       followers: followers.map(f => f.follower_id) || [],
       following: following.map(f => f.following_id) || [],
@@ -385,6 +399,29 @@ export const updateUserProfile = async (profile: Partial<User>, userId?: string)
       );
     }
     
+    // Save profile picture URL to user_profiles table for better organization
+    if (profile.avatar) {
+      // Check if profile exists in user_profiles
+      const existingProfile = await executeQuery<any[]>(
+        `SELECT user_id FROM user_profiles WHERE user_id = ?`,
+        [userId]
+      );
+      
+      if (existingProfile.length > 0) {
+        // Update existing profile
+        await executeQuery(
+          `UPDATE user_profiles SET profile_picture_url = ? WHERE user_id = ?`,
+          [profile.avatar, userId]
+        );
+      } else {
+        // Create new profile
+        await executeQuery(
+          `INSERT INTO user_profiles (user_id, profile_picture_url) VALUES (?, ?)`,
+          [userId, profile.avatar]
+        );
+      }
+    }
+    
     // Return updated user data
     return getCurrentUser(userId);
   } catch (error) {
@@ -395,5 +432,70 @@ export const updateUserProfile = async (profile: Partial<User>, userId?: string)
       variant: "destructive"
     });
     return null;
+  }
+};
+
+// Upload profile picture via URL
+export const uploadProfilePicture = async (imageUrl: string, userId?: string) => {
+  if (!userId) {
+    toast({
+      title: "Error",
+      description: "You must be logged in to update your profile picture.",
+      variant: "destructive"
+    });
+    return false;
+  }
+  
+  // Validate URL format
+  try {
+    new URL(imageUrl);
+  } catch (e) {
+    toast({
+      title: "Invalid URL",
+      description: "Please enter a valid image URL.",
+      variant: "destructive"
+    });
+    return false;
+  }
+  
+  try {
+    // Update the user's avatar in users table
+    await executeQuery(
+      `UPDATE users SET avatar = ? WHERE id = ?`,
+      [imageUrl, userId]
+    );
+    
+    // Update or create in user_profiles table
+    const existingProfile = await executeQuery<any[]>(
+      `SELECT user_id FROM user_profiles WHERE user_id = ?`,
+      [userId]
+    );
+    
+    if (existingProfile.length > 0) {
+      await executeQuery(
+        `UPDATE user_profiles SET profile_picture_url = ? WHERE user_id = ?`,
+        [imageUrl, userId]
+      );
+    } else {
+      await executeQuery(
+        `INSERT INTO user_profiles (user_id, profile_picture_url) VALUES (?, ?)`,
+        [userId, imageUrl]
+      );
+    }
+    
+    toast({
+      title: "Profile Picture Updated",
+      description: "Your profile picture has been successfully updated.",
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error uploading profile picture:', error);
+    toast({
+      title: "Error",
+      description: "Could not update profile picture. Please try again.",
+      variant: "destructive"
+    });
+    return false;
   }
 };

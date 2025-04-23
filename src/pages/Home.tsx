@@ -2,16 +2,19 @@
 import { useEffect, useState } from 'react';
 import ScrollableRow from '@/components/ScrollableRow';
 import SongTile from '@/components/SongTile';
+import UserCard from '@/components/UserCard';
 import { searchYouTubeVideos } from '@/services/youtubeService';
+import { getAllUsers } from '@/services/userService';
 import GenreExplorer from '@/components/GenreExplorer';
 
 const Home = () => {
   const [trendingSongs, setTrendingSongs] = useState([]);
   const [newReleases, setNewReleases] = useState([]);
+  const [recommendedUsers, setRecommendedUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchMusic = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         
@@ -22,14 +25,18 @@ const Home = () => {
         // Fetch new releases
         const releases = await searchYouTubeVideos('new music releases');
         setNewReleases(releases);
+        
+        // Fetch recommended users
+        const users = await getAllUsers();
+        setRecommendedUsers(users);
       } catch (error) {
-        console.error('Error fetching music:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
     
-    fetchMusic();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -71,6 +78,17 @@ const Home = () => {
           ))}
         </ScrollableRow>
       </section>
+      
+      {recommendedUsers.length > 0 && (
+        <section className="mb-10 animate-slide-in">
+          <h2 className="text-2xl font-bold mb-6">People to Follow</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recommendedUsers.slice(0, 6).map((user) => (
+              <UserCard key={user.id} user={user} />
+            ))}
+          </div>
+        </section>
+      )}
       
       <section className="mb-10">
         <GenreExplorer />

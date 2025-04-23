@@ -14,15 +14,15 @@ const AppSidebar = ({ onToggleSidebar }: AppSidebarProps) => {
   const { isAuthenticated, user, signOut } = useAuth();
   const navigate = useNavigate();
 
-  const handleSearch = () => {
-    navigate('/search');
+  const handleNavigation = (path: string) => {
+    navigate(path);
     if (onToggleSidebar) {
       onToggleSidebar();
     }
   };
 
   return (
-    <div className="h-screen w-64 bg-sidebar fixed left-0 top-0 z-30 glass-panel">
+    <div className="h-screen w-64 bg-sidebar fixed left-0 top-0 z-30 shadow-lg backdrop-blur-md bg-background/95">
       <div className="p-6">
         <div className="flex items-center gap-2 mb-2">
           <Disc3 className="h-8 w-8 text-neon-purple animate-pulse-glow" />
@@ -35,7 +35,7 @@ const AppSidebar = ({ onToggleSidebar }: AppSidebarProps) => {
         <Button 
           variant="outline" 
           className="w-full flex items-center justify-start gap-2 mb-4"
-          onClick={handleSearch}
+          onClick={() => handleNavigation('/search')}
         >
           <Search className="h-4 w-4" />
           Search...
@@ -78,26 +78,16 @@ const AppSidebar = ({ onToggleSidebar }: AppSidebarProps) => {
               variant="outline" 
               size="sm" 
               className="w-full" 
-              onClick={() => {
-                navigate('/login');
-                if (onToggleSidebar) {
-                  onToggleSidebar();
-                }
-              }}
+              onClick={() => handleNavigation('/login')}
             >
-              <NavLink to="/login">Sign In</NavLink>
+              Sign In
             </Button>
             <Button 
               size="sm" 
               className="w-full bg-neon-purple hover:bg-neon-purple/80" 
-              onClick={() => {
-                navigate('/signup');
-                if (onToggleSidebar) {
-                  onToggleSidebar();
-                }
-              }}
+              onClick={() => handleNavigation('/signup')}
             >
-              <NavLink to="/signup">Sign Up</NavLink>
+              Sign Up
             </Button>
           </div>
         )}
@@ -119,6 +109,16 @@ interface SidebarNavItemProps {
 }
 
 const SidebarNavItem = ({ to, icon, label, onToggleSidebar }: SidebarNavItemProps) => {
+  const navigate = useNavigate();
+  
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate(to);
+    if (onToggleSidebar) {
+      onToggleSidebar();
+    }
+  };
+  
   return (
     <NavLink
       to={to}
@@ -128,11 +128,7 @@ const SidebarNavItem = ({ to, icon, label, onToggleSidebar }: SidebarNavItemProp
           ? "bg-accent text-accent-foreground neon-glow-purple" 
           : "text-gray-400 hover:text-white hover:bg-gray-800/50"
       )}
-      onClick={() => {
-        if (onToggleSidebar) {
-          onToggleSidebar();
-        }
-      }}
+      onClick={handleClick}
     >
       {icon}
       <span>{label}</span>

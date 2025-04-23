@@ -1,4 +1,3 @@
-
 // Mock data for browser environment
 const mockSongs = [
   {
@@ -119,7 +118,8 @@ const mockDb = {
   playlist_songs: [...mockPlaylistSongs],
   liked_songs: [...mockLikedSongs],
   follows: [...mockFollows],
-  recently_played: [...mockRecentlyPlayed]
+  recently_played: [...mockRecentlyPlayed],
+  user_profiles: []
 };
 
 // Mock TiDB functions for browser environment
@@ -337,6 +337,20 @@ export const executeQuery = async <T>(
           // Update existing user
           existingUser.username = params[1] || existingUser.username;
         }
+      } else if (query.toLowerCase().includes('insert into user_profiles')) {
+        const userId = params[0];
+        const profilePicUrl = params[1];
+        const existingProfile = mockDb.user_profiles.find((p: any) => p.user_id === userId);
+        
+        if (existingProfile) {
+          existingProfile.profile_picture_url = profilePicUrl;
+        } else {
+          mockDb.user_profiles.push({
+            user_id: userId,
+            profile_picture_url: profilePicUrl
+          });
+        }
+        return { affectedRows: 1 } as unknown as T;
       }
       return { affectedRows: 1 } as unknown as T;
     }
@@ -472,11 +486,108 @@ export const executeQuery = async <T>(
   }
 };
 
-// Initialize TiDB tables (mocked in browser)
+// SQL commands for creating the necessary tables
+const createTableCommands = [
+  // Users table
+  `CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(255) PRIMARY KEY,
+    username VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    bio TEXT,
+    avatar VARCHAR(1024),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`,
+  
+  // Songs table
+  `CREATE TABLE IF NOT EXISTS songs (
+    id VARCHAR(255) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    thumbnail_url VARCHAR(1024),
+    channel_title VARCHAR(255),
+    duration_seconds INT
+  )`,
+  
+  // Playlists table
+  `CREATE TABLE IF NOT EXISTS playlists (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    image_url VARCHAR(1024),
+    user_id VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`,
+  
+  // Playlist songs table (junction table)
+  `CREATE TABLE IF NOT EXISTS playlist_songs (
+    id VARCHAR(255) PRIMARY KEY,
+    playlist_id VARCHAR(255) NOT NULL,
+    song_id VARCHAR(255) NOT NULL,
+    position INT NOT NULL,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_playlist_song (playlist_id, song_id)
+  )`,
+  
+  // Liked songs table
+  `CREATE TABLE IF NOT EXISTS liked_songs (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    song_id VARCHAR(255) NOT NULL,
+    liked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_like (user_id, song_id)
+  )`,
+  
+  // Follows table
+  `CREATE TABLE IF NOT EXISTS follows (
+    id VARCHAR(255) PRIMARY KEY,
+    follower_id VARCHAR(255) NOT NULL,
+    following_id VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_follow (follower_id, following_id)
+  )`,
+  
+  // Recently played table
+  `CREATE TABLE IF NOT EXISTS recently_played (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    song_id VARCHAR(255) NOT NULL,
+    played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_recent_play (user_id, song_id)
+  )`,
+  
+  // User profiles table (for profile pictures and additional user data)
+  `CREATE TABLE IF NOT EXISTS user_profiles (
+    user_id VARCHAR(255) PRIMARY KEY,
+    profile_picture_url VARCHAR(1024),
+    theme_preference VARCHAR(50) DEFAULT 'dark',
+    language_preference VARCHAR(10) DEFAULT 'en',
+    last_login TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`
+];
+
+// Initialize TiDB tables
 export const initializeTables = async () => {
-  console.log('Mock TiDB tables initialized');
-  // In a real environment, this would create tables if they don't exist
-  return true;
+  if (typeof window !== 'undefined') {
+    console.log('Mock TiDB tables initialized with the following structure:');
+    createTableCommands.forEach(command => console.log(`\n${command}`));
+    return true;
+  }
+  
+  try {
+    const pool = await getTiDBPool();
+    if (!pool) return false;
+    
+    // Execute all table creation commands
+    for (const command of createTableCommands) {
+      await pool.execute(command);
+    }
+    
+    console.log('TiDB tables initialized successfully');
+    return true;
+  } catch (error) {
+    console.error('Error initializing TiDB tables:', error);
+    return false;
+  }
 };
 
 // Generate a unique ID

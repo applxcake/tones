@@ -6,12 +6,19 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
-const AppSidebar = () => {
+interface AppSidebarProps {
+  onToggleSidebar?: () => void;
+}
+
+const AppSidebar = ({ onToggleSidebar }: AppSidebarProps) => {
   const { isAuthenticated, user, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleSearch = () => {
     navigate('/search');
+    if (onToggleSidebar) {
+      onToggleSidebar();
+    }
   };
 
   return (
@@ -35,11 +42,11 @@ const AppSidebar = () => {
         </Button>
         
         <nav className="space-y-1">
-          <SidebarNavItem to="/home" icon={<Home className="h-5 w-5" />} label="Home" />
-          <SidebarNavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
-          <SidebarNavItem to="/playlists" icon={<ListMusic className="h-5 w-5" />} label="Playlists" />
-          <SidebarNavItem to="/explore" icon={<Users className="h-5 w-5" />} label="Explore" />
-          <SidebarNavItem to="/profile" icon={<User className="h-5 w-5" />} label="Profile" />
+          <SidebarNavItem to="/home" icon={<Home className="h-5 w-5" />} label="Home" onToggleSidebar={onToggleSidebar} />
+          <SidebarNavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" onToggleSidebar={onToggleSidebar} />
+          <SidebarNavItem to="/playlists" icon={<ListMusic className="h-5 w-5" />} label="Playlists" onToggleSidebar={onToggleSidebar} />
+          <SidebarNavItem to="/explore" icon={<Users className="h-5 w-5" />} label="Explore" onToggleSidebar={onToggleSidebar} />
+          <SidebarNavItem to="/profile" icon={<User className="h-5 w-5" />} label="Profile" onToggleSidebar={onToggleSidebar} />
         </nav>
       </div>
 
@@ -54,7 +61,12 @@ const AppSidebar = () => {
               variant="ghost" 
               size="sm"
               className="justify-start text-gray-400 hover:text-white"
-              onClick={() => signOut()}
+              onClick={() => {
+                signOut();
+                if (onToggleSidebar) {
+                  onToggleSidebar();
+                }
+              }}
             >
               <LogOut className="mr-2 h-4 w-4" />
               Sign out
@@ -66,14 +78,24 @@ const AppSidebar = () => {
               variant="outline" 
               size="sm" 
               className="w-full" 
-              asChild
+              onClick={() => {
+                navigate('/login');
+                if (onToggleSidebar) {
+                  onToggleSidebar();
+                }
+              }}
             >
               <NavLink to="/login">Sign In</NavLink>
             </Button>
             <Button 
               size="sm" 
               className="w-full bg-neon-purple hover:bg-neon-purple/80" 
-              asChild
+              onClick={() => {
+                navigate('/signup');
+                if (onToggleSidebar) {
+                  onToggleSidebar();
+                }
+              }}
             >
               <NavLink to="/signup">Sign Up</NavLink>
             </Button>
@@ -93,9 +115,10 @@ interface SidebarNavItemProps {
   to: string;
   icon: React.ReactNode;
   label: string;
+  onToggleSidebar?: () => void;
 }
 
-const SidebarNavItem = ({ to, icon, label }: SidebarNavItemProps) => {
+const SidebarNavItem = ({ to, icon, label, onToggleSidebar }: SidebarNavItemProps) => {
   return (
     <NavLink
       to={to}
@@ -105,6 +128,11 @@ const SidebarNavItem = ({ to, icon, label }: SidebarNavItemProps) => {
           ? "bg-accent text-accent-foreground neon-glow-purple" 
           : "text-gray-400 hover:text-white hover:bg-gray-800/50"
       )}
+      onClick={() => {
+        if (onToggleSidebar) {
+          onToggleSidebar();
+        }
+      }}
     >
       {icon}
       <span>{label}</span>

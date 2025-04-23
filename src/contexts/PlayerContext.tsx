@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
 import { YouTubeVideo, YouTubeVideoBasic } from '@/services/youtubeService';
 import { executeQuery, generateId } from '@/integrations/tidb/client';
 import { useAuth } from './AuthContext';
@@ -11,16 +12,20 @@ interface PlayerContextType {
   volume: number;
   likedSongs: YouTubeVideo[];
   recentlyPlayed: YouTubeVideo[];
+  progress: number; // Added for progress tracking
+  duration: number; // Added for total duration
   playTrack: (track: YouTubeVideo) => void;
   togglePlayPause: () => void;
   nextTrack: () => void;
   previousTrack: () => void;
+  prevTrack: () => void; // Alias for previousTrack
   addToQueue: (track: YouTubeVideo) => void;
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
   setVolume: (volume: number) => void;
   toggleLike: (track: YouTubeVideo) => Promise<boolean>;
   isLiked: (trackId: string) => boolean;
+  seekToPosition: (progressPercentage: number) => void; // Added for seeking
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -42,9 +47,131 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
   const [currentTrack, setCurrentTrack] = useState<YouTubeVideo | null>(null);
   const [queue, setQueue] = useState<YouTubeVideo[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(80);
+  const [volume, setVolume] = useState(0.8); // Default to 80%
   const [likedSongs, setLikedSongs] = useState<YouTubeVideo[]>([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState<YouTubeVideo[]>([]);
+  const [progress, setProgress] = useState(0); // Track playback progress (0-100)
+  const [duration, setDuration] = useState(0); // Track duration in seconds
+  
+  // YouTube player reference
+  const playerRef = useRef<YT.Player | null>(null);
+
+  // Initialize YouTube API
+  useEffect(() => {
+    // Create YouTube IFrame API script
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+      
+      // Create hidden YouTube player container if it doesn't exist
+      if (!document.getElementById('youtube-player-container')) {
+        const playerContainer = document.createElement('div');
+        playerContainer.id = 'youtube-player-container';
+        playerContainer.style.position = 'absolute';
+        playerContainer.style.visibility = 'hidden';
+        playerContainer.style.left = '-9999px';
+        playerContainer.style.top = '-9999px';
+        document.body.appendChild(playerContainer);
+      }
+    }
+    
+    // Initialize player when API is ready
+    window.onYouTubeIframeAPIReady = initializeYouTubePlayer;
+    
+    // If API already loaded, initialize player directly
+    if (window.YT && window.YT.Player) {
+      initializeYouTubePlayer();
+    }
+    
+    return () => {
+      // Cleanup
+      if (playerRef.current) {
+        playerRef.current.destroy();
+      }
+    };
+  }, []);
+  
+  // Initialize YouTube player
+  const initializeYouTubePlayer = () => {
+    if (window.YT && window.YT.Player) {
+      playerRef.current = new window.YT.Player('youtube-player-container', {
+        height: '0',
+        width: '0',
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+        },
+        events: {
+          onReady: onPlayerReady,
+          onStateChange: onPlayerStateChange,
+        },
+      });
+    }
+  };
+  
+  const onPlayerReady = (event: YT.PlayerEvent) => {
+    // Set initial volume
+    event.target.setVolume(volume * 100);
+    
+    // Load current track if exists
+    if (currentTrack) {
+      loadVideo(currentTrack.id);
+    }
+  };
+  
+  const onPlayerStateChange = (event: YT.OnStateChangeEvent) => {
+    // Update playing state based on player state
+    if (event.data === window.YT.PlayerState.PLAYING) {
+      setIsPlaying(true);
+      startProgressTracker();
+    } else if (event.data === window.YT.PlayerState.PAUSED) {
+      setIsPlaying(false);
+      stopProgressTracker();
+    } else if (event.data === window.YT.PlayerState.ENDED) {
+      // Auto play next song
+      setIsPlaying(false);
+      stopProgressTracker();
+      nextTrack();
+    }
+  };
+  
+  // Progress tracking
+  const progressIntervalRef = useRef<number | null>(null);
+  
+  const startProgressTracker = () => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+    
+    progressIntervalRef.current = window.setInterval(() => {
+      if (playerRef.current && playerRef.current.getCurrentTime && playerRef.current.getDuration) {
+        const currentTime = playerRef.current.getCurrentTime() || 0;
+        const totalDuration = playerRef.current.getDuration() || 0;
+        
+        setProgress((currentTime / totalDuration) * 100);
+        setDuration(totalDuration);
+      }
+    }, 1000);
+  };
+  
+  const stopProgressTracker = () => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  };
+  
+  // Load and play a video
+  const loadVideo = (videoId: string) => {
+    if (playerRef.current && playerRef.current.loadVideoById) {
+      playerRef.current.loadVideoById({
+        videoId,
+        startSeconds: 0,
+      });
+    }
+  };
   
   // Fetch liked songs when user changes
   useEffect(() => {
@@ -160,11 +287,24 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
   
   const playTrack = (track: YouTubeVideo) => {
     setCurrentTrack(track);
-    setIsPlaying(true);
+    
+    if (playerRef.current && playerRef.current.loadVideoById) {
+      loadVideo(track.id);
+      setIsPlaying(true);
+    }
+    
     recordPlay(track);
   };
   
   const togglePlayPause = () => {
+    if (!playerRef.current) return;
+    
+    if (isPlaying) {
+      playerRef.current.pauseVideo();
+    } else {
+      playerRef.current.playVideo();
+    }
+    
     setIsPlaying(!isPlaying);
   };
   
@@ -179,16 +319,35 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
     
     setCurrentTrack(nextSong);
     setQueue(newQueue);
+    loadVideo(nextSong.id);
     recordPlay(nextSong);
   };
   
   const previousTrack = () => {
-    // For simplicity, just toggle to beginning of the track
-    // In a real app, you might want to keep track of play history
-    if (currentTrack) {
-      // Pretend to restart the current track
-      setIsPlaying(true);
+    if (!playerRef.current) return;
+    
+    // For simplicity, just restart the current track
+    playerRef.current.seekTo(0, true);
+    setIsPlaying(true);
+  };
+  
+  // Alias for previousTrack to fix the build error
+  const prevTrack = previousTrack;
+  
+  const seekToPosition = (progressPercentage: number) => {
+    if (!playerRef.current || !duration) return;
+    
+    const seekTime = (progressPercentage / 100) * duration;
+    playerRef.current.seekTo(seekTime, true);
+    setProgress(progressPercentage);
+  };
+  
+  const handleVolumeChange = (newVolume: number) => {
+    if (playerRef.current) {
+      playerRef.current.setVolume(newVolume * 100);
     }
+    
+    setVolume(newVolume);
   };
   
   const addToQueue = (track: YouTubeVideo) => {
@@ -292,16 +451,20 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
         volume,
         likedSongs,
         recentlyPlayed,
+        progress,
+        duration,
         playTrack,
         togglePlayPause,
         nextTrack,
         previousTrack,
+        prevTrack,
         addToQueue,
         removeFromQueue,
         clearQueue,
-        setVolume,
+        setVolume: handleVolumeChange,
         toggleLike,
         isLiked,
+        seekToPosition,
       }}
     >
       {children}

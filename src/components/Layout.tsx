@@ -19,6 +19,11 @@ const Layout = () => {
     localStorage.setItem('sidebar-open', JSON.stringify(sidebarOpen));
   }, [sidebarOpen]);
 
+  // Toggle sidebar function
+  const toggleSidebar = () => {
+    setSidebarOpen(prev => !prev);
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Sidebar with transition */}
@@ -27,7 +32,7 @@ const Layout = () => {
           sidebarOpen ? 'left-0' : '-translate-x-full'
         }`}
       >
-        <AppSidebar />
+        <AppSidebar onToggleSidebar={toggleSidebar} />
       </div>
       
       {/* Sidebar toggle button */}
@@ -37,7 +42,7 @@ const Layout = () => {
         className={`fixed top-4 z-40 transition-all duration-300 ${
           sidebarOpen ? 'left-[260px]' : 'left-4'
         } animate-fade-in`}
-        onClick={() => setSidebarOpen(!sidebarOpen)}
+        onClick={toggleSidebar}
       >
         {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
       </Button>

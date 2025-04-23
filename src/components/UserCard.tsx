@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { followUser, unfollowUser, getCurrentUser } from '@/services/userService';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/components/ui/use-toast';
 
 interface UserCardProps {
   user: {
@@ -23,7 +22,6 @@ const UserCard = ({ user }: UserCardProps) => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [currentUserData, setCurrentUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
 
   // Fetch current user data to check following status
   useEffect(() => {
@@ -39,8 +37,6 @@ const UserCard = ({ user }: UserCardProps) => {
         } finally {
           setLoading(false);
         }
-      } else {
-        setLoading(false);
       }
     };
     
@@ -48,14 +44,7 @@ const UserCard = ({ user }: UserCardProps) => {
   }, [authUser, user.id]);
 
   const handleFollowToggle = async () => {
-    if (!authUser) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to follow users.",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!authUser) return;
     
     try {
       if (isFollowing) {
@@ -68,10 +57,6 @@ const UserCard = ({ user }: UserCardProps) => {
     } catch (error) {
       console.error('Error toggling follow status:', error);
     }
-  };
-
-  const handleImageError = () => {
-    setImageError(true);
   };
 
   if (loading) {
@@ -94,17 +79,10 @@ const UserCard = ({ user }: UserCardProps) => {
       <div className="flex items-center gap-4">
         <Link to={`/users/${user.id}`}>
           <Avatar className="h-12 w-12 cursor-pointer hover:neon-glow-blue animate-scale-in">
-            {!imageError && user.avatar ? (
-              <AvatarImage 
-                src={user.avatar} 
-                alt={user.username} 
-                onError={handleImageError}
-              />
-            ) : (
-              <AvatarFallback className="bg-gradient-to-br from-indigo-600 to-purple-700">
-                {user.username?.charAt(0)?.toUpperCase() || <UserIcon className="h-6 w-6" />}
-              </AvatarFallback>
-            )}
+            <AvatarImage src={user.avatar} alt={user.username} />
+            <AvatarFallback>
+              <UserIcon className="h-6 w-6" />
+            </AvatarFallback>
           </Avatar>
         </Link>
         
@@ -116,7 +94,7 @@ const UserCard = ({ user }: UserCardProps) => {
             {user.username}
           </Link>
           <p className="text-sm text-gray-400 truncate">
-            {user.followers?.length || 0} followers
+            {user.followers.length} followers
           </p>
         </div>
         

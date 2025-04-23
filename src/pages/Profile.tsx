@@ -10,6 +10,7 @@ import SongTile from '@/components/SongTile';
 import { getCurrentUser } from '@/services/userService';
 import { executeQuery } from '@/integrations/tidb/client';
 import { YouTubeVideo } from '@/services/youtubeService';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const Profile = () => {
   const { recentlyPlayed, likedSongs } = usePlayer();
@@ -17,6 +18,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const [currentUserData, setCurrentUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   // Fetch current user data when the component mounts or user changes
   useEffect(() => {
@@ -40,6 +42,10 @@ const Profile = () => {
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
+  };
+
+  const handleImageError = () => {
+    setImageError(true);
   };
 
   if (loading) {
@@ -86,25 +92,20 @@ const Profile = () => {
       
       {/* User Info */}
       <div className="glass-panel rounded-lg p-6 mb-8 flex flex-col md:flex-row items-center gap-6 animate-scale-in">
-        <div className="w-24 h-24 rounded-full glass-panel flex items-center justify-center neon-glow-blue hover-scale">
-          {currentUserData?.avatar ? (
-            <img 
+        <Avatar className="w-24 h-24 rounded-full glass-panel flex items-center justify-center neon-glow-blue hover-scale">
+          {!imageError && currentUserData?.avatar ? (
+            <AvatarImage 
               src={currentUserData.avatar} 
               alt={currentUserData.username}
-              className="w-full h-full object-cover rounded-full"
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.style.display = 'none';
-                const parent = e.currentTarget.parentElement;
-                if (parent) {
-                  parent.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white/70"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
-                }
-              }}
+              onError={handleImageError}
+              className="w-full h-full object-cover"
             />
           ) : (
-            <User className="w-12 h-12 text-white/70" />
+            <AvatarFallback className="w-full h-full text-4xl bg-gradient-to-br from-indigo-600 to-purple-700">
+              {currentUserData?.username?.charAt(0)?.toUpperCase() || <User className="w-12 h-12 text-white/70" />}
+            </AvatarFallback>
           )}
-        </div>
+        </Avatar>
         
         <div className="text-center md:text-left">
           <h2 className="text-2xl font-bold mb-1">{currentUserData?.username || 'User'}</h2>

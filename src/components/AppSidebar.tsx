@@ -85,7 +85,7 @@ const AppSidebar = ({ onToggleSidebar }: AppSidebarProps) => {
                 }
               }}
             >
-              <NavLink to="/login">Sign In</NavLink>
+              Sign In
             </Button>
             <Button 
               size="sm" 
@@ -97,7 +97,7 @@ const AppSidebar = ({ onToggleSidebar }: AppSidebarProps) => {
                 }
               }}
             >
-              <NavLink to="/signup">Sign Up</NavLink>
+              Sign Up
             </Button>
           </div>
         )}

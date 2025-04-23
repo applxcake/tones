@@ -29,8 +29,8 @@ const Layout = () => {
       {/* Sidebar with transition */}
       <div 
         className={`fixed top-0 bottom-0 z-30 transition-all duration-300 ${
-          sidebarOpen ? 'left-0' : '-translate-x-full'
-        }`}
+          sidebarOpen ? 'left-0' : '-left-64'
+        } md:${sidebarOpen ? 'left-0' : '-left-64'}`}
       >
         <AppSidebar onToggleSidebar={toggleSidebar} />
       </div>

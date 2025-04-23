@@ -1,17 +1,20 @@
 
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ScrollableRow from '@/components/ScrollableRow';
 import SongTile from '@/components/SongTile';
 import UserCard from '@/components/UserCard';
 import { searchYouTubeVideos } from '@/services/youtubeService';
 import { getAllUsers } from '@/services/userService';
 import GenreExplorer from '@/components/GenreExplorer';
+import SearchBar from '@/components/SearchBar';
 
 const Home = () => {
   const [trendingSongs, setTrendingSongs] = useState([]);
   const [newReleases, setNewReleases] = useState([]);
   const [recommendedUsers, setRecommendedUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,6 +42,10 @@ const Home = () => {
     fetchData();
   }, []);
 
+  const handleSearch = (query: string) => {
+    navigate(`/search?q=${encodeURIComponent(query)}`);
+  };
+
   if (loading) {
     return (
       <div className="pt-6 pb-24 animate-slide-in">
@@ -59,7 +66,10 @@ const Home = () => {
 
   return (
     <div className="pt-6 pb-24">
-      <h1 className="text-3xl font-bold mb-8 animate-fade-in">Welcome to Tones</h1>
+      <div className="mb-8 animate-fade-in">
+        <SearchBar onSearch={handleSearch} className="mb-8" />
+        <h1 className="text-3xl font-bold">Welcome to Tones</h1>
+      </div>
       
       <section className="mb-10 animate-slide-in">
         <h2 className="text-2xl font-bold mb-6">Trending Now</h2>

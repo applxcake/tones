@@ -18,7 +18,7 @@ export interface YouTubeVideoBasic {
 }
 
 // YouTube API key - NOTE: In production, this should be stored in environment variables
-const YOUTUBE_API_KEY = 'AIzaSyDIoNDSqJEVx74dnlGizQUs5Wm0UAoyeZQ';
+const YOUTUBE_API_KEY = 'AIzaSyBAxmc3Rn7Id-bifTpe7iqsz5p8k1Otzdw';
 const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3';
 
 /**

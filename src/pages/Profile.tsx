@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import SongTile from '@/components/SongTile';
 import { getCurrentUser } from '@/services/userService';
-import { executeQuery } from '@/integrations/tidb/client';
+import { supabase } from '@/integrations/supabase/client';
 import { YouTubeVideo } from '@/services/youtubeService';
 
 const Profile = () => {
@@ -24,8 +24,28 @@ const Profile = () => {
       if (user) {
         try {
           setLoading(true);
-          const userData = await getCurrentUser(user.id);
-          setCurrentUserData(userData);
+          
+          // Get user profile from Supabase
+          const { data: profileData, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          if (error) {
+            console.error('Error fetching user profile from Supabase:', error);
+            // Fall back to local data
+            const userData = await getCurrentUser(user.id);
+            setCurrentUserData(userData);
+          } else {
+            // Use Supabase data
+            setCurrentUserData({
+              ...profileData,
+              email: user.email,
+              username: profileData.username || user.username || user.email?.split('@')[0],
+              bio: profileData.bio || ''
+            });
+          }
         } catch (error) {
           console.error('Error fetching user data:', error);
         } finally {

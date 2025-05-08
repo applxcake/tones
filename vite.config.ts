@@ -42,6 +42,7 @@ export default defineConfig(({ mode }) => ({
         'tls', 
         'dns',
         'cloudflare:sockets',
+        'mysql2',
         'mysql2/promise'
       ]
     }

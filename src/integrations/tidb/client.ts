@@ -1,5 +1,4 @@
-
-import mysql from 'mysql2/promise';
+import * as mysql from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
 
 // TiDB Connection Pool Configuration

@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => ({
   },
   // Handle Node.js built-in module polyfills
   optimizeDeps: {
-    exclude: ['pg', 'pg-pool', 'pg-connection-string']
+    exclude: ['pg', 'pg-pool', 'pg-connection-string', 'mysql2']
   },
   build: {
     commonjsOptions: {
@@ -41,7 +41,8 @@ export default defineConfig(({ mode }) => ({
         'net', 
         'tls', 
         'dns',
-        'cloudflare:sockets'
+        'cloudflare:sockets',
+        'mysql2/promise'
       ]
     }
   }

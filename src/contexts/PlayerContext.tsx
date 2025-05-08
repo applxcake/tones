@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
-import { YouTubeVideo, YouTubeVideoBasic } from '@/services/youtubeService';
+import { YouTubeVideo } from '@/services/youtubeService';
 import { executeQuery, generateId } from '@/integrations/tidb/client';
 import { useAuth } from './AuthContext';
 import { toast } from '@/components/ui/use-toast';
@@ -196,8 +196,8 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
             id: song.id,
             title: song.title,
             thumbnailUrl: song.thumbnail_url,
-            channelTitle: song.channel_title,
-            publishedAt: new Date().toISOString(), // Default value
+            channelTitle: song.artist || '',
+            publishedAt: song.created_at || new Date().toISOString(),
           }));
           
           setLikedSongs(songs);
@@ -224,9 +224,9 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
       try {
         const recentlyPlayedData = await executeQuery<any[]>(
           `SELECT s.* FROM songs s 
-           JOIN recently_played rp ON s.id = rp.song_id 
-           WHERE rp.user_id = ? 
-           ORDER BY rp.played_at DESC 
+           JOIN listening_history lh ON s.id = lh.song_id 
+           WHERE lh.user_id = ? 
+           ORDER BY lh.played_at DESC 
            LIMIT 20`,
           [user.id]
         );
@@ -236,8 +236,8 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
             id: song.id,
             title: song.title,
             thumbnailUrl: song.thumbnail_url,
-            channelTitle: song.channel_title,
-            publishedAt: new Date().toISOString(), // Default value
+            channelTitle: song.artist || '',
+            publishedAt: song.created_at || new Date().toISOString(),
           }));
           
           setRecentlyPlayed(songs);
@@ -250,7 +250,7 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
     fetchRecentlyPlayed();
   }, [user]);
   
-  // Record song play in recently played
+  // Record song play in listening history
   const recordPlay = async (track: YouTubeVideo) => {
     if (!user?.id || !track?.id) return;
     
@@ -263,18 +263,17 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
       
       if (!existingSong.length) {
         await executeQuery(
-          `INSERT INTO songs (id, title, thumbnail_url, channel_title) 
+          `INSERT INTO songs (id, title, artist, thumbnail_url) 
            VALUES (?, ?, ?, ?)`,
-          [track.id, track.title, track.thumbnailUrl, track.channelTitle]
+          [track.id, track.title, track.channelTitle, track.thumbnailUrl]
         );
       }
       
-      // Add to recently played
+      // Add to listening history
       await executeQuery(
-        `INSERT INTO recently_played (id, user_id, song_id, played_at) 
-         VALUES (?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE played_at = VALUES(played_at)`,
-        [generateId(), user.id, track.id, new Date().toISOString()]
+        `INSERT INTO listening_history (user_id, song_id) 
+         VALUES (?, ?)`,
+        [user.id, track.id]
       );
       
       // Update recently played state
@@ -409,17 +408,17 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
         
         if (!existingSong.length) {
           await executeQuery(
-            `INSERT INTO songs (id, title, thumbnail_url, channel_title) 
+            `INSERT INTO songs (id, title, artist, thumbnail_url) 
              VALUES (?, ?, ?, ?)`,
-            [track.id, track.title, track.thumbnailUrl, track.channelTitle]
+            [track.id, track.title, track.channelTitle, track.thumbnailUrl]
           );
         }
         
         // Like the song
         await executeQuery(
-          `INSERT INTO liked_songs (id, user_id, song_id, liked_at) 
-           VALUES (?, ?, ?, ?)`,
-          [generateId(), user.id, track.id, new Date().toISOString()]
+          `INSERT INTO liked_songs (user_id, song_id) 
+           VALUES (?, ?)`,
+          [user.id, track.id]
         );
         
         setLikedSongs(prev => [track, ...prev]);
@@ -427,6 +426,7 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
         toast({
           title: "Added to Liked Songs",
           description: `${track.title} has been added to your liked songs.`,
+          className: "animate-bounce"
         });
         
         return true;

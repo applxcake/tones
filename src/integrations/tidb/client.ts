@@ -1,596 +1,265 @@
-// Mock data for browser environment
-const mockSongs = [
-  {
-    id: 'song1',
-    title: 'Summertime',
-    thumbnail_url: 'https://i.ytimg.com/vi/sample1/default.jpg',
-    channel_title: 'Jazz Classics',
-    duration_seconds: 180
+
+import mysql from 'mysql2/promise';
+import { v4 as uuidv4 } from 'uuid';
+
+// TiDB Connection Pool Configuration
+const config = {
+  host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
+  port: 4000,
+  user: '3yYS8LUTvavTJ9C.root',
+  password: 'seNv1GQN8dmFCDJH',
+  database: 'test',
+  ssl: {
+    rejectUnauthorized: true,
   },
-  {
-    id: 'song2',
-    title: 'Autumn Leaves',
-    thumbnail_url: 'https://i.ytimg.com/vi/sample2/default.jpg',
-    channel_title: 'Jazz Standards',
-    duration_seconds: 240
-  },
-  {
-    id: 'song3',
-    title: 'Winter Wonderland',
-    thumbnail_url: 'https://i.ytimg.com/vi/sample3/default.jpg',
-    channel_title: 'Holiday Hits',
-    duration_seconds: 195
-  }
-];
-
-const mockUsers = [
-  {
-    id: 'user1',
-    username: 'MusicLover',
-    email: 'music@example.com',
-    avatar: 'https://i.pravatar.cc/150?u=musiclover',
-    bio: 'I love all kinds of music!',
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'user2',
-    username: 'JazzMaster',
-    avatar: 'https://i.pravatar.cc/150?u=jazzmaster',
-    bio: 'Jazz enthusiast and trumpet player',
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'user3',
-    username: 'ClassicalVibes',
-    avatar: 'https://i.pravatar.cc/150?u=classical',
-    bio: 'Piano and orchestra lover',
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'user4',
-    username: 'RockStar',
-    avatar: 'https://i.pravatar.cc/150?u=rockstar',
-    bio: 'Living on the edge with rock music',
-    created_at: new Date().toISOString()
-  }
-];
-
-const mockPlaylists = [
-  {
-    id: 'playlist1',
-    name: 'My Favorites',
-    description: 'All my favorite songs',
-    image_url: null,
-    user_id: 'user1',
-    created_at: new Date().toISOString()
-  }
-];
-
-const mockPlaylistSongs = [
-  {
-    id: 'plsong1',
-    playlist_id: 'playlist1',
-    song_id: 'song1',
-    position: 0,
-    added_at: new Date().toISOString()
-  },
-  {
-    id: 'plsong2',
-    playlist_id: 'playlist1',
-    song_id: 'song2',
-    position: 1,
-    added_at: new Date().toISOString()
-  }
-];
-
-const mockLikedSongs = [
-  {
-    id: 'like1',
-    user_id: 'user1',
-    song_id: 'song1',
-    liked_at: new Date().toISOString()
-  }
-];
-
-const mockFollows = [
-  {
-    id: 'follow1',
-    follower_id: 'user1',
-    following_id: 'user2',
-    created_at: new Date().toISOString()
-  }
-];
-
-const mockRecentlyPlayed = [
-  {
-    id: 'recent1',
-    user_id: 'user1',
-    song_id: 'song2',
-    played_at: new Date().toISOString()
-  }
-];
-
-// In-memory database for browser environment
-const mockDb = {
-  songs: [...mockSongs],
-  users: [...mockUsers],
-  playlists: [...mockPlaylists],
-  playlist_songs: [...mockPlaylistSongs],
-  liked_songs: [...mockLikedSongs],
-  follows: [...mockFollows],
-  recently_played: [...mockRecentlyPlayed],
-  user_profiles: []
+  connectionLimit: 10,
 };
 
-// Mock TiDB functions for browser environment
-export const getTiDBPool = async () => {
-  console.log('Using mock TiDB functionality in browser environment');
-  return null;
-};
+// Create a connection pool
+let pool: mysql.Pool | null = null;
 
-// Helper function to execute queries against mock data
-export const executeQuery = async <T>(
-  query: string, 
-  params: any[] = []
-): Promise<T> => {
-  console.log('Mock query execution:', query, params);
+// Initialize the TiDB pool
+export const initPool = async (): Promise<mysql.Pool> => {
+  // Check if we're in a browser environment
+  const isBrowser = typeof window !== 'undefined';
   
-  // Basic query parser for mock data
-  // This is a simplified version that handles basic SELECT, INSERT, UPDATE, DELETE operations
+  if (isBrowser) {
+    console.log('Running in browser, using mock implementation');
+    return null as any;
+  }
+  
   try {
-    if (query.toLowerCase().includes('select * from songs')) {
-      if (query.toLowerCase().includes('join liked_songs')) {
-        // Fetch liked songs for a user
-        const userId = params[0];
-        const likedSongIds = mockDb.liked_songs
-          .filter(ls => ls.user_id === userId)
-          .map(ls => ls.song_id);
-        
-        const likedSongs = mockDb.songs.filter(s => likedSongIds.includes(s.id));
-        return likedSongs as unknown as T;
-      }
-      
-      if (query.toLowerCase().includes('join recently_played')) {
-        // Fetch recently played songs for a user
-        const userId = params[0];
-        const recentSongIds = mockDb.recently_played
-          .filter(rp => rp.user_id === userId)
-          .sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
-          .map(rp => rp.song_id);
-        
-        const recentSongs = [];
-        for (const songId of recentSongIds) {
-          const song = mockDb.songs.find(s => s.id === songId);
-          if (song) recentSongs.push(song);
-        }
-        
-        return recentSongs as unknown as T;
-      }
-      
-      if (query.toLowerCase().includes('join playlist_songs')) {
-        // Fetch songs for a specific playlist
-        const playlistId = params[0];
-        const playlistSongIds = mockDb.playlist_songs
-          .filter(ps => ps.playlist_id === playlistId)
-          .sort((a, b) => a.position - b.position)
-          .map(ps => ps.song_id);
-        
-        const playlistSongs = [];
-        for (const songId of playlistSongIds) {
-          const song = mockDb.songs.find(s => s.id === songId);
-          if (song) playlistSongs.push(song);
-        }
-        
-        return playlistSongs as unknown as T;
-      }
-      
-      if (params.length > 0) {
-        const songId = params[0];
-        const song = mockDb.songs.find(s => s.id === songId);
-        return song ? [song] as unknown as T : [] as unknown as T;
-      }
-      
-      return mockDb.songs as unknown as T;
+    if (!pool) {
+      pool = mysql.createPool(config);
+      console.log('TiDB pool initialized');
     }
-    
-    if (query.toLowerCase().includes('select * from users where id')) {
-      const userId = params[0];
-      const user = mockDb.users.find(u => u.id === userId);
-      return user ? [user] as unknown as T : [] as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select * from users where lower(username)')) {
-      const searchTerm = params[0].replace(/%/g, '').toLowerCase();
-      const bioSearchTerm = params[1].replace(/%/g, '').toLowerCase();
-      
-      const matchedUsers = mockDb.users.filter(u => {
-        return u.username.toLowerCase().includes(searchTerm) || 
-               (u.bio && u.bio.toLowerCase().includes(bioSearchTerm));
-      });
-      
-      return matchedUsers as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select * from users')) {
-      return mockDb.users as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select * from playlists where user_id')) {
-      const userId = params[0];
-      const userPlaylists = mockDb.playlists.filter(p => p.user_id === userId);
-      return userPlaylists as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select * from playlists where id')) {
-      const playlistId = params[0];
-      const playlist = mockDb.playlists.find(p => p.id === playlistId);
-      return playlist ? [playlist] as unknown as T : [] as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select name from playlists where id')) {
-      const playlistId = params[0];
-      const playlist = mockDb.playlists.find(p => p.id === playlistId);
-      return playlist ? [{ name: playlist.name }] as unknown as T : [] as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select s.* from songs s join playlist_songs ps')) {
-      const playlistId = params[0];
-      const playlistSongIds = mockDb.playlist_songs
-        .filter(ps => ps.playlist_id === playlistId)
-        .sort((a, b) => a.position - b.position)
-        .map(ps => ps.song_id);
-      
-      const songs = mockDb.songs.filter(s => playlistSongIds.includes(s.id));
-      return songs as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('insert into')) {
-      // Mock insert operation
-      if (query.toLowerCase().includes('insert into songs')) {
-        const existingSong = mockDb.songs.find(s => s.id === params[0]);
-        if (!existingSong) {
-          const newSong = {
-            id: params[0],
-            title: params[1],
-            thumbnail_url: params[2],
-            channel_title: params[3],
-            duration_seconds: params[4] || null
-          };
-          mockDb.songs.push(newSong);
-        }
-      } else if (query.toLowerCase().includes('insert into playlists')) {
-        const newPlaylist = {
-          id: params[0],
-          name: params[1],
-          description: params[2] || null,
-          user_id: params[3],
-          created_at: params[4],
-          image_url: null
-        };
-        mockDb.playlists.push(newPlaylist);
-      } else if (query.toLowerCase().includes('insert into playlist_songs')) {
-        const newPlaylistSong = {
-          id: params[0],
-          playlist_id: params[1],
-          song_id: params[2],
-          position: params[3],
-          added_at: params[4]
-        };
-        mockDb.playlist_songs.push(newPlaylistSong);
-      } else if (query.toLowerCase().includes('insert into liked_songs')) {
-        // Check if already exists
-        const existingLike = mockDb.liked_songs.find(
-          ls => ls.user_id === params[1] && ls.song_id === params[2]
-        );
-        
-        if (!existingLike) {
-          const newLike = {
-            id: params[0],
-            user_id: params[1],
-            song_id: params[2],
-            liked_at: params[3]
-          };
-          mockDb.liked_songs.push(newLike);
-        }
-      } else if (query.toLowerCase().includes('insert into follows')) {
-        // Check if already following
-        const existingFollow = mockDb.follows.find(
-          f => f.follower_id === params[1] && f.following_id === params[2]
-        );
-        
-        if (!existingFollow) {
-          const newFollow = {
-            id: params[0],
-            follower_id: params[1],
-            following_id: params[2],
-            created_at: params[3]
-          };
-          mockDb.follows.push(newFollow);
-        }
-      } else if (query.toLowerCase().includes('insert into recently_played')) {
-        // Remove old entry if exists
-        mockDb.recently_played = mockDb.recently_played.filter(
-          rp => !(rp.user_id === params[1] && rp.song_id === params[2])
-        );
-        
-        const newRecent = {
-          id: params[0],
-          user_id: params[1],
-          song_id: params[2],
-          played_at: params[3]
-        };
-        mockDb.recently_played.push(newRecent);
-      } else if (query.toLowerCase().includes('insert into users')) {
-        const existingUser = mockDb.users.find(u => u.id === params[0]);
-        
-        if (!existingUser) {
-          const newUser = {
-            id: params[0],
-            username: params[1],
-            email: params[2] || null,
-            bio: params[3] || null,
-            avatar: params[4] || null,
-            created_at: params[5] || new Date().toISOString()
-          };
-          mockDb.users.push(newUser);
-        } else if (query.toLowerCase().includes('on duplicate key update')) {
-          // Update existing user
-          existingUser.username = params[1] || existingUser.username;
-        }
-      } else if (query.toLowerCase().includes('insert into user_profiles')) {
-        const userId = params[0];
-        const profilePicUrl = params[1];
-        const existingProfile = mockDb.user_profiles.find((p: any) => p.user_id === userId);
-        
-        if (existingProfile) {
-          existingProfile.profile_picture_url = profilePicUrl;
-        } else {
-          mockDb.user_profiles.push({
-            user_id: userId,
-            profile_picture_url: profilePicUrl
-          });
-        }
-        return { affectedRows: 1 } as unknown as T;
-      }
-      return { affectedRows: 1 } as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('delete from')) {
-      if (query.toLowerCase().includes('delete from playlist_songs')) {
-        const playlistId = params[0];
-        const songId = params[1];
-        mockDb.playlist_songs = mockDb.playlist_songs.filter(
-          ps => !(ps.playlist_id === playlistId && ps.song_id === songId)
-        );
-      } else if (query.toLowerCase().includes('delete from playlists')) {
-        const playlistId = params[0];
-        mockDb.playlists = mockDb.playlists.filter(p => p.id !== playlistId);
-        mockDb.playlist_songs = mockDb.playlist_songs.filter(ps => ps.playlist_id !== playlistId);
-      } else if (query.toLowerCase().includes('delete from follows')) {
-        const followerId = params[0];
-        const followingId = params[1];
-        mockDb.follows = mockDb.follows.filter(
-          f => !(f.follower_id === followerId && f.following_id === followingId)
-        );
-      } else if (query.toLowerCase().includes('delete from liked_songs')) {
-        const userId = params[0];
-        const songId = params[1];
-        mockDb.liked_songs = mockDb.liked_songs.filter(
-          ls => !(ls.user_id === userId && ls.song_id === songId)
-        );
-      }
-      return { affectedRows: 1 } as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select * from liked_songs')) {
-      if (params.length >= 2) {
-        const userId = params[0];
-        const songId = params[1];
-        const likes = mockDb.liked_songs.filter(
-          ls => ls.user_id === userId && ls.song_id === songId
-        );
-        return likes as unknown as T;
-      } else if (params.length === 1) {
-        const userId = params[0];
-        const likes = mockDb.liked_songs.filter(ls => ls.user_id === userId);
-        return likes as unknown as T;
-      }
-      return mockDb.liked_songs as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select song_id from liked_songs')) {
-      const userId = params[0];
-      const likedSongIds = mockDb.liked_songs
-        .filter(ls => ls.user_id === userId)
-        .map(ls => ({ song_id: ls.song_id }));
-      return likedSongIds as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select follower_id from follows')) {
-      const userId = params[0];
-      const followers = mockDb.follows
-        .filter(f => f.following_id === userId)
-        .map(f => ({ follower_id: f.follower_id }));
-      return followers as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select following_id from follows')) {
-      const userId = params[0];
-      const following = mockDb.follows
-        .filter(f => f.follower_id === userId)
-        .map(f => ({ following_id: f.following_id }));
-      return following as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select count(*) as count from follows')) {
-      if (query.toLowerCase().includes('where following_id')) {
-        const userId = params[0];
-        const count = mockDb.follows.filter(f => f.following_id === userId).length;
-        return [{ count }] as unknown as T;
-      } else if (query.toLowerCase().includes('where follower_id')) {
-        const userId = params[0];
-        const count = mockDb.follows.filter(f => f.follower_id === userId).length;
-        return [{ count }] as unknown as T;
-      }
-    }
-    
-    if (query.toLowerCase().includes('select * from follows')) {
-      if (params.length >= 2) {
-        const followerId = params[0];
-        const followingId = params[1];
-        const follows = mockDb.follows.filter(
-          f => f.follower_id === followerId && f.following_id === followingId
-        );
-        return follows as unknown as T;
-      }
-      return mockDb.follows as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('update users')) {
-      const username = params[0];
-      const email = params[1];
-      const bio = params[2];
-      const avatar = params[3];
-      const userId = params[4];
-      
-      const userIndex = mockDb.users.findIndex(u => u.id === userId);
-      if (userIndex >= 0) {
-        mockDb.users[userIndex] = {
-          ...mockDb.users[userIndex],
-          username: username || mockDb.users[userIndex].username,
-          email: email || mockDb.users[userIndex].email,
-          bio: bio || mockDb.users[userIndex].bio,
-          avatar: avatar || mockDb.users[userIndex].avatar
-        };
-      }
-      return { affectedRows: 1 } as unknown as T;
-    }
-    
-    if (query.toLowerCase().includes('select position from playlist_songs')) {
-      const playlistId = params[0];
-      const playlistSongs = mockDb.playlist_songs
-        .filter(ps => ps.playlist_id === playlistId)
-        .sort((a, b) => b.position - a.position);
-        
-      if (playlistSongs.length > 0) {
-        return [{ position: playlistSongs[0].position }] as unknown as T;
-      }
-      return [] as unknown as T;
-    }
-    
-    // Default return empty array for unhandled queries
-    return [] as unknown as T;
+    return pool;
   } catch (error) {
-    console.error('Error in mock query execution:', error);
+    console.error('Failed to initialize TiDB pool:', error);
     throw error;
   }
 };
 
-// SQL commands for creating the necessary tables
-const createTableCommands = [
-  // Users table
-  `CREATE TABLE IF NOT EXISTS users (
-    id VARCHAR(255) PRIMARY KEY,
-    username VARCHAR(255) NOT NULL,
-    email VARCHAR(255),
-    bio TEXT,
-    avatar VARCHAR(1024),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )`,
+// Execute SQL query with parameters
+export async function executeQuery<T>(sql: string, params: any[] = []): Promise<T> {
+  // Check if we're in a browser environment
+  const isBrowser = typeof window !== 'undefined';
   
-  // Songs table
-  `CREATE TABLE IF NOT EXISTS songs (
-    id VARCHAR(255) PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    thumbnail_url VARCHAR(1024),
-    channel_title VARCHAR(255),
-    duration_seconds INT
-  )`,
-  
-  // Playlists table
-  `CREATE TABLE IF NOT EXISTS playlists (
-    id VARCHAR(255) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    image_url VARCHAR(1024),
-    user_id VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )`,
-  
-  // Playlist songs table (junction table)
-  `CREATE TABLE IF NOT EXISTS playlist_songs (
-    id VARCHAR(255) PRIMARY KEY,
-    playlist_id VARCHAR(255) NOT NULL,
-    song_id VARCHAR(255) NOT NULL,
-    position INT NOT NULL,
-    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_playlist_song (playlist_id, song_id)
-  )`,
-  
-  // Liked songs table
-  `CREATE TABLE IF NOT EXISTS liked_songs (
-    id VARCHAR(255) PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
-    song_id VARCHAR(255) NOT NULL,
-    liked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_like (user_id, song_id)
-  )`,
-  
-  // Follows table
-  `CREATE TABLE IF NOT EXISTS follows (
-    id VARCHAR(255) PRIMARY KEY,
-    follower_id VARCHAR(255) NOT NULL,
-    following_id VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_follow (follower_id, following_id)
-  )`,
-  
-  // Recently played table
-  `CREATE TABLE IF NOT EXISTS recently_played (
-    id VARCHAR(255) PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
-    song_id VARCHAR(255) NOT NULL,
-    played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_recent_play (user_id, song_id)
-  )`,
-  
-  // User profiles table (for profile pictures and additional user data)
-  `CREATE TABLE IF NOT EXISTS user_profiles (
-    user_id VARCHAR(255) PRIMARY KEY,
-    profile_picture_url VARCHAR(1024),
-    theme_preference VARCHAR(50) DEFAULT 'dark',
-    language_preference VARCHAR(10) DEFAULT 'en',
-    last_login TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  )`
-];
-
-// Initialize TiDB tables
-export const initializeTables = async () => {
-  if (typeof window !== 'undefined') {
-    console.log('Mock TiDB tables initialized with the following structure:');
-    createTableCommands.forEach(command => console.log(`\n${command}`));
-    return true;
+  if (isBrowser) {
+    // Use mock implementation for browser
+    return mockExecuteQuery(sql, params) as T;
   }
   
   try {
-    const pool = await getTiDBPool();
-    if (!pool) return false;
+    if (!pool) {
+      pool = await initPool();
+    }
     
-    // Execute all table creation commands
-    for (const command of createTableCommands) {
-      await pool.execute(command);
+    const [rows] = await pool.execute(sql, params);
+    return rows as T;
+  } catch (error) {
+    console.error('Error executing query:', error, 'SQL:', sql, 'Params:', params);
+    throw error;
+  }
+}
+
+// Generate a unique ID (UUID)
+export function generateId(): string {
+  return uuidv4();
+}
+
+// In-memory storage for browser-side mock data
+const mockDb = {
+  users: new Map(),
+  songs: new Map(),
+  likedSongs: new Map<string, Set<string>>(),
+  playlists: new Map(),
+  playlistSongs: new Map<number, Map<string, Date>>(),
+  listeningHistory: new Map<string, Array<{songId: string, playedAt: Date}>>()
+};
+
+// Mock implementation for browser environment
+function mockExecuteQuery(sql: string, params: any[] = []): any {
+  console.log('Mock query:', sql, params);
+  
+  // Handle different types of queries
+  if (sql.includes('INSERT INTO liked_songs')) {
+    const [userId, songId] = params;
+    if (!mockDb.likedSongs.has(userId)) {
+      mockDb.likedSongs.set(userId, new Set());
+    }
+    mockDb.likedSongs.get(userId)!.add(songId);
+    return { affectedRows: 1 };
+  }
+  
+  else if (sql.includes('DELETE FROM liked_songs')) {
+    const [userId, songId] = params;
+    if (mockDb.likedSongs.has(userId)) {
+      mockDb.likedSongs.get(userId)!.delete(songId);
+    }
+    return { affectedRows: 1 };
+  }
+  
+  else if (sql.includes('SELECT * FROM liked_songs')) {
+    const userId = params[0];
+    if (!mockDb.likedSongs.has(userId)) return [];
+    
+    return Array.from(mockDb.likedSongs.get(userId)!).map(songId => ({
+      user_id: userId,
+      song_id: songId,
+      liked_at: new Date().toISOString()
+    }));
+  }
+  
+  else if (sql.includes('INSERT INTO playlists')) {
+    const [userId, name] = params;
+    const id = mockDb.playlists.size + 1;
+    const playlist = {
+      id,
+      user_id: userId,
+      name,
+      created_at: new Date().toISOString()
+    };
+    mockDb.playlists.set(id, playlist);
+    return { insertId: id };
+  }
+  
+  else if (sql.includes('DELETE FROM playlists')) {
+    const playlistId = parseInt(params[0]);
+    mockDb.playlists.delete(playlistId);
+    
+    // Also delete associated playlist songs
+    if (mockDb.playlistSongs.has(playlistId)) {
+      mockDb.playlistSongs.delete(playlistId);
+    }
+    return { affectedRows: 1 };
+  }
+  
+  else if (sql.includes('SELECT * FROM playlists WHERE user_id')) {
+    const userId = params[0];
+    const userPlaylists = Array.from(mockDb.playlists.values())
+      .filter(p => p.user_id === userId);
+    return userPlaylists;
+  }
+  
+  else if (sql.includes('SELECT * FROM playlists WHERE id')) {
+    const playlistId = parseInt(params[0]);
+    const playlist = mockDb.playlists.get(playlistId);
+    return playlist ? [playlist] : [];
+  }
+  
+  else if (sql.includes('INSERT INTO playlist_songs')) {
+    const [playlistId, songId] = params;
+    if (!mockDb.playlistSongs.has(playlistId)) {
+      mockDb.playlistSongs.set(playlistId, new Map());
+    }
+    mockDb.playlistSongs.get(playlistId)!.set(songId, new Date());
+    return { affectedRows: 1 };
+  }
+  
+  else if (sql.includes('DELETE FROM playlist_songs')) {
+    const [playlistId, songId] = params;
+    if (mockDb.playlistSongs.has(playlistId)) {
+      mockDb.playlistSongs.get(playlistId)!.delete(songId);
+    }
+    return { affectedRows: 1 };
+  }
+  
+  else if (sql.includes('SELECT * FROM playlist_songs')) {
+    const playlistId = parseInt(params[0]);
+    if (!mockDb.playlistSongs.has(playlistId)) return [];
+    
+    return Array.from(mockDb.playlistSongs.get(playlistId)!.entries()).map(([songId, addedAt]) => ({
+      playlist_id: playlistId,
+      song_id: songId,
+      added_at: addedAt.toISOString()
+    }));
+  }
+  
+  else if (sql.includes('INSERT INTO listening_history')) {
+    const [userId, songId] = params;
+    if (!mockDb.listeningHistory.has(userId)) {
+      mockDb.listeningHistory.set(userId, []);
+    }
+    mockDb.listeningHistory.get(userId)!.unshift({
+      songId,
+      playedAt: new Date()
+    });
+    return { affectedRows: 1 };
+  }
+  
+  else if (sql.includes('SELECT * FROM listening_history')) {
+    const userId = params[0];
+    if (!mockDb.listeningHistory.has(userId)) return [];
+    
+    return mockDb.listeningHistory.get(userId)!.map(entry => ({
+      user_id: userId,
+      song_id: entry.songId,
+      played_at: entry.playedAt.toISOString()
+    }));
+  }
+  
+  return [];
+}
+
+// Initialize the database tables
+export const initializeTables = async (): Promise<void> => {
+  const isBrowser = typeof window !== 'undefined';
+  if (isBrowser) {
+    console.log('Running in browser, skipping table initialization');
+    return;
+  }
+  
+  try {
+    // Check if tables exist and create them if they don't
+    const tables = [
+      `CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR(255) PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        name VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `CREATE TABLE IF NOT EXISTS songs (
+        id VARCHAR(255) PRIMARY KEY,
+        title VARCHAR(255),
+        artist VARCHAR(255),
+        thumbnail_url TEXT,
+        duration INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `CREATE TABLE IF NOT EXISTS liked_songs (
+        user_id VARCHAR(255),
+        song_id VARCHAR(255),
+        liked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, song_id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS playlists (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id VARCHAR(255),
+        name VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `CREATE TABLE IF NOT EXISTS playlist_songs (
+        playlist_id INT,
+        song_id VARCHAR(255),
+        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (playlist_id, song_id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS listening_history (
+        user_id VARCHAR(255),
+        song_id VARCHAR(255),
+        played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, song_id, played_at)
+      )`
+    ];
+    
+    for (const tableQuery of tables) {
+      await executeQuery(tableQuery);
     }
     
     console.log('TiDB tables initialized successfully');
-    return true;
   } catch (error) {
     console.error('Error initializing TiDB tables:', error);
-    return false;
+    throw error;
   }
-};
-
-// Generate a unique ID
-export const generateId = (): string => {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2);
 };

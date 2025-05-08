@@ -64,12 +64,12 @@ const MusicPlayer = () => {
     if (!isPlaying) return Array(10).fill(0);
     
     // Generate random heights that change every second
-    const now = Math.floor(Date.now() / 1000);
+    const now = Math.floor(Date.now() / 200); // More frequent updates
     const seed = now + (currentTrack?.id || '').charCodeAt(0);
-    const randomHeights = Array.from({ length: 10 }, (_, i) => {
+    const randomHeights = Array.from({ length: 15 }, (_, i) => { // More bars
       // Use seed + index to create pseudo-random but deterministic heights
       const val = Math.sin(seed + i) * 0.5 + 0.5;
-      return Math.max(3, val * 15);
+      return Math.max(3, val * 20); // Taller max height
     });
     
     return randomHeights;
@@ -87,14 +87,15 @@ const MusicPlayer = () => {
                 alt={currentTrack.title}
                 className="w-full h-full object-cover"
               />
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-transparent animate-pulse"></div>
             </div>
             <div className="truncate">
-              <h4 className="text-sm font-medium truncate">{currentTrack.title}</h4>
-              <p className="text-xs text-gray-400 truncate">{currentTrack.channelTitle}</p>
+              <h4 className="text-sm font-medium truncate animate-fade-in" style={{animationDelay: '0.1s'}}>{currentTrack.title}</h4>
+              <p className="text-xs text-gray-400 truncate animate-fade-in" style={{animationDelay: '0.2s'}}>{currentTrack.channelTitle}</p>
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center w-2/4 animate-fade-in">
+          <div className="flex flex-col items-center justify-center w-2/4 animate-fade-in" style={{animationDelay: '0.1s'}}>
             <div className="flex items-center gap-4">
               <Button 
                 size="icon" 
@@ -109,12 +110,12 @@ const MusicPlayer = () => {
                 size="icon" 
                 variant="secondary"
                 onClick={togglePlayPause}
-                className="rounded-full bg-neon-purple/80 hover:bg-neon-purple text-white neon-glow-purple hover-scale"
+                className="rounded-full bg-neon-purple/80 hover:bg-neon-purple text-white neon-glow-purple hover-scale transform transition-all hover:scale-110"
               >
                 {isPlaying ? (
-                  <Pause className="h-5 w-5" />
+                  <Pause className="h-5 w-5 animate-pulse" />
                 ) : (
-                  <Play className="h-5 w-5" />
+                  <Play className="h-5 w-5 ml-0.5" />
                 )}
               </Button>
               
@@ -133,10 +134,10 @@ const MusicPlayer = () => {
               ref={progressBarRef}
               onClick={handleProgressClick}
             >
-              <span className="text-xs text-gray-400">{formatTime(currentTime)}</span>
+              <span className="text-xs text-gray-400 animate-fade-in" style={{animationDelay: '0.3s'}}>{formatTime(currentTime)}</span>
               <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden relative">
                 <div 
-                  className="h-full bg-neon-purple rounded-full absolute top-0 left-0"
+                  className="h-full bg-neon-purple rounded-full absolute top-0 left-0 transition-all duration-300 ease-in-out"
                   style={{ width: `${progress}%` }}
                 />
                 <div 
@@ -144,12 +145,16 @@ const MusicPlayer = () => {
                 >
                   <Progress value={progress} className="h-2" />
                 </div>
+                <div 
+                  className="absolute top-1/2 transform -translate-y-1/2 bg-white rounded-full w-3 h-3 shadow-glow transition-all duration-300 ease-in-out"
+                  style={{ left: `${progress}%` }}
+                ></div>
               </div>
-              <span className="text-xs text-gray-400">{formatTime(duration)}</span>
+              <span className="text-xs text-gray-400 animate-fade-in" style={{animationDelay: '0.4s'}}>{formatTime(duration)}</span>
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-4 w-1/4 justify-end animate-fade-in">
+          <div className="hidden md:flex items-center gap-4 w-1/4 justify-end animate-fade-in" style={{animationDelay: '0.2s'}}>
             <Button 
               size="icon" 
               variant="ghost" 
@@ -159,7 +164,12 @@ const MusicPlayer = () => {
               )}
               onClick={() => toggleLike(currentTrack)}
             >
-              <Heart className={cn("h-5 w-5", isLiked(currentTrack.id) && "fill-neon-pink")} />
+              <Heart 
+                className={cn(
+                  "h-5 w-5 transform transition-transform duration-300", 
+                  isLiked(currentTrack.id) ? "fill-neon-pink scale-110" : "scale-100"
+                )}
+              />
             </Button>
             
             <Button 
@@ -209,16 +219,18 @@ const MusicPlayer = () => {
           </div>
         </div>
 
-        {/* Audio visualizer waves */}
+        {/* Enhanced audio visualizer waves */}
         <div className="absolute bottom-0 left-0 right-0 flex justify-center h-0.5">
-          <div className="flex items-end gap-0.5">
-            {isPlaying && visualizerBars().map((height, i) => (
+          <div className="flex items-end gap-[2px]">
+            {visualizerBars().map((height, i) => (
               <div
                 key={i}
-                className="w-0.5 bg-neon-purple rounded-full animate-wave"
+                className={`w-[2px] bg-neon-purple/80 rounded-full animate-wave transition-all duration-150 ease-in-out ${isPlaying ? '' : 'h-[1px]'}`}
                 style={{
-                  height: `${height}px`,
-                  animationDelay: `${i * 0.1}s`
+                  height: `${isPlaying ? height : 1}px`,
+                  animationDelay: `${i * 0.05}s`,
+                  backgroundColor: i % 3 === 0 ? '#8A2BE2' : i % 2 === 0 ? '#6A5ACD' : '#9370DB',
+                  boxShadow: isPlaying ? '0 0 5px rgba(138, 43, 226, 0.7)' : 'none'
                 }}
               />
             ))}

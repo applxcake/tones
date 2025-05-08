@@ -1,50 +1,55 @@
 
 import { toast } from '@/components/ui/use-toast';
 import { YouTubeVideo } from './youtubeService';
-import { executeQuery, generateId } from '@/integrations/neondb/client';
+import { executeQuery, generateId } from '@/integrations/tidb/client';
 
+// Create interfaces for playlists and playlist songs
 export interface Playlist {
-  id: string;
+  id: number;
   name: string;
-  description: string;
+  description?: string;
   imageUrl?: string;
   songs: YouTubeVideo[];
   createdAt: string;
   userId: string;
 }
 
-// Get all playlists for the current user
-export const getUserPlaylists = async (userId?: string) => {
+// Get all playlists for a user
+export const getUserPlaylists = async (userId?: string): Promise<Playlist[]> => {
   if (!userId) return [];
 
   try {
+    // Get playlists from the database
     const playlists = await executeQuery<any[]>(
-      'SELECT * FROM playlists WHERE user_id = $1',
+      'SELECT * FROM playlists WHERE user_id = ?',
       [userId]
     );
     
     // Get songs for each playlist
     const playlistsWithSongs = await Promise.all(playlists.map(async (playlist) => {
-      const playlistSongs = await executeQuery<any[]>(
-        `SELECT s.* FROM songs s 
-         JOIN playlist_songs ps ON s.id = ps.song_id 
-         WHERE ps.playlist_id = $1 
-         ORDER BY ps.position ASC`,
+      // Get playlist songs
+      const playlistSongsQuery = await executeQuery<any[]>(
+        `SELECT ps.*, s.* FROM playlist_songs ps
+         JOIN songs s ON ps.song_id = s.id
+         WHERE ps.playlist_id = ?
+         ORDER BY ps.added_at DESC`,
         [playlist.id]
       );
+      
+      // Transform the songs into the expected format
+      const songs = playlistSongsQuery.map(row => ({
+        id: row.song_id,
+        title: row.title,
+        thumbnailUrl: row.thumbnail_url,
+        channelTitle: row.artist || '',
+        publishedAt: row.created_at || new Date().toISOString(),
+      }));
       
       return {
         id: playlist.id,
         name: playlist.name,
-        description: playlist.description || '',
-        imageUrl: playlist.image_url || undefined,
-        songs: playlistSongs?.map(song => ({
-          id: song.id,
-          title: song.title,
-          thumbnailUrl: song.thumbnail_url,
-          channelTitle: song.channel_title,
-          publishedAt: new Date().toISOString(), // Default value for publishedAt
-        })) || [],
+        description: '',
+        songs,
         createdAt: playlist.created_at,
         userId: playlist.user_id,
       };
@@ -63,7 +68,7 @@ export const getUserPlaylists = async (userId?: string) => {
 };
 
 // Create a new playlist
-export const createPlaylist = async (name: string, description = '', userId?: string) => {
+export const createPlaylist = async (name: string, description = '', userId?: string): Promise<Playlist | null> => {
   if (!userId) {
     toast({
       title: "Error creating playlist",
@@ -74,25 +79,26 @@ export const createPlaylist = async (name: string, description = '', userId?: st
   }
 
   try {
-    const playlistId = generateId();
-    const now = new Date().toISOString();
-    
-    await executeQuery(
-      'INSERT INTO playlists (id, name, description, user_id, created_at) VALUES ($1, $2, $3, $4, $5)',
-      [playlistId, name, description, userId, now]
+    // Insert a new playlist into the database
+    const result = await executeQuery<any>(
+      'INSERT INTO playlists (user_id, name) VALUES (?, ?)',
+      [userId, name]
     );
+    
+    const playlistId = result.insertId;
     
     toast({
       title: "Playlist Created",
       description: `'${name}' has been created.`,
     });
-
+    
+    // Return the newly created playlist
     return {
       id: playlistId,
       name,
-      description: description || '',
+      description,
       songs: [],
-      createdAt: now,
+      createdAt: new Date().toISOString(),
       userId,
     };
   } catch (error) {
@@ -107,7 +113,7 @@ export const createPlaylist = async (name: string, description = '', userId?: st
 };
 
 // Add a song to a playlist
-export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, userId?: string) => {
+export const addSongToPlaylist = async (playlistId: string | number, song: YouTubeVideo, userId?: string): Promise<boolean> => {
   if (!userId) {
     toast({
       title: "Error adding song",
@@ -120,7 +126,7 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
   try {
     // Verify the playlist exists and belongs to the user
     const playlist = await executeQuery<any[]>(
-      'SELECT * FROM playlists WHERE id = $1 AND user_id = $2',
+      'SELECT * FROM playlists WHERE id = ? AND user_id = ?',
       [playlistId, userId]
     );
     
@@ -133,57 +139,43 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
       return false;
     }
     
-    // First check if the song exists in the songs table
+    // Check if the song exists in the songs table, if not, add it
     const existingSong = await executeQuery<any[]>(
-      'SELECT * FROM songs WHERE id = $1',
+      'SELECT * FROM songs WHERE id = ?',
       [song.id]
     );
     
-    // If song doesn't exist, add it
     if (!existingSong || existingSong.length === 0) {
+      // Add the song to the songs table
       await executeQuery(
-        'INSERT INTO songs (id, title, thumbnail_url, channel_title) VALUES ($1, $2, $3, $4)',
-        [song.id, song.title, song.thumbnailUrl, song.channelTitle]
+        'INSERT INTO songs (id, title, artist, thumbnail_url) VALUES (?, ?, ?, ?)',
+        [song.id, song.title, song.channelTitle, song.thumbnailUrl]
       );
     }
     
-    // Check if song is already in playlist
+    // Check if the song is already in the playlist
     const existingPlaylistSong = await executeQuery<any[]>(
-      'SELECT * FROM playlist_songs WHERE playlist_id = $1 AND song_id = $2',
+      'SELECT * FROM playlist_songs WHERE playlist_id = ? AND song_id = ?',
       [playlistId, song.id]
     );
-      
+    
     if (existingPlaylistSong && existingPlaylistSong.length > 0) {
       toast({
         title: "Already Added",
         description: "This song is already in the playlist.",
       });
-      return true; // Already exists, but we consider it a success
+      return true;
     }
     
-    // Get highest position in playlist
-    const positionData = await executeQuery<any[]>(
-      'SELECT position FROM playlist_songs WHERE playlist_id = $1 ORDER BY position DESC LIMIT 1',
-      [playlistId]
-    );
-      
-    const position = positionData && positionData.length > 0 ? positionData[0].position + 1 : 0;
-    
-    // Add song to playlist
+    // Add the song to the playlist
     await executeQuery(
-      'INSERT INTO playlist_songs (id, playlist_id, song_id, position, added_at) VALUES ($1, $2, $3, $4, $5)',
-      [generateId(), playlistId, song.id, position, new Date().toISOString()]
-    );
-    
-    // Get playlist name for toast
-    const playlistInfo = await executeQuery<any[]>(
-      'SELECT name FROM playlists WHERE id = $1',
-      [playlistId]
+      'INSERT INTO playlist_songs (playlist_id, song_id) VALUES (?, ?)',
+      [playlistId, song.id]
     );
     
     toast({
       title: "Song Added",
-      description: `Added to ${playlistInfo[0]?.name || 'playlist'}`,
+      description: `Added to ${playlist[0].name}`,
     });
     
     return true;
@@ -199,10 +191,10 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
 };
 
 // Remove a song from a playlist
-export const removeSongFromPlaylist = async (playlistId: string, songId: string) => {
+export const removeSongFromPlaylist = async (playlistId: string | number, songId: string): Promise<boolean> => {
   try {
     await executeQuery(
-      'DELETE FROM playlist_songs WHERE playlist_id = $1 AND song_id = $2',
+      'DELETE FROM playlist_songs WHERE playlist_id = ? AND song_id = ?',
       [playlistId, songId]
     );
     
@@ -224,17 +216,17 @@ export const removeSongFromPlaylist = async (playlistId: string, songId: string)
 };
 
 // Delete a playlist
-export const deletePlaylist = async (playlistId: string) => {
+export const deletePlaylist = async (playlistId: string | number): Promise<boolean> => {
   try {
     // First delete all playlist songs
     await executeQuery(
-      'DELETE FROM playlist_songs WHERE playlist_id = $1',
+      'DELETE FROM playlist_songs WHERE playlist_id = ?',
       [playlistId]
     );
     
     // Then delete the playlist itself
     await executeQuery(
-      'DELETE FROM playlists WHERE id = $1',
+      'DELETE FROM playlists WHERE id = ?',
       [playlistId]
     );
     
@@ -255,39 +247,42 @@ export const deletePlaylist = async (playlistId: string) => {
   }
 };
 
-// Get a single playlist by ID
-export const getPlaylistById = async (playlistId: string) => {
+// Get a playlist by ID
+export const getPlaylistById = async (playlistId: string | number): Promise<Playlist | null> => {
   try {
+    // Get the playlist
     const playlist = await executeQuery<any[]>(
-      'SELECT * FROM playlists WHERE id = $1',
+      'SELECT * FROM playlists WHERE id = ?',
       [playlistId]
     );
     
     if (!playlist || playlist.length === 0) {
-      throw new Error('Playlist not found');
+      return null;
     }
     
-    // Get songs for the playlist
-    const playlistSongs = await executeQuery<any[]>(
-      `SELECT s.* FROM songs s 
-       JOIN playlist_songs ps ON s.id = ps.song_id 
-       WHERE ps.playlist_id = $1 
-       ORDER BY ps.position ASC`,
+    // Get playlist songs
+    const playlistSongsQuery = await executeQuery<any[]>(
+      `SELECT ps.*, s.* FROM playlist_songs ps
+       JOIN songs s ON ps.song_id = s.id
+       WHERE ps.playlist_id = ?
+       ORDER BY ps.added_at DESC`,
       [playlistId]
     );
-      
+    
+    // Transform the songs into the expected format
+    const songs = playlistSongsQuery.map(row => ({
+      id: row.song_id,
+      title: row.title,
+      thumbnailUrl: row.thumbnail_url,
+      channelTitle: row.artist || '',
+      publishedAt: row.created_at || new Date().toISOString(),
+    }));
+    
     return {
       id: playlist[0].id,
       name: playlist[0].name,
-      description: playlist[0].description || '',
-      imageUrl: playlist[0].image_url || undefined,
-      songs: playlistSongs?.map(song => ({
-        id: song.id,
-        title: song.title,
-        thumbnailUrl: song.thumbnail_url,
-        channelTitle: song.channel_title,
-        publishedAt: new Date().toISOString(), // Default value for publishedAt
-      })) || [],
+      description: '',
+      songs,
       createdAt: playlist[0].created_at,
       userId: playlist[0].user_id,
     };

@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import SongTile from '@/components/SongTile';
 import { getCurrentUser } from '@/services/userService';
-import { supabase } from '@/integrations/supabase/client';
+import { executeQuery } from '@/integrations/neondb/client';
 import { YouTubeVideo } from '@/services/youtubeService';
 
 const Profile = () => {
@@ -25,29 +25,34 @@ const Profile = () => {
         try {
           setLoading(true);
           
-          // Get user profile from Supabase
-          const { data: profileData, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', user.id)
-            .single();
+          // Get user profile from PostgreSQL database
+          const userData = await executeQuery<any[]>(
+            'SELECT * FROM users WHERE id = $1',
+            [user.id]
+          );
           
-          if (error) {
-            console.error('Error fetching user profile from Supabase:', error);
+          if (!userData || userData.length === 0) {
             // Fall back to local data
-            const userData = await getCurrentUser(user.id);
-            setCurrentUserData(userData);
+            const localUserData = await getCurrentUser(user.id);
+            setCurrentUserData(localUserData);
           } else {
-            // Use Supabase data
+            // Use database data
             setCurrentUserData({
-              ...profileData,
+              ...userData[0],
               email: user.email,
-              username: profileData.username || user.username || user.email?.split('@')[0],
-              bio: profileData.bio || ''
+              username: userData[0].username || user.username || user.email?.split('@')[0],
+              bio: userData[0].bio || ''
             });
           }
         } catch (error) {
           console.error('Error fetching user data:', error);
+          // Try to get user data from the service as fallback
+          try {
+            const fallbackUserData = await getCurrentUser(user.id);
+            setCurrentUserData(fallbackUserData);
+          } catch (fallbackError) {
+            console.error('Error getting fallback user data:', fallbackError);
+          }
         } finally {
           setLoading(false);
         }

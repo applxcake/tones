@@ -1,5 +1,5 @@
 
-// Define YouTubeVideo type
+// Define the structure of a YouTube video
 export interface YouTubeVideo {
   id: string;
   title: string;
@@ -8,204 +8,163 @@ export interface YouTubeVideo {
   publishedAt: string;
 }
 
-// Define YouTubeVideoBasic type for videos from database with fewer properties
-export interface YouTubeVideoBasic {
-  id: string;
-  title: string;
-  thumbnailUrl: string;
-  channelTitle: string;
-  publishedAt: string; // Changed from optional to required to match YouTubeVideo
-}
+// API key for YouTube Data API
+const API_KEY = 'AIzaSyBAxmc3Rn7Id-bifTpe7iqsz5p8k1Otzdw';
+const MAX_RESULTS = 10;
 
-// YouTube API key - NOTE: In production, this should be stored in environment variables
-const YOUTUBE_API_KEY = 'AIzaSyBAxmc3Rn7Id-bifTpe7iqsz5p8k1Otzdw';
-const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3';
-
-/**
- * Fetches trending music videos from YouTube
- * @param maxResults - Maximum number of results to return (default: 15)
- * @returns Array of YouTubeVideo objects
- */
-export const getTrendingMusic = async (maxResults = 15): Promise<YouTubeVideo[]> => {
-  try {
-    // Use music category ID (10) and fetch trending videos
-    const response = await fetch(
-      `${YOUTUBE_API_URL}/videos?part=snippet&chart=mostPopular&videoCategoryId=10&maxResults=${maxResults}&key=${YOUTUBE_API_KEY}`
-    );
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('YouTube API error:', errorData);
-      throw new Error(`YouTube API error: ${errorData.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-    
-    return data.items.map((item: any) => ({
-      id: item.id,
-      title: item.snippet.title,
-      thumbnailUrl: item.snippet.thumbnails.medium.url,
-      channelTitle: item.snippet.channelTitle,
-      publishedAt: item.snippet.publishedAt
-    }));
-  } catch (error) {
-    console.error('Error fetching trending music from YouTube:', error);
-    
-    // Return mock data if API fails (for development purposes)
-    return getMockTrendingMusic();
-  }
-};
-
-/**
- * Searches for videos on YouTube
- * @param query - Search query
- * @param maxResults - Maximum number of results to return (default: 20)
- * @returns Array of YouTubeVideo objects
- */
-export const searchYouTubeVideos = async (query: string, maxResults = 20): Promise<YouTubeVideo[]> => {
-  if (!query) return [];
-  
+// Search YouTube videos by query
+export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]> => {
   try {
     const response = await fetch(
-      `${YOUTUBE_API_URL}/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=${maxResults}&key=${YOUTUBE_API_KEY}`
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${MAX_RESULTS}&q=${encodeURIComponent(
+        query
+      )}&key=${API_KEY}&type=video`
     );
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('YouTube API error:', errorData);
-      throw new Error(`YouTube API error: ${errorData.error?.message || 'Unknown error'}`);
+      console.error('YouTube API Error:', errorData);
+      return getMockSearchResults(query);
     }
-    
+
     const data = await response.json();
     
+    // Map the response to our YouTubeVideo format
     return data.items.map((item: any) => ({
       id: item.id.videoId,
       title: item.snippet.title,
       thumbnailUrl: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
       channelTitle: item.snippet.channelTitle,
-      publishedAt: item.snippet.publishedAt
+      publishedAt: item.snippet.publishedAt,
     }));
   } catch (error) {
-    console.error('Error searching YouTube videos:', error);
-    return [];
+    console.error('Error fetching YouTube data:', error);
+    // Return mock data in case of error
+    return getMockSearchResults(query);
   }
 };
 
-// Add the missing searchVideos function that is imported in Search.tsx
-export const searchVideos = async (query: string, pageToken?: string) => {
+// Get video details by ID
+export const getYouTubeVideoById = async (videoId: string): Promise<YouTubeVideo | null> => {
   try {
-    const params = new URLSearchParams({
-      part: 'snippet',
-      q: query,
-      type: 'video',
-      videoCategoryId: '10', // Music category
-      maxResults: '20',
-      key: YOUTUBE_API_KEY
-    });
-    
-    if (pageToken) {
-      params.append('pageToken', pageToken);
-    }
-    
-    const response = await fetch(`${YOUTUBE_API_URL}/search?${params.toString()}`);
-    
+    const response = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${API_KEY}`
+    );
+
     if (!response.ok) {
-      throw new Error('Failed to search videos');
+      console.error('YouTube API Error:', await response.text());
+      return getMockVideoById(videoId);
     }
-    
+
     const data = await response.json();
     
-    return {
-      items: data.items.map((item: any) => ({
-        id: item.id.videoId,
-        title: item.snippet.title,
-        thumbnailUrl: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
-        channelTitle: item.snippet.channelTitle,
-        publishedAt: item.snippet.publishedAt
-      })),
-      nextPageToken: data.nextPageToken
-    };
+    if (data.items && data.items.length > 0) {
+      const video = data.items[0];
+      return {
+        id: video.id,
+        title: video.snippet.title,
+        thumbnailUrl: video.snippet.thumbnails.medium?.url || video.snippet.thumbnails.default?.url,
+        channelTitle: video.snippet.channelTitle,
+        publishedAt: video.snippet.publishedAt,
+      };
+    }
+    
+    return null;
   } catch (error) {
-    console.error('Error searching videos:', error);
-    return { items: [], nextPageToken: undefined };
+    console.error('Error fetching YouTube video by ID:', error);
+    return getMockVideoById(videoId);
   }
 };
 
-/**
- * Generates mock trending music data
- * Used as fallback when API calls fail
- */
-const getMockTrendingMusic = (): YouTubeVideo[] => {
-  return [
+// Mock data for testing when API fails
+function getMockSearchResults(query: string): YouTubeVideo[] {
+  // Base results that will be returned for any query
+  const baseResults = [
     {
       id: 'dQw4w9WgXcQ',
       title: 'Rick Astley - Never Gonna Give You Up',
       thumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
       channelTitle: 'Rick Astley',
-      publishedAt: '2009-10-25T06:57:33Z'
+      publishedAt: '2009-10-25T06:57:33Z',
     },
     {
-      id: '1XzY2ij_vL4',
-      title: 'Katy Perry - Dark Horse ft. Juicy J',
-      thumbnailUrl: 'https://i.ytimg.com/vi/1XzY2ij_vL4/mqdefault.jpg',
-      channelTitle: 'Katy Perry',
-      publishedAt: '2019-12-16T16:32:12Z'
+      id: 'yPYZpwSpKmA',
+      title: 'Rick Astley - Together Forever',
+      thumbnailUrl: 'https://i.ytimg.com/vi/yPYZpwSpKmA/mqdefault.jpg',
+      channelTitle: 'Rick Astley',
+      publishedAt: '2010-10-25T06:57:33Z',
     },
-    {
-      id: 'IcrbM1l_BoI',
-      title: 'Avicii - Wake Me Up',
-      thumbnailUrl: 'https://i.ytimg.com/vi/IcrbM1l_BoI/mqdefault.jpg',
-      channelTitle: 'Avicii',
-      publishedAt: '2013-07-29T13:54:22Z'
-    },
-    {
-      id: 'CqdL36VKbMQ',
-      title: 'Adele - Rolling in the Deep',
-      thumbnailUrl: 'https://i.ytimg.com/vi/CqdL36VKbMQ/mqdefault.jpg',
-      channelTitle: 'Adele',
-      publishedAt: '2013-11-14T23:12:45Z'
-    },
-    {
-      id: 'OPf0YbXqDm0',
-      title: 'Mark Ronson ft. Bruno Mars - Uptown Funk',
-      thumbnailUrl: 'https://i.ytimg.com/vi/OPf0YbXqDm0/mqdefault.jpg',
-      channelTitle: 'Mark Ronson',
-      publishedAt: '2014-11-19T17:32:56Z'
-    },
-    {
-      id: 'JGwWNGJdvx8',
-      title: 'Ed Sheeran - Shape of You',
-      thumbnailUrl: 'https://i.ytimg.com/vi/JGwWNGJdvx8/mqdefault.jpg',
-      channelTitle: 'Ed Sheeran',
-      publishedAt: '2017-01-30T11:10:22Z'
-    },
-    {
-      id: 'r8OXJuTBlqE',
-      title: 'Taylor Swift - Blank Space',
-      thumbnailUrl: 'https://i.ytimg.com/vi/r8OXJuTBlqE/mqdefault.jpg', 
-      channelTitle: 'Taylor Swift',
-      publishedAt: '2014-11-10T15:43:12Z'
-    },
-    {
-      id: 'YykjpeuMNEk',
-      title: 'Coldplay - Hymn For The Weekend',
-      thumbnailUrl: 'https://i.ytimg.com/vi/YykjpeuMNEk/mqdefault.jpg',
-      channelTitle: 'Coldplay',
-      publishedAt: '2016-01-29T14:22:54Z'
-    },
-    {
-      id: 'fKopy74weus',
-      title: 'Imagine Dragons - Believer',
-      thumbnailUrl: 'https://i.ytimg.com/vi/fKopy74weus/mqdefault.jpg',
-      channelTitle: 'Imagine Dragons',
-      publishedAt: '2017-03-07T13:11:23Z'
-    },
-    {
-      id: 'eH4F1Tdb040',
-      title: 'Sia - Chandelier',
-      thumbnailUrl: 'https://i.ytimg.com/vi/eH4F1Tdb040/mqdefault.jpg',
-      channelTitle: 'Sia',
-      publishedAt: '2014-05-06T18:32:12Z'
-    }
   ];
-};
+  
+  // Genre-specific mock data
+  const genres: Record<string, YouTubeVideo[]> = {
+    'hip hop': [
+      {
+        id: 'mock_hip_hop_1',
+        title: 'Best Hip Hop Mix 2023',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=1',
+        channelTitle: 'Hip Hop Channel',
+        publishedAt: '2023-01-15T10:30:00Z',
+      },
+      {
+        id: 'mock_hip_hop_2',
+        title: 'Classic Hip Hop Beats',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=2',
+        channelTitle: 'Beats Master',
+        publishedAt: '2023-02-10T14:45:00Z',
+      },
+    ],
+    'pop': [
+      {
+        id: 'mock_pop_1',
+        title: 'Top Pop Hits 2023',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=3',
+        channelTitle: 'Pop Music Now',
+        publishedAt: '2023-03-05T09:15:00Z',
+      },
+      {
+        id: 'mock_pop_2',
+        title: 'Best Pop Songs Playlist',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=4',
+        channelTitle: 'Pop Playlist',
+        publishedAt: '2023-02-22T11:30:00Z',
+      },
+    ],
+    'rock': [
+      {
+        id: 'mock_rock_1',
+        title: 'Classic Rock Anthems',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=5',
+        channelTitle: 'Rock Legends',
+        publishedAt: '2023-01-30T16:20:00Z',
+      },
+      {
+        id: 'mock_rock_2',
+        title: 'Rock Hits Compilation',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=6',
+        channelTitle: 'Rock Forever',
+        publishedAt: '2023-03-12T08:45:00Z',
+      },
+    ],
+  };
+  
+  // Check if query matches one of our genre keys
+  const normalizedQuery = query.toLowerCase();
+  for (const genre in genres) {
+    if (normalizedQuery.includes(genre)) {
+      return [...genres[genre], ...baseResults];
+    }
+  }
+  
+  return baseResults;
+}
+
+function getMockVideoById(videoId: string): YouTubeVideo {
+  return {
+    id: videoId,
+    title: `Video ${videoId.substring(0, 6)}`,
+    thumbnailUrl: `https://i.pravatar.cc/300?u=${videoId}`,
+    channelTitle: 'Mock Channel',
+    publishedAt: new Date().toISOString(),
+  };
+}

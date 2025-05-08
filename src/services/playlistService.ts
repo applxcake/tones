@@ -1,7 +1,7 @@
 
 import { toast } from '@/components/ui/use-toast';
 import { YouTubeVideo } from './youtubeService';
-import { executeQuery, generateId } from '@/integrations/tidb/client';
+import { executeQuery, generateId } from '@/integrations/neondb/client';
 
 export interface Playlist {
   id: string;
@@ -19,7 +19,7 @@ export const getUserPlaylists = async (userId?: string) => {
 
   try {
     const playlists = await executeQuery<any[]>(
-      `SELECT * FROM playlists WHERE user_id = ?`,
+      'SELECT * FROM playlists WHERE user_id = $1',
       [userId]
     );
     
@@ -28,7 +28,7 @@ export const getUserPlaylists = async (userId?: string) => {
       const playlistSongs = await executeQuery<any[]>(
         `SELECT s.* FROM songs s 
          JOIN playlist_songs ps ON s.id = ps.song_id 
-         WHERE ps.playlist_id = ? 
+         WHERE ps.playlist_id = $1 
          ORDER BY ps.position ASC`,
         [playlist.id]
       );
@@ -78,8 +78,7 @@ export const createPlaylist = async (name: string, description = '', userId?: st
     const now = new Date().toISOString();
     
     await executeQuery(
-      `INSERT INTO playlists (id, name, description, user_id, created_at) 
-       VALUES (?, ?, ?, ?, ?)`,
+      'INSERT INTO playlists (id, name, description, user_id, created_at) VALUES ($1, $2, $3, $4, $5)',
       [playlistId, name, description, userId, now]
     );
     
@@ -121,11 +120,11 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
   try {
     // Verify the playlist exists and belongs to the user
     const playlist = await executeQuery<any[]>(
-      `SELECT * FROM playlists WHERE id = ? AND user_id = ?`,
+      'SELECT * FROM playlists WHERE id = $1 AND user_id = $2',
       [playlistId, userId]
     );
     
-    if (!playlist.length) {
+    if (!playlist || playlist.length === 0) {
       toast({
         title: "Error adding song",
         description: "You don't have permission to add to this playlist.",
@@ -136,26 +135,25 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
     
     // First check if the song exists in the songs table
     const existingSong = await executeQuery<any[]>(
-      `SELECT * FROM songs WHERE id = ?`,
+      'SELECT * FROM songs WHERE id = $1',
       [song.id]
     );
     
     // If song doesn't exist, add it
-    if (!existingSong.length) {
+    if (!existingSong || existingSong.length === 0) {
       await executeQuery(
-        `INSERT INTO songs (id, title, thumbnail_url, channel_title) 
-         VALUES (?, ?, ?, ?)`,
+        'INSERT INTO songs (id, title, thumbnail_url, channel_title) VALUES ($1, $2, $3, $4)',
         [song.id, song.title, song.thumbnailUrl, song.channelTitle]
       );
     }
     
     // Check if song is already in playlist
     const existingPlaylistSong = await executeQuery<any[]>(
-      `SELECT * FROM playlist_songs WHERE playlist_id = ? AND song_id = ?`,
+      'SELECT * FROM playlist_songs WHERE playlist_id = $1 AND song_id = $2',
       [playlistId, song.id]
     );
       
-    if (existingPlaylistSong.length) {
+    if (existingPlaylistSong && existingPlaylistSong.length > 0) {
       toast({
         title: "Already Added",
         description: "This song is already in the playlist.",
@@ -165,22 +163,21 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
     
     // Get highest position in playlist
     const positionData = await executeQuery<any[]>(
-      `SELECT position FROM playlist_songs WHERE playlist_id = ? ORDER BY position DESC LIMIT 1`,
+      'SELECT position FROM playlist_songs WHERE playlist_id = $1 ORDER BY position DESC LIMIT 1',
       [playlistId]
     );
       
-    const position = positionData.length > 0 ? positionData[0].position + 1 : 0;
+    const position = positionData && positionData.length > 0 ? positionData[0].position + 1 : 0;
     
     // Add song to playlist
     await executeQuery(
-      `INSERT INTO playlist_songs (id, playlist_id, song_id, position, added_at) 
-       VALUES (?, ?, ?, ?, ?)`,
+      'INSERT INTO playlist_songs (id, playlist_id, song_id, position, added_at) VALUES ($1, $2, $3, $4, $5)',
       [generateId(), playlistId, song.id, position, new Date().toISOString()]
     );
     
     // Get playlist name for toast
     const playlistInfo = await executeQuery<any[]>(
-      `SELECT name FROM playlists WHERE id = ?`,
+      'SELECT name FROM playlists WHERE id = $1',
       [playlistId]
     );
     
@@ -205,7 +202,7 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
 export const removeSongFromPlaylist = async (playlistId: string, songId: string) => {
   try {
     await executeQuery(
-      `DELETE FROM playlist_songs WHERE playlist_id = ? AND song_id = ?`,
+      'DELETE FROM playlist_songs WHERE playlist_id = $1 AND song_id = $2',
       [playlistId, songId]
     );
     
@@ -231,13 +228,13 @@ export const deletePlaylist = async (playlistId: string) => {
   try {
     // First delete all playlist songs
     await executeQuery(
-      `DELETE FROM playlist_songs WHERE playlist_id = ?`,
+      'DELETE FROM playlist_songs WHERE playlist_id = $1',
       [playlistId]
     );
     
     // Then delete the playlist itself
     await executeQuery(
-      `DELETE FROM playlists WHERE id = ?`,
+      'DELETE FROM playlists WHERE id = $1',
       [playlistId]
     );
     
@@ -262,11 +259,11 @@ export const deletePlaylist = async (playlistId: string) => {
 export const getPlaylistById = async (playlistId: string) => {
   try {
     const playlist = await executeQuery<any[]>(
-      `SELECT * FROM playlists WHERE id = ?`,
+      'SELECT * FROM playlists WHERE id = $1',
       [playlistId]
     );
     
-    if (!playlist.length) {
+    if (!playlist || playlist.length === 0) {
       throw new Error('Playlist not found');
     }
     
@@ -274,7 +271,7 @@ export const getPlaylistById = async (playlistId: string) => {
     const playlistSongs = await executeQuery<any[]>(
       `SELECT s.* FROM songs s 
        JOIN playlist_songs ps ON s.id = ps.song_id 
-       WHERE ps.playlist_id = ? 
+       WHERE ps.playlist_id = $1 
        ORDER BY ps.position ASC`,
       [playlistId]
     );

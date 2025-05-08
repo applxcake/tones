@@ -6,6 +6,7 @@ import AppSidebar from '@/components/AppSidebar';
 import MusicPlayer from '@/components/MusicPlayer';
 import MobileNav from '@/components/MobileNav';
 import { Button } from '@/components/ui/button';
+import { initializeTables } from '@/integrations/neondb/client';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -18,10 +19,31 @@ const Layout = () => {
   useEffect(() => {
     localStorage.setItem('sidebar-open', JSON.stringify(sidebarOpen));
   }, [sidebarOpen]);
+  
+  // Initialize database tables on first render
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await initializeTables();
+      } catch (error) {
+        console.error("Error initializing database tables:", error);
+      }
+    };
+    
+    init();
+  }, []);
 
   // Toggle sidebar function
   const toggleSidebar = () => {
     setSidebarOpen(prev => !prev);
+  };
+  
+  // Close sidebar on mobile when overlay is clicked
+  const closeSidebar = () => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
   };
 
   return (
@@ -30,7 +52,7 @@ const Layout = () => {
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-20 md:hidden" 
-          onClick={toggleSidebar}
+          onClick={closeSidebar}
           aria-hidden="true"
         />
       )}

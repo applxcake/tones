@@ -76,6 +76,67 @@ export const getYouTubeVideoById = async (videoId: string): Promise<YouTubeVideo
   }
 };
 
+// Search videos implementation for compatibility with Search page
+export const searchVideos = async (query: string, pageToken?: string) => {
+  try {
+    const videos = await searchYouTubeVideos(query);
+    
+    // Format results to match expected structure
+    return {
+      items: videos,
+      nextPageToken: undefined // Mock implementation doesn't support paging
+    };
+  } catch (error) {
+    console.error('Error in searchVideos:', error);
+    return {
+      items: getMockSearchResults(query),
+      nextPageToken: undefined
+    };
+  }
+};
+
+// Get trending music implementation for the Explore page
+export const getTrendingMusic = async (): Promise<YouTubeVideo[]> => {
+  // For mock implementation, return some predefined results
+  return [
+    {
+      id: 'trending1',
+      title: 'Top Hit - Currently Trending',
+      thumbnailUrl: 'https://i.pravatar.cc/300?img=10',
+      channelTitle: 'Trending Music',
+      publishedAt: new Date().toISOString(),
+    },
+    {
+      id: 'trending2',
+      title: 'Popular Music Video',
+      thumbnailUrl: 'https://i.pravatar.cc/300?img=11',
+      channelTitle: 'Music Channel',
+      publishedAt: new Date().toISOString(),
+    },
+    {
+      id: 'trending3',
+      title: 'Viral Song of the Week',
+      thumbnailUrl: 'https://i.pravatar.cc/300?img=12',
+      channelTitle: 'Viral Hits',
+      publishedAt: new Date().toISOString(),
+    },
+    {
+      id: 'trending4',
+      title: 'New Release - Hot Track',
+      thumbnailUrl: 'https://i.pravatar.cc/300?img=13',
+      channelTitle: 'New Releases',
+      publishedAt: new Date().toISOString(),
+    },
+    {
+      id: 'trending5',
+      title: 'Rising Artist - Breaking Hit',
+      thumbnailUrl: 'https://i.pravatar.cc/300?img=14',
+      channelTitle: 'Rising Stars',
+      publishedAt: new Date().toISOString(),
+    }
+  ];
+};
+
 // Mock data for testing when API fails
 function getMockSearchResults(query: string): YouTubeVideo[] {
   // Base results that will be returned for any query

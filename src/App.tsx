@@ -21,6 +21,7 @@ import Layout from '@/components/Layout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Toaster } from '@/components/ui/toaster';
 import TiDBInitializer from '@/components/TiDBInitializer';
+import NeonDBInitializer from '@/components/NeonDBInitializer';
 
 // Context providers
 import { PlayerProvider } from '@/contexts/PlayerContext';
@@ -36,6 +37,7 @@ function App() {
         <PlayerProvider>
           <BrowserRouter>
             <TiDBInitializer />
+            <NeonDBInitializer />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />

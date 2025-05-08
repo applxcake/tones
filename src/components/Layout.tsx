@@ -6,7 +6,6 @@ import AppSidebar from '@/components/AppSidebar';
 import MusicPlayer from '@/components/MusicPlayer';
 import MobileNav from '@/components/MobileNav';
 import { Button } from '@/components/ui/button';
-import { initializeTables } from '@/integrations/neondb/client';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -19,19 +18,6 @@ const Layout = () => {
   useEffect(() => {
     localStorage.setItem('sidebar-open', JSON.stringify(sidebarOpen));
   }, [sidebarOpen]);
-  
-  // Initialize database tables on first render
-  useEffect(() => {
-    const init = async () => {
-      try {
-        await initializeTables();
-      } catch (error) {
-        console.error("Error initializing database tables:", error);
-      }
-    };
-    
-    init();
-  }, []);
 
   // Toggle sidebar function
   const toggleSidebar = () => {

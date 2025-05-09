@@ -251,7 +251,7 @@ export const followUser = async (userId: string, currentUserId?: string) => {
     }
     
     // Check if already following
-    const existingFollow = await executeQuery<any[]>(
+    const existingFollow = await executeQuery(
       'SELECT * FROM follows WHERE follower_id = ? AND following_id = ?',
       [currentUserId, userId]
     );
@@ -388,7 +388,7 @@ export const updateUserProfile = async (profile: Partial<User>, userId?: string)
   }
   
   try {
-    const userExists = await executeQuery<any[]>(
+    const userExists = await executeQuery(
       'SELECT id FROM users WHERE id = ?',
       [userId]
     );
@@ -417,7 +417,7 @@ export const updateUserProfile = async (profile: Partial<User>, userId?: string)
     // Save profile picture URL to user_profiles table for better organization
     if (profile.avatar) {
       // Check if profile exists in user_profiles
-      const existingProfile = await executeQuery<any[]>(
+      const existingProfile = await executeQuery(
         'SELECT user_id FROM user_profiles WHERE user_id = ?',
         [userId]
       );
@@ -481,7 +481,7 @@ export const uploadProfilePicture = async (imageUrl: string, userId?: string) =>
     );
     
     // Update or create in user_profiles table
-    const existingProfile = await executeQuery<any[]>(
+    const existingProfile = await executeQuery(
       'SELECT user_id FROM user_profiles WHERE user_id = ?',
       [userId]
     );

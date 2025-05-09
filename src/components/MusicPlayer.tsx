@@ -10,6 +10,7 @@ import { usePlayer } from '@/contexts/PlayerContext';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
+import VinylRecordDisplay from './VinylRecordDisplay';
 
 // Add a container for the invisible YouTube player
 const YouTubePlayerContainer = () => {
@@ -36,6 +37,7 @@ const MusicPlayer = () => {
   const progressBarRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [showVisualizer, setShowVisualizer] = useState(false);
+  const [showVinyl, setShowVinyl] = useState(true);
   
   // Show nothing if no track is selected
   if (!currentTrack) {
@@ -90,10 +92,22 @@ const MusicPlayer = () => {
     });
   };
 
+  // Toggle vinyl display
+  const toggleVinyl = () => {
+    setShowVinyl(prev => !prev);
+    toast({
+      title: showVinyl ? "Standard view enabled" : "Vinyl view enabled",
+      description: showVinyl ? 
+        "Showing standard album art" : 
+        "Now showing vinyl record view",
+      variant: "default",
+    });
+  };
+
   return (
     <>
       <YouTubePlayerContainer />
-      <div className="fixed bottom-0 left-0 right-0 bg-black/60 backdrop-blur-lg glass-panel border-t border-white/10 z-50 h-20 animate-slide-in">
+      <div className="fixed bottom-0 left-0 right-0 bg-black/60 backdrop-blur-lg glass-panel border-t border-white/10 z-50 animate-slide-in">
         {/* Animated background gradient */}
         <div className="absolute inset-0 opacity-30 z-0 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/30 via-neon-pink/20 to-neon-blue/30 animate-pulse-soft"></div>
@@ -117,28 +131,68 @@ const MusicPlayer = () => {
             />
           ))}
         </div>
-
-        <div className="container mx-auto h-full flex items-center justify-between px-4 relative z-10">
-          <div className="flex items-center gap-3 w-1/4 min-w-[200px] animate-fade-in">
-            <div className="relative w-12 h-12 rounded overflow-hidden neon-border hover-scale group">
-              <img 
-                src={currentTrack.thumbnailUrl} 
-                alt={currentTrack.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-transparent animate-pulse"></div>
-              {/* Sparkle effect on hover */}
-              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Sparkle size={12} className="text-white animate-pulse" />
-              </div>
+        
+        {/* Player with vinyl display */}
+        <div className="container mx-auto flex items-stretch justify-between px-4 relative z-10">
+          {/* Left section: Album art / Vinyl record */}
+          <div className="flex items-center gap-3 w-1/4 min-w-[200px] animate-fade-in py-4">
+            <div className="hidden md:block w-16 h-16 mr-2">
+              {showVinyl ? (
+                <VinylRecordDisplay 
+                  thumbnailUrl={currentTrack.thumbnailUrl}
+                  title={currentTrack.title}
+                  className="w-16 h-16"
+                />
+              ) : (
+                <div className="relative w-16 h-16 rounded-lg overflow-hidden neon-border hover-scale group">
+                  <img 
+                    src={currentTrack.thumbnailUrl} 
+                    alt={currentTrack.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-transparent animate-pulse"></div>
+                  {/* Sparkle effect on hover */}
+                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Sparkle size={12} className="text-white animate-pulse" />
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="truncate">
+            <div className="truncate md:ml-2">
               <h4 className="text-sm font-medium truncate animate-fade-in" style={{animationDelay: '0.1s'}}>{currentTrack.title}</h4>
               <p className="text-xs text-gray-400 truncate animate-fade-in" style={{animationDelay: '0.2s'}}>{currentTrack.channelTitle}</p>
+              
+              <div className="flex items-center mt-1">
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-6 w-6 p-0 mr-2"
+                  onClick={toggleVinyl}
+                >
+                  <div className="w-4 h-4 rounded-full bg-neon-purple/70 flex items-center justify-center">
+                    <div className="w-1 h-1 rounded-full bg-white"></div>
+                  </div>
+                </Button>
+                {/* Small visualizer bars on mobile */}
+                <div className="flex items-end h-4 gap-[1px] ml-1">
+                  {visualizerBars().slice(0, 8).map((height, i) => (
+                    <div
+                      key={i}
+                      className="w-[1px] rounded-full animate-wave"
+                      style={{
+                        height: `${isPlaying ? Math.min(height, 12) : 1}px`,
+                        animationDelay: `${i * 0.05}s`,
+                        backgroundColor: '#9b87f5'
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center w-2/4 animate-fade-in" style={{animationDelay: '0.1s'}}>
+          {/* Center section: Controls and progress */}
+          <div className="flex flex-col items-center justify-center w-2/4 animate-fade-in py-4" style={{animationDelay: '0.1s'}}>
             <div className="flex items-center gap-4">
               <Button 
                 size="icon" 
@@ -199,7 +253,8 @@ const MusicPlayer = () => {
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-4 w-1/4 justify-end animate-fade-in" style={{animationDelay: '0.2s'}}>
+          {/* Right section: Volume and buttons */}
+          <div className="hidden md:flex items-center gap-4 w-1/4 justify-end animate-fade-in py-4" style={{animationDelay: '0.2s'}}>
             <Button 
               size="icon" 
               variant="ghost" 

@@ -8,6 +8,8 @@ import { searchYouTubeVideos } from '@/services/youtubeService';
 import { getAllUsers } from '@/services/userService';
 import GenreExplorer from '@/components/GenreExplorer';
 import SearchBar from '@/components/SearchBar';
+import TrendingCarousel from '@/components/TrendingCarousel';
+import { Sparkle } from 'lucide-react';
 
 const Home = () => {
   const [trendingSongs, setTrendingSongs] = useState([]);
@@ -68,7 +70,10 @@ const Home = () => {
     <div className="pt-6 pb-24">
       <div className="mb-8 animate-fade-in">
         <SearchBar onSearch={handleSearch} className="mb-8" />
-        <h1 className="text-3xl font-bold">Welcome to Tones</h1>
+        <h1 className="text-3xl font-bold flex items-center">
+          Welcome to Tones 
+          <Sparkle className="h-6 w-6 ml-2 text-neon-purple animate-pulse" />
+        </h1>
         
         {/* Graphic design under welcome message */}
         <div className="mt-4 mb-8 rounded-lg overflow-hidden glass-panel relative">
@@ -116,12 +121,7 @@ const Home = () => {
       </div>
       
       <section className="mb-10 animate-slide-in">
-        <h2 className="text-2xl font-bold mb-6">Trending Now</h2>
-        <ScrollableRow title="Trending Songs">
-          {trendingSongs.map((song) => (
-            <SongTile key={song.id} song={song} className="min-w-[200px] max-w-[200px]" />
-          ))}
-        </ScrollableRow>
+        <TrendingCarousel title="Trending Now" songs={trendingSongs} />
       </section>
       
       <section className="mb-10 animate-slide-in">

@@ -28,3 +28,26 @@
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
+
+/* Vinyl record spinning animation */
+@keyframes vinylSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.vinyl-spinning {
+  animation: vinylSpin 2s linear infinite;
+}
+
+.vinyl-paused {
+  animation-play-state: paused;
+}
+
+/* Shadow glow for vinyl */
+.shadow-glow {
+  box-shadow: 0 0 15px rgba(155, 135, 245, 0.7);
+}

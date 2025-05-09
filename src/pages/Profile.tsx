@@ -26,7 +26,7 @@ const Profile = () => {
           setLoading(true);
           
           // Get user profile from PostgreSQL database
-          const userData = await executeQuery<any[]>(
+          const userData = await executeQuery(
             'SELECT * FROM users WHERE id = $1',
             [user.id]
           );

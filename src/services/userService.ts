@@ -98,7 +98,7 @@ export const getCurrentUser = async (userId?: string) => {
 export const getAllUsers = async () => {
   try {
     // Query all users from database
-    const users = await executeQuery<any[]>('SELECT * FROM users');
+    const users = await executeQuery('SELECT * FROM users');
     
     if (!users || users.length === 0) {
       return [
@@ -135,12 +135,12 @@ export const getAllUsers = async () => {
     // Process database users
     return Promise.all(users.map(async (user) => {
       // Get followers and following counts for each user
-      const { rowCount: followersCount } = await executeQuery<any>(
+      const { rowCount: followersCount } = await executeQuery(
         'SELECT COUNT(*) FROM follows WHERE following_id = ?',
         [user.id]
       );
       
-      const { rowCount: followingCount } = await executeQuery<any>(
+      const { rowCount: followingCount } = await executeQuery(
         'SELECT COUNT(*) FROM follows WHERE follower_id = ?',
         [user.id]
       );
@@ -169,7 +169,7 @@ export const getUserById = async (userId: string) => {
   
   try {
     // Get users from database
-    const userData = await executeQuery<any[]>(
+    const userData = await executeQuery(
       'SELECT * FROM users WHERE id = ?',
       [userId]
     );
@@ -179,13 +179,13 @@ export const getUserById = async (userId: string) => {
       const user = userData[0];
       
       // Get followers
-      const followers = await executeQuery<any[]>(
+      const followers = await executeQuery(
         'SELECT follower_id FROM follows WHERE following_id = ?',
         [userId]
       );
       
       // Get following
-      const following = await executeQuery<any[]>(
+      const following = await executeQuery(
         'SELECT following_id FROM follows WHERE follower_id = ?',
         [userId]
       );
@@ -332,7 +332,7 @@ export const searchUsers = async (query: string) => {
     // Search in database users
     const normalizedQuery = query.toLowerCase();
     
-    const users = await executeQuery<any[]>(
+    const users = await executeQuery(
       "SELECT * FROM users WHERE LOWER(username) LIKE ? OR LOWER(bio) LIKE ?",
       [`%${normalizedQuery}%`, `%${normalizedQuery}%`]
     );
@@ -340,12 +340,12 @@ export const searchUsers = async (query: string) => {
     if (users && users.length > 0) {
       return Promise.all(users.map(async (user) => {
         // Get followers and following counts
-        const followersCount = await executeQuery<any>(
+        const followersCount = await executeQuery(
           'SELECT COUNT(*) FROM follows WHERE following_id = ?',
           [user.id]
         );
         
-        const followingCount = await executeQuery<any>(
+        const followingCount = await executeQuery(
           'SELECT COUNT(*) FROM follows WHERE follower_id = ?',
           [user.id]
         );

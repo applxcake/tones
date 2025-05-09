@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { executeQuery, generateId } from '@/integrations/tidb/client';
@@ -52,6 +51,7 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
   const [recentlyPlayed, setRecentlyPlayed] = useState<YouTubeVideo[]>([]);
   const [progress, setProgress] = useState(0); // Track playback progress (0-100)
   const [duration, setDuration] = useState(0); // Track duration in seconds
+  const [isLikeInProgress, setIsLikeInProgress] = useState(false); // Add a state to track like in progress
   
   // YouTube player reference
   const playerRef = useRef<YT.Player | null>(null);
@@ -381,7 +381,13 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
       return false;
     }
     
+    // Prevent multiple rapid clicks
+    if (isLikeInProgress) {
+      return isLiked(track.id);
+    }
+    
     try {
+      setIsLikeInProgress(true);
       const isCurrentlyLiked = isLiked(track.id);
       
       if (isCurrentlyLiked) {
@@ -398,6 +404,7 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
           description: `${track.title} has been removed from your liked songs.`,
         });
         
+        setIsLikeInProgress(false);
         return false;
       } else {
         // First, ensure the song exists in the songs table
@@ -426,9 +433,9 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
         toast({
           title: "Added to Liked Songs",
           description: `${track.title} has been added to your liked songs.`,
-          className: "animate-bounce"
         });
         
+        setIsLikeInProgress(false);
         return true;
       }
     } catch (error) {
@@ -438,6 +445,7 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
         description: "Failed to update your liked songs. Please try again.",
         variant: "destructive"
       });
+      setIsLikeInProgress(false);
       return isLiked(track.id);
     }
   };

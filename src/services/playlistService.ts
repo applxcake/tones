@@ -25,34 +25,50 @@ export const getUserPlaylists = async (userId?: string): Promise<Playlist[]> => 
       [userId]
     );
     
+    if (!playlists || playlists.length === 0) {
+      return [];
+    }
+    
     // Get songs for each playlist
     const playlistsWithSongs = await Promise.all(playlists.map(async (playlist) => {
-      // Get playlist songs
-      const playlistSongsQuery = await executeQuery(
-        `SELECT ps.*, s.* FROM playlist_songs ps
-         JOIN songs s ON ps.song_id = s.id
-         WHERE ps.playlist_id = ?
-         ORDER BY ps.added_at DESC`,
-        [playlist.id]
-      );
-      
-      // Transform the songs into the expected format
-      const songs = playlistSongsQuery.map(row => ({
-        id: row.song_id,
-        title: row.title,
-        thumbnailUrl: row.thumbnail_url,
-        channelTitle: row.artist || '',
-        publishedAt: row.created_at || new Date().toISOString(),
-      }));
-      
-      return {
-        id: playlist.id,
-        name: playlist.name,
-        description: '',
-        songs,
-        createdAt: playlist.created_at,
-        userId: playlist.user_id,
-      };
+      try {
+        // Get playlist songs
+        const playlistSongsQuery = await executeQuery(
+          `SELECT ps.*, s.* FROM playlist_songs ps
+           LEFT JOIN songs s ON ps.song_id = s.id
+           WHERE ps.playlist_id = ?
+           ORDER BY ps.added_at DESC`,
+          [playlist.id]
+        );
+        
+        // Transform the songs into the expected format
+        const songs = playlistSongsQuery.filter(row => row.song_id).map(row => ({
+          id: row.song_id,
+          title: row.title,
+          thumbnailUrl: row.thumbnail_url,
+          channelTitle: row.artist || '',
+          publishedAt: row.created_at || new Date().toISOString(),
+        }));
+        
+        return {
+          id: playlist.id,
+          name: playlist.name,
+          description: '',
+          songs,
+          createdAt: playlist.created_at,
+          userId: playlist.user_id,
+        };
+      } catch (error) {
+        console.error(`Error fetching songs for playlist ${playlist.id}:`, error);
+        return {
+          id: playlist.id,
+          name: playlist.name,
+          description: '',
+          songs: [],
+          createdAt: playlist.created_at,
+          userId: playlist.user_id,
+        };
+      }
     }));
     
     return playlistsWithSongs;

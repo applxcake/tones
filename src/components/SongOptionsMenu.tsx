@@ -46,6 +46,7 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
         try {
           setLoading(true);
           const userPlaylists = await getUserPlaylists(user.id);
+          console.log("Fetched playlists:", userPlaylists);
           setPlaylists(userPlaylists || []);
         } catch (error) {
           console.error('Error fetching playlists:', error);
@@ -55,7 +56,9 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
       }
     };
 
-    fetchPlaylists();
+    if (isOpen) {
+      fetchPlaylists();
+    }
   }, [user, isOpen]);
 
   const handleLike = async (e: React.MouseEvent) => {
@@ -123,7 +126,7 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
       <DropdownMenuContent
         side="right"
         align="start"
-        className="w-56 animate-scale-in"
+        className="w-56 animate-scale-in bg-black/80 backdrop-blur-lg border border-white/10"
         onClick={(e) => e.stopPropagation()}
       >
         <DropdownMenuItem onClick={handleAddToQueue} className="hover-scale">
@@ -143,7 +146,7 @@ const SongOptionsMenu = ({ song }: SongOptionsMenuProps) => {
             <ListPlus className="mr-2 h-4 w-4" />
             Add to Playlist
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="animate-fade-in">
+          <DropdownMenuSubContent className="animate-fade-in bg-black/80 backdrop-blur-lg border border-white/10">
             {loading ? (
               <DropdownMenuLabel className="text-sm text-muted-foreground">
                 <div className="flex justify-center py-2">

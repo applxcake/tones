@@ -69,6 +69,50 @@ const Home = () => {
       <div className="mb-8 animate-fade-in">
         <SearchBar onSearch={handleSearch} className="mb-8" />
         <h1 className="text-3xl font-bold">Welcome to Tones</h1>
+        
+        {/* Graphic design under welcome message */}
+        <div className="mt-4 mb-8 rounded-lg overflow-hidden glass-panel relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/30 to-neon-pink/30 z-0"></div>
+          <div className="relative z-10 p-6 flex flex-col md:flex-row items-center justify-between">
+            <div className="mb-4 md:mb-0 md:w-1/2">
+              <h2 className="text-2xl font-bold mb-2">Discover Your Sound</h2>
+              <p className="text-gray-300 mb-4">
+                Explore trending tracks, create custom playlists, and find your perfect musical rhythm.
+              </p>
+              <div className="flex gap-3">
+                <div className="h-1 w-12 bg-neon-purple rounded-full animate-pulse"></div>
+                <div className="h-1 w-8 bg-neon-blue rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                <div className="h-1 w-16 bg-neon-pink rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <div className="grid grid-cols-3 gap-2">
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-8 h-8 rounded-full bg-white/5 backdrop-blur-sm flex items-center justify-center hover-scale"
+                    style={{ 
+                      animationDelay: `${i * 0.1}s`,
+                      boxShadow: i % 3 === 0 ? '0 0 8px rgba(138, 43, 226, 0.6)' : 
+                                i % 3 === 1 ? '0 0 8px rgba(0, 191, 255, 0.6)' : 
+                                             '0 0 8px rgba(255, 0, 128, 0.6)'
+                    }}
+                  >
+                    <div 
+                      className={`w-2 h-2 rounded-full ${
+                        i % 3 === 0 ? 'bg-neon-purple' : 
+                        i % 3 === 1 ? 'bg-neon-blue' : 
+                                     'bg-neon-pink'
+                      } animate-pulse`}
+                      style={{ animationDelay: `${i * 0.15}s` }}
+                    ></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-neon-purple via-neon-blue to-neon-pink"></div>
+        </div>
       </div>
       
       <section className="mb-10 animate-slide-in">

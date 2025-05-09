@@ -1,6 +1,5 @@
-
 import { toast } from '@/components/ui/use-toast';
-import { executeQuery, generateId } from '@/integrations/neondb/client';
+import { executeQuery, generateId } from '@/integrations/tidb/client';
 
 export interface User {
   id: string;
@@ -19,9 +18,9 @@ export const getCurrentUser = async (userId?: string) => {
   if (!userId) return null;
   
   try {
-    // Get user from PostgreSQL database
-    const userData = await executeQuery<any[]>(
-      'SELECT * FROM users WHERE id = $1',
+    // Get user from TiDB database
+    const userData = await executeQuery(
+      'SELECT * FROM users WHERE id = ?',
       [userId]
     );
     
@@ -30,7 +29,7 @@ export const getCurrentUser = async (userId?: string) => {
       const username = `User_${userId.substring(0, 5)}`;
       
       await executeQuery(
-        'INSERT INTO users (id, username, created_at) VALUES ($1, $2, $3)',
+        'INSERT INTO users (id, username, created_at) VALUES (?, ?, ?)',
         [userId, username, new Date().toISOString()]
       );
       
@@ -46,34 +45,34 @@ export const getCurrentUser = async (userId?: string) => {
     
     const user = userData[0];
     
-    // Get followers
-    const followers = await executeQuery<any[]>(
-      'SELECT follower_id FROM follows WHERE following_id = $1',
+    // Get followers - now storing the actual follower objects instead of just count
+    const followers = await executeQuery(
+      'SELECT follower_id FROM follows WHERE following_id = ?',
       [userId]
     );
     
-    // Get following
-    const following = await executeQuery<any[]>(
-      'SELECT following_id FROM follows WHERE follower_id = $1',
+    // Get following - now storing the actual following objects instead of just count 
+    const following = await executeQuery(
+      'SELECT following_id FROM follows WHERE follower_id = ?',
       [userId]
     );
     
     // Get liked songs
-    const likedSongs = await executeQuery<any[]>(
-      'SELECT song_id FROM liked_songs WHERE user_id = $1',
+    const likedSongs = await executeQuery(
+      'SELECT song_id FROM liked_songs WHERE user_id = ?',
       [userId]
     );
     
     // Get profile picture from user_profiles table (if exists)
-    const profileData = await executeQuery<any[]>(
-      'SELECT * FROM user_profiles WHERE user_id = $1',
+    const profileData = await executeQuery(
+      'SELECT * FROM user_profiles WHERE user_id = ?',
       [userId]
     );
     
     // If profile picture exists in user_profiles but not in users table, update users table
     if (profileData.length > 0 && profileData[0].profile_picture_url && !user.avatar) {
       await executeQuery(
-        'UPDATE users SET avatar = $1 WHERE id = $2',
+        'UPDATE users SET avatar = ? WHERE id = ?',
         [profileData[0].profile_picture_url, userId]
       );
     }
@@ -137,12 +136,12 @@ export const getAllUsers = async () => {
     return Promise.all(users.map(async (user) => {
       // Get followers and following counts for each user
       const { rowCount: followersCount } = await executeQuery<any>(
-        'SELECT COUNT(*) FROM follows WHERE following_id = $1',
+        'SELECT COUNT(*) FROM follows WHERE following_id = ?',
         [user.id]
       );
       
       const { rowCount: followingCount } = await executeQuery<any>(
-        'SELECT COUNT(*) FROM follows WHERE follower_id = $1',
+        'SELECT COUNT(*) FROM follows WHERE follower_id = ?',
         [user.id]
       );
       
@@ -171,7 +170,7 @@ export const getUserById = async (userId: string) => {
   try {
     // Get users from database
     const userData = await executeQuery<any[]>(
-      'SELECT * FROM users WHERE id = $1',
+      'SELECT * FROM users WHERE id = ?',
       [userId]
     );
 
@@ -181,13 +180,13 @@ export const getUserById = async (userId: string) => {
       
       // Get followers
       const followers = await executeQuery<any[]>(
-        'SELECT follower_id FROM follows WHERE following_id = $1',
+        'SELECT follower_id FROM follows WHERE following_id = ?',
         [userId]
       );
       
       // Get following
       const following = await executeQuery<any[]>(
-        'SELECT following_id FROM follows WHERE follower_id = $1',
+        'SELECT following_id FROM follows WHERE follower_id = ?',
         [userId]
       );
 
@@ -212,7 +211,7 @@ export const getUserById = async (userId: string) => {
       if (mockUser) {
         // Create the mock user in PostgreSQL for persistence
         await executeQuery(
-          'INSERT INTO users (id, username, avatar, bio, created_at) VALUES ($1, $2, $3, $4, $5)',
+          'INSERT INTO users (id, username, avatar, bio, created_at) VALUES (?, ?, ?, ?, ?)',
           [mockUser.id, mockUser.username, mockUser.avatar, mockUser.bio, mockUser.createdAt]
         );
         
@@ -253,7 +252,7 @@ export const followUser = async (userId: string, currentUserId?: string) => {
     
     // Check if already following
     const existingFollow = await executeQuery<any[]>(
-      'SELECT * FROM follows WHERE follower_id = $1 AND following_id = $2',
+      'SELECT * FROM follows WHERE follower_id = ? AND following_id = ?',
       [currentUserId, userId]
     );
       
@@ -267,7 +266,7 @@ export const followUser = async (userId: string, currentUserId?: string) => {
     
     // Create follow relationship
     await executeQuery(
-      'INSERT INTO follows (id, follower_id, following_id, created_at) VALUES ($1, $2, $3, $4)',
+      'INSERT INTO follows (id, follower_id, following_id, created_at) VALUES (?, ?, ?, ?)',
       [generateId(), currentUserId, userId, new Date().toISOString()]
     );
       
@@ -304,7 +303,7 @@ export const unfollowUser = async (userId: string, currentUserId?: string) => {
     const userToUnfollow = await getUserById(userId);
     
     const result = await executeQuery(
-      'DELETE FROM follows WHERE follower_id = $1 AND following_id = $2',
+      'DELETE FROM follows WHERE follower_id = ? AND following_id = ?',
       [currentUserId, userId]
     );
       
@@ -334,20 +333,20 @@ export const searchUsers = async (query: string) => {
     const normalizedQuery = query.toLowerCase();
     
     const users = await executeQuery<any[]>(
-      "SELECT * FROM users WHERE LOWER(username) LIKE $1 OR LOWER(bio) LIKE $1",
-      [`%${normalizedQuery}%`]
+      "SELECT * FROM users WHERE LOWER(username) LIKE ? OR LOWER(bio) LIKE ?",
+      [`%${normalizedQuery}%`, `%${normalizedQuery}%`]
     );
     
     if (users && users.length > 0) {
       return Promise.all(users.map(async (user) => {
         // Get followers and following counts
         const followersCount = await executeQuery<any>(
-          'SELECT COUNT(*) FROM follows WHERE following_id = $1',
+          'SELECT COUNT(*) FROM follows WHERE following_id = ?',
           [user.id]
         );
         
         const followingCount = await executeQuery<any>(
-          'SELECT COUNT(*) FROM follows WHERE follower_id = $1',
+          'SELECT COUNT(*) FROM follows WHERE follower_id = ?',
           [user.id]
         );
         
@@ -390,14 +389,14 @@ export const updateUserProfile = async (profile: Partial<User>, userId?: string)
   
   try {
     const userExists = await executeQuery<any[]>(
-      'SELECT id FROM users WHERE id = $1',
+      'SELECT id FROM users WHERE id = ?',
       [userId]
     );
     
     if (!userExists || userExists.length === 0) {
       // Create user if they don't exist
       await executeQuery(
-        'INSERT INTO users (id, username, email, bio, avatar, created_at) VALUES ($1, $2, $3, $4, $5, $6)',
+        'INSERT INTO users (id, username, email, bio, avatar, created_at) VALUES (?, ?, ?, ?, ?, ?)',
         [
           userId, 
           profile.username || `User_${userId.substring(0, 5)}`,
@@ -410,7 +409,7 @@ export const updateUserProfile = async (profile: Partial<User>, userId?: string)
     } else {
       // Update existing user
       await executeQuery(
-        'UPDATE users SET username = COALESCE($1, username), email = COALESCE($2, email), bio = COALESCE($3, bio), avatar = COALESCE($4, avatar) WHERE id = $5',
+        'UPDATE users SET username = COALESCE(?, username), email = COALESCE(?, email), bio = COALESCE(?, bio), avatar = COALESCE(?, avatar) WHERE id = ?',
         [profile.username, profile.email, profile.bio, profile.avatar, userId]
       );
     }
@@ -419,20 +418,20 @@ export const updateUserProfile = async (profile: Partial<User>, userId?: string)
     if (profile.avatar) {
       // Check if profile exists in user_profiles
       const existingProfile = await executeQuery<any[]>(
-        'SELECT user_id FROM user_profiles WHERE user_id = $1',
+        'SELECT user_id FROM user_profiles WHERE user_id = ?',
         [userId]
       );
       
       if (existingProfile && existingProfile.length > 0) {
         // Update existing profile
         await executeQuery(
-          'UPDATE user_profiles SET profile_picture_url = $1 WHERE user_id = $2',
+          'UPDATE user_profiles SET profile_picture_url = ? WHERE user_id = ?',
           [profile.avatar, userId]
         );
       } else {
         // Create new profile
         await executeQuery(
-          'INSERT INTO user_profiles (user_id, profile_picture_url) VALUES ($1, $2)',
+          'INSERT INTO user_profiles (user_id, profile_picture_url) VALUES (?, ?)',
           [userId, profile.avatar]
         );
       }
@@ -477,24 +476,24 @@ export const uploadProfilePicture = async (imageUrl: string, userId?: string) =>
   try {
     // Update the user's avatar in users table
     await executeQuery(
-      'UPDATE users SET avatar = $1 WHERE id = $2',
+      'UPDATE users SET avatar = ? WHERE id = ?',
       [imageUrl, userId]
     );
     
     // Update or create in user_profiles table
     const existingProfile = await executeQuery<any[]>(
-      'SELECT user_id FROM user_profiles WHERE user_id = $1',
+      'SELECT user_id FROM user_profiles WHERE user_id = ?',
       [userId]
     );
     
     if (existingProfile && existingProfile.length > 0) {
       await executeQuery(
-        'UPDATE user_profiles SET profile_picture_url = $1 WHERE user_id = $2',
+        'UPDATE user_profiles SET profile_picture_url = ? WHERE user_id = ?',
         [imageUrl, userId]
       );
     } else {
       await executeQuery(
-        'INSERT INTO user_profiles (user_id, profile_picture_url) VALUES ($1, $2)',
+        'INSERT INTO user_profiles (user_id, profile_picture_url) VALUES (?, ?)',
         [userId, imageUrl]
       );
     }

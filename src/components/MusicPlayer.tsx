@@ -1,14 +1,15 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { 
   Play, Pause, SkipBack, SkipForward, Volume2, Volume1, VolumeX, 
-  Heart, ListPlus, AudioWaveform
+  Heart, ListPlus, AudioWaveform, Sparkle
 } from 'lucide-react';
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { usePlayer } from '@/contexts/PlayerContext';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
 
 // Add a container for the invisible YouTube player
 const YouTubePlayerContainer = () => {
@@ -33,6 +34,8 @@ const MusicPlayer = () => {
   } = usePlayer();
   
   const progressBarRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const [showVisualizer, setShowVisualizer] = useState(false);
   
   // Show nothing if no track is selected
   if (!currentTrack) {
@@ -75,19 +78,59 @@ const MusicPlayer = () => {
     return randomHeights;
   };
 
+  // Toggle audio visualizer
+  const toggleVisualizer = () => {
+    setShowVisualizer(prev => !prev);
+    toast({
+      title: showVisualizer ? "Visualizer disabled" : "Audio visualizer enabled",
+      description: showVisualizer ? 
+        "Standard wave visualizer mode" : 
+        "Enhanced audio visualization active",
+      variant: "default",
+    });
+  };
+
   return (
     <>
       <YouTubePlayerContainer />
       <div className="fixed bottom-0 left-0 right-0 bg-black/60 backdrop-blur-lg glass-panel border-t border-white/10 z-50 h-20 animate-slide-in">
-        <div className="container mx-auto h-full flex items-center justify-between px-4">
+        {/* Animated background gradient */}
+        <div className="absolute inset-0 opacity-30 z-0 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/30 via-neon-pink/20 to-neon-blue/30 animate-pulse-soft"></div>
+          {/* Animated circles */}
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full opacity-20"
+              style={{
+                width: `${Math.random() * 80 + 50}px`,
+                height: `${Math.random() * 80 + 50}px`,
+                left: `${i * 33}%`,
+                top: `${Math.random() * 100}%`,
+                background: `radial-gradient(circle, 
+                  ${i === 0 ? '#9b87f5' : i === 1 ? '#D946EF' : '#0EA5E9'} 0%, 
+                  rgba(0,0,0,0) 70%)`,
+                transform: `scale(${Math.random() * 0.5 + 0.5})`,
+                animation: `float ${Math.random() * 5 + 3}s ease-in-out infinite`,
+                animationDelay: `${i * 0.5}s`
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="container mx-auto h-full flex items-center justify-between px-4 relative z-10">
           <div className="flex items-center gap-3 w-1/4 min-w-[200px] animate-fade-in">
-            <div className="relative w-12 h-12 rounded overflow-hidden neon-border hover-scale">
+            <div className="relative w-12 h-12 rounded overflow-hidden neon-border hover-scale group">
               <img 
                 src={currentTrack.thumbnailUrl} 
                 alt={currentTrack.title}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-transparent animate-pulse"></div>
+              {/* Sparkle effect on hover */}
+              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Sparkle size={12} className="text-white animate-pulse" />
+              </div>
             </div>
             <div className="truncate">
               <h4 className="text-sm font-medium truncate animate-fade-in" style={{animationDelay: '0.1s'}}>{currentTrack.title}</h4>
@@ -136,8 +179,10 @@ const MusicPlayer = () => {
             >
               <span className="text-xs text-gray-400 animate-fade-in" style={{animationDelay: '0.3s'}}>{formatTime(currentTime)}</span>
               <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden relative">
+                {/* Pulsing glow under progress bar */}
+                <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/20 via-neon-pink/20 to-neon-purple/20 animate-pulse"></div>
                 <div 
-                  className="h-full bg-neon-purple rounded-full absolute top-0 left-0 transition-all duration-300 ease-in-out"
+                  className="h-full bg-gradient-to-r from-neon-purple to-neon-pink rounded-full absolute top-0 left-0 transition-all duration-300 ease-in-out"
                   style={{ width: `${progress}%` }}
                 />
                 <div 
@@ -176,7 +221,14 @@ const MusicPlayer = () => {
               size="icon" 
               variant="ghost" 
               className="text-gray-400 hover:text-white hover-scale"
-              onClick={() => currentTrack && addToQueue(currentTrack)}
+              onClick={() => {
+                addToQueue(currentTrack);
+                toast({
+                  title: "Added to queue",
+                  description: `${currentTrack.title} has been added to your queue`,
+                  variant: "default",
+                });
+              }}
             >
               <ListPlus className="h-5 w-5" />
             </Button>
@@ -184,9 +236,16 @@ const MusicPlayer = () => {
             <Button 
               size="icon" 
               variant="ghost" 
-              className="text-gray-400 hover:text-white hover-scale"
+              className={cn(
+                "text-gray-400 hover:text-white hover-scale transition-all",
+                showVisualizer && "text-neon-blue neon-glow-blue"
+              )}
+              onClick={toggleVisualizer}
             >
-              <AudioWaveform className="h-5 w-5" />
+              <AudioWaveform className={cn(
+                "h-5 w-5", 
+                showVisualizer && "animate-pulse"
+              )} />
             </Button>
             
             <div className="flex items-center gap-2">
@@ -219,18 +278,27 @@ const MusicPlayer = () => {
           </div>
         </div>
 
-        {/* Enhanced audio visualizer waves */}
+        {/* Enhanced audio visualizer waves with conditional rendering based on showVisualizer */}
         <div className="absolute bottom-0 left-0 right-0 flex justify-center h-0.5">
           <div className="flex items-end gap-[2px]">
             {visualizerBars().map((height, i) => (
               <div
                 key={i}
-                className={`w-[2px] bg-neon-purple/80 rounded-full animate-wave transition-all duration-150 ease-in-out ${isPlaying ? '' : 'h-[1px]'}`}
+                className={`w-[2px] rounded-full animate-wave transition-all duration-150 ease-in-out`}
                 style={{
                   height: `${isPlaying ? height : 1}px`,
                   animationDelay: `${i * 0.05}s`,
-                  backgroundColor: i % 3 === 0 ? '#8A2BE2' : i % 2 === 0 ? '#6A5ACD' : '#9370DB',
-                  boxShadow: isPlaying ? '0 0 5px rgba(138, 43, 226, 0.7)' : 'none'
+                  backgroundColor: showVisualizer 
+                    ? (i % 5 === 0 ? '#9b87f5' : 
+                       i % 3 === 0 ? '#D946EF' : 
+                       i % 2 === 0 ? '#0EA5E9' : '#9370DB')
+                    : (i % 3 === 0 ? '#8A2BE2' : i % 2 === 0 ? '#6A5ACD' : '#9370DB'),
+                  boxShadow: isPlaying 
+                    ? (showVisualizer 
+                        ? `0 0 8px ${i % 5 === 0 ? 'rgba(155, 135, 245, 0.8)' : 
+                           i % 3 === 0 ? 'rgba(217, 70, 239, 0.8)' : 'rgba(14, 165, 233, 0.8)'}`
+                        : '0 0 5px rgba(138, 43, 226, 0.7)')
+                    : 'none'
                 }}
               />
             ))}

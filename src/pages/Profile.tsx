@@ -1,22 +1,23 @@
 
 import { useState, useEffect } from 'react';
-import { User, Settings, Clock, Heart, LogOut } from 'lucide-react';
+import { User, Settings, Clock, Heart, LogOut, ListMusic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import SongTile from '@/components/SongTile';
 import { getCurrentUser } from '@/services/userService';
-import { executeQuery } from '@/integrations/tidb/client'; // Changed from '@/integrations/neondb/client'
-import { YouTubeVideo } from '@/services/youtubeService';
+import { executeQuery } from '@/integrations/tidb/client';
+import { getUserPlaylists } from '@/services/playlistService';
 
 const Profile = () => {
   const { recentlyPlayed, likedSongs } = usePlayer();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [currentUserData, setCurrentUserData] = useState<any>(null);
+  const [currentUserData, setCurrentUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userPlaylists, setUserPlaylists] = useState([]);
 
   // Fetch current user data when the component mounts or user changes
   useEffect(() => {
@@ -25,9 +26,9 @@ const Profile = () => {
         try {
           setLoading(true);
           
-          // Get user profile from PostgreSQL database
+          // Get user profile from TiDB database
           const userData = await executeQuery(
-            'SELECT * FROM users WHERE id = $1',
+            'SELECT * FROM users WHERE id = ?',
             [user.id]
           );
           
@@ -44,6 +45,10 @@ const Profile = () => {
               bio: userData[0].bio || ''
             });
           }
+          
+          // Fetch the user's playlists
+          const playlists = await getUserPlaylists(user.id);
+          setUserPlaylists(playlists);
         } catch (error) {
           console.error('Error fetching user data:', error);
           // Try to get user data from the service as fallback
@@ -140,7 +145,7 @@ const Profile = () => {
           
           <div className="flex flex-wrap gap-4 justify-center md:justify-start">
             <div className="text-center hover-scale animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              <p className="text-xl font-bold">2</p>
+              <p className="text-xl font-bold">{userPlaylists?.length || 0}</p>
               <p className="text-sm text-gray-400">Playlists</p>
             </div>
             <div className="text-center hover-scale animate-fade-in" style={{ animationDelay: '0.2s' }}>
@@ -165,6 +170,10 @@ const Profile = () => {
           <TabsTrigger value="liked" className="flex items-center gap-2">
             <Heart className="h-4 w-4" /> 
             Liked Songs
+          </TabsTrigger>
+          <TabsTrigger value="playlists" className="flex items-center gap-2">
+            <ListMusic className="h-4 w-4" /> 
+            Playlists
           </TabsTrigger>
         </TabsList>
         
@@ -192,6 +201,37 @@ const Profile = () => {
           ) : (
             <div className="py-12 text-center glass-panel rounded-lg">
               <p className="text-gray-400">Your liked songs will appear here</p>
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="playlists" className="animate-slide-in">
+          {userPlaylists.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              {userPlaylists.map((playlist) => (
+                <Link 
+                  to={`/playlists/${playlist.id}`} 
+                  key={playlist.id}
+                  className="glass-panel rounded-lg p-4 hover-scale transition-all animate-fade-in"
+                >
+                  <div className="aspect-square rounded-md bg-gray-800/50 mb-3 flex items-center justify-center">
+                    <ListMusic className="w-12 h-12 text-neon-purple opacity-70" />
+                  </div>
+                  <h3 className="font-medium truncate">{playlist.name}</h3>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {playlist.songs.length} song{playlist.songs.length !== 1 ? 's' : ''}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center glass-panel rounded-lg">
+              <p className="text-gray-400">
+                You don't have any playlists yet. Create some on the 
+                <Link to="/playlists" className="text-neon-purple hover:underline mx-1">
+                  playlists page
+                </Link>!
+              </p>
             </div>
           )}
         </TabsContent>

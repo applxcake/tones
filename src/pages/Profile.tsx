@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import SongTile from '@/components/SongTile';
 import { getCurrentUser } from '@/services/userService';
-import { executeQuery } from '@/integrations/neondb/client';
+import { executeQuery } from '@/integrations/tidb/client'; // Changed from '@/integrations/neondb/client'
 import { YouTubeVideo } from '@/services/youtubeService';
 
 const Profile = () => {

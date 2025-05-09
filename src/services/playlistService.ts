@@ -20,7 +20,7 @@ export const getUserPlaylists = async (userId?: string): Promise<Playlist[]> => 
 
   try {
     // Get playlists from the database
-    const playlists = await executeQuery<any[]>(
+    const playlists = await executeQuery(
       'SELECT * FROM playlists WHERE user_id = ?',
       [userId]
     );
@@ -28,7 +28,7 @@ export const getUserPlaylists = async (userId?: string): Promise<Playlist[]> => 
     // Get songs for each playlist
     const playlistsWithSongs = await Promise.all(playlists.map(async (playlist) => {
       // Get playlist songs
-      const playlistSongsQuery = await executeQuery<any[]>(
+      const playlistSongsQuery = await executeQuery(
         `SELECT ps.*, s.* FROM playlist_songs ps
          JOIN songs s ON ps.song_id = s.id
          WHERE ps.playlist_id = ?
@@ -80,7 +80,7 @@ export const createPlaylist = async (name: string, description = '', userId?: st
 
   try {
     // Insert a new playlist into the database
-    const result = await executeQuery<any>(
+    const result = await executeQuery(
       'INSERT INTO playlists (user_id, name) VALUES (?, ?)',
       [userId, name]
     );
@@ -125,7 +125,7 @@ export const addSongToPlaylist = async (playlistId: string | number, song: YouTu
   
   try {
     // Verify the playlist exists and belongs to the user
-    const playlist = await executeQuery<any[]>(
+    const playlist = await executeQuery(
       'SELECT * FROM playlists WHERE id = ? AND user_id = ?',
       [playlistId, userId]
     );
@@ -140,7 +140,7 @@ export const addSongToPlaylist = async (playlistId: string | number, song: YouTu
     }
     
     // Check if the song exists in the songs table, if not, add it
-    const existingSong = await executeQuery<any[]>(
+    const existingSong = await executeQuery(
       'SELECT * FROM songs WHERE id = ?',
       [song.id]
     );
@@ -154,7 +154,7 @@ export const addSongToPlaylist = async (playlistId: string | number, song: YouTu
     }
     
     // Check if the song is already in the playlist
-    const existingPlaylistSong = await executeQuery<any[]>(
+    const existingPlaylistSong = await executeQuery(
       'SELECT * FROM playlist_songs WHERE playlist_id = ? AND song_id = ?',
       [playlistId, song.id]
     );
@@ -251,7 +251,7 @@ export const deletePlaylist = async (playlistId: string | number): Promise<boole
 export const getPlaylistById = async (playlistId: string | number): Promise<Playlist | null> => {
   try {
     // Get the playlist
-    const playlist = await executeQuery<any[]>(
+    const playlist = await executeQuery(
       'SELECT * FROM playlists WHERE id = ?',
       [playlistId]
     );
@@ -261,7 +261,7 @@ export const getPlaylistById = async (playlistId: string | number): Promise<Play
     }
     
     // Get playlist songs
-    const playlistSongsQuery = await executeQuery<any[]>(
+    const playlistSongsQuery = await executeQuery(
       `SELECT ps.*, s.* FROM playlist_songs ps
        JOIN songs s ON ps.song_id = s.id
        WHERE ps.playlist_id = ?

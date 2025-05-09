@@ -183,7 +183,7 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
       
       try {
         // Get liked song IDs from the database
-        const likedSongsData = await executeQuery<any[]>(
+        const likedSongsData = await executeQuery(
           `SELECT s.* FROM songs s 
            JOIN liked_songs ls ON s.id = ls.song_id 
            WHERE ls.user_id = ?
@@ -222,7 +222,7 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
       }
       
       try {
-        const recentlyPlayedData = await executeQuery<any[]>(
+        const recentlyPlayedData = await executeQuery(
           `SELECT s.* FROM songs s 
            JOIN listening_history lh ON s.id = lh.song_id 
            WHERE lh.user_id = ? 
@@ -256,7 +256,7 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
     
     try {
       // First, ensure the song exists in the songs table
-      const existingSong = await executeQuery<any[]>(
+      const existingSong = await executeQuery(
         `SELECT * FROM songs WHERE id = ?`,
         [track.id]
       );
@@ -401,7 +401,7 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
         return false;
       } else {
         // First, ensure the song exists in the songs table
-        const existingSong = await executeQuery<any[]>(
+        const existingSong = await executeQuery(
           `SELECT * FROM songs WHERE id = ?`,
           [track.id]
         );

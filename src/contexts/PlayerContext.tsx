@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { executeQuery, generateId } from '@/integrations/tidb/client';
@@ -11,20 +12,22 @@ interface PlayerContextType {
   volume: number;
   likedSongs: YouTubeVideo[];
   recentlyPlayed: YouTubeVideo[];
-  progress: number; // Added for progress tracking
-  duration: number; // Added for total duration
+  progress: number; 
+  duration: number;
+  loopMode: 'none' | 'one' | 'all'; // Added loop mode
   playTrack: (track: YouTubeVideo) => void;
   togglePlayPause: () => void;
   nextTrack: () => void;
   previousTrack: () => void;
-  prevTrack: () => void; // Alias for previousTrack
+  prevTrack: () => void;
   addToQueue: (track: YouTubeVideo) => void;
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
   setVolume: (volume: number) => void;
   toggleLike: (track: YouTubeVideo) => Promise<boolean>;
   isLiked: (trackId: string) => boolean;
-  seekToPosition: (progressPercentage: number) => void; // Added for seeking
+  seekToPosition: (progressPercentage: number) => void;
+  toggleLoopMode: () => void; // Added toggle loop function
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -49,9 +52,10 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
   const [volume, setVolume] = useState(0.8); // Default to 80%
   const [likedSongs, setLikedSongs] = useState<YouTubeVideo[]>([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState<YouTubeVideo[]>([]);
-  const [progress, setProgress] = useState(0); // Track playback progress (0-100)
-  const [duration, setDuration] = useState(0); // Track duration in seconds
-  const [isLikeInProgress, setIsLikeInProgress] = useState(false); // Add a state to track like in progress
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isLikeInProgress, setIsLikeInProgress] = useState(false);
+  const [loopMode, setLoopMode] = useState<'none' | 'one' | 'all'>('none');
   
   // YouTube player reference
   const playerRef = useRef<YT.Player | null>(null);
@@ -130,10 +134,29 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
       setIsPlaying(false);
       stopProgressTracker();
     } else if (event.data === window.YT.PlayerState.ENDED) {
-      // Auto play next song
-      setIsPlaying(false);
-      stopProgressTracker();
-      nextTrack();
+      // Handle end of track based on loop mode
+      if (loopMode === 'one') {
+        // Replay the current song
+        playerRef.current?.seekTo(0, true);
+        playerRef.current?.playVideo();
+      } else if (loopMode === 'all') {
+        // Play next song or loop back to first if queue is empty
+        if (queue.length > 0) {
+          nextTrack();
+        } else if (currentTrack) {
+          // Replay the current song if it's the only one in the loop
+          playerRef.current?.seekTo(0, true);
+          playerRef.current?.playVideo();
+        } else {
+          setIsPlaying(false);
+          stopProgressTracker();
+        }
+      } else {
+        // Default behavior - play next or stop
+        setIsPlaying(false);
+        stopProgressTracker();
+        nextTrack();
+      }
     }
   };
   
@@ -309,17 +332,49 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
   
   const nextTrack = () => {
     if (queue.length === 0) {
-      setIsPlaying(false);
-      return;
+      if (loopMode === 'all' && currentTrack) {
+        // Loop back to current track
+        playerRef.current?.seekTo(0, true);
+        setIsPlaying(true);
+        return;
+      } else {
+        setIsPlaying(false);
+        return;
+      }
     }
     
     const nextSong = queue[0];
     const newQueue = queue.slice(1);
     
+    // If looping all, add current song to end of queue if it exists
+    if (loopMode === 'all' && currentTrack) {
+      setQueue([...newQueue, currentTrack]);
+    } else {
+      setQueue(newQueue);
+    }
+    
     setCurrentTrack(nextSong);
-    setQueue(newQueue);
     loadVideo(nextSong.id);
     recordPlay(nextSong);
+  };
+  
+  // Toggle through loop modes: none -> one -> all -> none
+  const toggleLoopMode = () => {
+    setLoopMode(current => {
+      const nextMode = current === 'none' ? 'one' : current === 'one' ? 'all' : 'none';
+      
+      toast({
+        title: `Loop mode: ${nextMode}`,
+        description: nextMode === 'none' ? 
+          'Loop disabled' : 
+          nextMode === 'one' ? 
+          'Repeating current song' : 
+          'Looping playlist',
+        variant: "default",
+      });
+      
+      return nextMode;
+    });
   };
   
   const previousTrack = () => {
@@ -461,6 +516,7 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
         recentlyPlayed,
         progress,
         duration,
+        loopMode,
         playTrack,
         togglePlayPause,
         nextTrack,
@@ -473,6 +529,7 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
         toggleLike,
         isLiked,
         seekToPosition,
+        toggleLoopMode,
       }}
     >
       {children}

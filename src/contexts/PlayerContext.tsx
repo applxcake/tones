@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { executeQuery, generateId } from '@/integrations/tidb/client';
@@ -14,7 +13,7 @@ interface PlayerContextType {
   recentlyPlayed: YouTubeVideo[];
   progress: number; 
   duration: number;
-  loopMode: 'none' | 'one' | 'all'; // Added loop mode
+  loopMode: 'none' | 'one' | 'all';
   playTrack: (track: YouTubeVideo) => void;
   togglePlayPause: () => void;
   nextTrack: () => void;
@@ -27,7 +26,7 @@ interface PlayerContextType {
   toggleLike: (track: YouTubeVideo) => Promise<boolean>;
   isLiked: (trackId: string) => boolean;
   seekToPosition: (progressPercentage: number) => void;
-  toggleLoopMode: () => void; // Added toggle loop function
+  toggleLoopMode: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -70,7 +69,8 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
       firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
       
       // Create hidden YouTube player container if it doesn't exist
-      if (!document.getElementById('youtube-player-container')) {
+      const existingContainer = document.getElementById('youtube-player-container');
+      if (!existingContainer) {
         const playerContainer = document.createElement('div');
         playerContainer.id = 'youtube-player-container';
         playerContainer.style.position = 'absolute';
@@ -97,25 +97,45 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
     };
   }, []);
   
-  // Initialize YouTube player
+  // Initialize YouTube player with fixed error handling
   const initializeYouTubePlayer = () => {
-    if (window.YT && window.YT.Player) {
-      playerRef.current = new window.YT.Player('youtube-player-container', {
-        height: '0',
-        width: '0',
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-        },
-        events: {
-          onReady: onPlayerReady,
-          onStateChange: onPlayerStateChange,
-        },
-      });
+    try {
+      if (window.YT && window.YT.Player) {
+        if (playerRef.current) {
+          // Clean up existing player instance before creating new one
+          playerRef.current.destroy();
+        }
+        
+        playerRef.current = new window.YT.Player('youtube-player-container', {
+          height: '0',
+          width: '0',
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            enablejsapi: 1,
+            origin: window.location.origin,
+            rel: 0,
+          },
+          events: {
+            onReady: onPlayerReady,
+            onStateChange: onPlayerStateChange,
+            onError: (e) => console.error('YouTube player error:', e),
+          },
+        });
+        
+        console.log('YouTube player initialized');
+      } else {
+        console.warn('YouTube API not available yet');
+        // Retry initialization after a short delay
+        setTimeout(initializeYouTubePlayer, 1000);
+      }
+    } catch (error) {
+      console.error('Error initializing YouTube player:', error);
     }
   };
   
   const onPlayerReady = (event: YT.PlayerEvent) => {
+    console.log('Player ready');
     // Set initial volume
     event.target.setVolume(volume * 100);
     
@@ -186,12 +206,33 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
     }
   };
   
-  // Load and play a video
+  // Load and play a video with improved error handling
   const loadVideo = (videoId: string) => {
-    if (playerRef.current && playerRef.current.loadVideoById) {
-      playerRef.current.loadVideoById({
-        videoId,
-        startSeconds: 0,
+    try {
+      if (playerRef.current && playerRef.current.loadVideoById) {
+        console.log('Loading video:', videoId);
+        playerRef.current.loadVideoById({
+          videoId,
+          startSeconds: 0,
+        });
+      } else {
+        console.warn('Player not ready for loading video');
+        // If player isn't ready, retry after a short delay
+        setTimeout(() => {
+          if (playerRef.current && playerRef.current.loadVideoById) {
+            playerRef.current.loadVideoById({
+              videoId,
+              startSeconds: 0,
+            });
+          }
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error loading video:', error);
+      toast({
+        title: "Playback Error",
+        description: "Could not play this track. Please try again.",
+        variant: "destructive"
       });
     }
   };
@@ -308,14 +349,45 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
   };
   
   const playTrack = (track: YouTubeVideo) => {
+    console.log('Playing track:', track);
     setCurrentTrack(track);
     
-    if (playerRef.current && playerRef.current.loadVideoById) {
-      loadVideo(track.id);
-      setIsPlaying(true);
+    if (!track.id) {
+      console.error('Invalid track ID');
+      toast({
+        title: "Playback Error",
+        description: "Invalid track data",
+        variant: "destructive"
+      });
+      return;
     }
     
-    recordPlay(track);
+    try {
+      if (playerRef.current && playerRef.current.loadVideoById) {
+        loadVideo(track.id);
+        setIsPlaying(true);
+      } else {
+        console.warn('Player reference not available');
+        // If YouTube API hasn't loaded yet, try to initialize it
+        initializeYouTubePlayer();
+        // And retry playing after a delay
+        setTimeout(() => {
+          if (playerRef.current && playerRef.current.loadVideoById) {
+            loadVideo(track.id);
+            setIsPlaying(true);
+          }
+        }, 1500);
+      }
+      
+      recordPlay(track);
+    } catch (error) {
+      console.error('Error playing track:', error);
+      toast({
+        title: "Playback Error",
+        description: "Could not play this track. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   
   const togglePlayPause = () => {

@@ -11,6 +11,7 @@ import SongTile from '@/components/SongTile';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { cn } from '@/lib/utils';
 import { Sparkle } from 'lucide-react';
+import { type CarouselApi } from "@/components/ui/carousel";
 
 interface TrendingCarouselProps {
   title: string;
@@ -22,6 +23,25 @@ const TrendingCarousel = ({ title, songs, className }: TrendingCarouselProps) =>
   const [activeIndex, setActiveIndex] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
   const [sparkles, setSparkles] = useState<Array<{id: number, x: number, y: number, size: number, delay: number}>>([]);
+  const [api, setApi] = useState<CarouselApi | null>(null);
+
+  // Set up carousel API and listen for index changes
+  useEffect(() => {
+    if (!api) return;
+    
+    const onSelect = () => {
+      setActiveIndex(api.selectedScrollSnap());
+    };
+    
+    api.on("select", onSelect);
+    
+    // Initial position
+    onSelect();
+    
+    return () => {
+      api.off("select", onSelect);
+    };
+  }, [api]);
 
   // Generate random sparkles when hovering
   useEffect(() => {
@@ -78,10 +98,7 @@ const TrendingCarousel = ({ title, songs, className }: TrendingCarouselProps) =>
               loop: true,
             }}
             className="w-full"
-            onSelect={(index) => {
-              // Fix: Properly handle the onSelect callback by using the index parameter
-              setActiveIndex(index);
-            }}
+            setApi={setApi}
           >
             <CarouselContent>
               {songs.map((song, index) => (

@@ -78,7 +78,10 @@ const TrendingCarousel = ({ title, songs, className }: TrendingCarouselProps) =>
               loop: true,
             }}
             className="w-full"
-            onSelect={(index) => setActiveIndex(index)}
+            onSelect={(index) => {
+              // Fix: Properly handle the onSelect callback by using the index parameter
+              setActiveIndex(index);
+            }}
           >
             <CarouselContent>
               {songs.map((song, index) => (

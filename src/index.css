@@ -468,6 +468,148 @@
   .neon-border {
     box-shadow: 0 0 5px rgba(139, 92, 246, 0.7) inset;
   }
+
+  /* NEW ANIMATIONS - Added for the enhanced player UI */
+  
+  /* Glass panel blur in animation */
+  @keyframes glassBlurIn {
+    0% {
+      backdrop-filter: blur(0px);
+      background-color: rgba(0, 0, 0, 0);
+    }
+    100% {
+      backdrop-filter: blur(10px);
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  /* Horizontal slide animation */
+  @keyframes slideX {
+    0% {
+      transform: translateX(-20px);
+      opacity: 0;
+    }
+    100% {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Color flash animation */
+  @keyframes colorFlash {
+    0%, 100% {
+      filter: saturate(1);
+      opacity: 1;
+    }
+    50% {
+      filter: saturate(1.5);
+      opacity: 0.8;
+    }
+  }
+
+  /* Rotate zoom animation */
+  @keyframes rotateZoom {
+    0% {
+      transform: rotate(-10deg) scale(0.9);
+      opacity: 0;
+    }
+    100% {
+      transform: rotate(0deg) scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Vibrate effect */
+  @keyframes vibrate {
+    0%, 100% {
+      transform: translateX(0);
+    }
+    20%, 60% {
+      transform: translateX(-2px);
+    }
+    40%, 80% {
+      transform: translateX(2px);
+    }
+  }
+
+  /* 3D flip animation */
+  @keyframes flip3D {
+    0% {
+      transform: perspective(400px) rotateY(90deg);
+      opacity: 0;
+    }
+    100% {
+      transform: perspective(400px) rotateY(0deg);
+      opacity: 1;
+    }
+  }
+
+  /* Slow fade-in animation */
+  @keyframes fadeInSlow {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  /* Animation classes for new animations */
+  .animate-glass-blur-in {
+    animation: glassBlurIn 0.5s ease-out forwards;
+  }
+
+  .animate-slide-x {
+    animation: slideX 0.4s ease-out forwards;
+  }
+
+  .animate-color-flash {
+    animation: colorFlash 2s infinite;
+  }
+
+  .animate-rotate-zoom {
+    animation: rotateZoom 0.4s ease-out forwards;
+  }
+
+  .animate-vibrate {
+    animation: vibrate 0.3s ease-in-out;
+  }
+
+  .animate-flip-3d {
+    animation: flip3D 0.6s ease-out forwards;
+  }
+
+  .animate-fade-in-slow {
+    animation: fadeInSlow 1s ease-out forwards;
+  }
+
+  /* Neon text effect */
+  .text-neon {
+    text-shadow: 
+      0 0 5px rgba(255, 255, 255, 0.8),
+      0 0 10px rgba(155, 135, 245, 0.8),
+      0 0 15px rgba(155, 135, 245, 0.6),
+      0 0 20px rgba(155, 135, 245, 0.4);
+  }
+
+  /* Neon border effect */
+  .border-neon {
+    box-shadow:
+      0 0 5px rgba(155, 135, 245, 0.8),
+      0 0 10px rgba(155, 135, 245, 0.5),
+      inset 0 0 5px rgba(155, 135, 245, 0.5);
+  }
+
+  /* Glassmorphism styles */
+  .glassmorphism {
+    @apply backdrop-blur-md bg-white/10 border border-white/30 shadow-lg;
+    backdrop-filter: blur(8px);
+  }
+
+  .glassmorphism-dark {
+    @apply backdrop-blur-md bg-black/30 border border-white/10 shadow-lg;
+    backdrop-filter: blur(8px);
+  }
 }
 
 /* Animation keyframes */

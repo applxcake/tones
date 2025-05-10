@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { 
   Play, Pause, SkipBack, SkipForward, Volume2, Volume1, VolumeX, 
@@ -12,6 +11,9 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import VinylRecordDisplay from './VinylRecordDisplay';
 import { Toggle } from "@/components/ui/toggle";
+import VisualVolumePeaks from './VisualVolumePeaks';
+import EnhancedPlayerUI from './EnhancedPlayerUI';
+import ParticleBackground from './ParticleBackground';
 
 // Add a container for the invisible YouTube player
 const YouTubePlayerContainer = () => {
@@ -42,6 +44,8 @@ const MusicPlayer = () => {
   const [showVisualizer, setShowVisualizer] = useState(false);
   const [showVinyl, setShowVinyl] = useState(true);
   const [animatedBg, setAnimatedBg] = useState(Math.floor(Math.random() * 5));
+  const [showEnhancedUI, setShowEnhancedUI] = useState(false);
+  const [showVolumeVisualizer, setShowVolumeVisualizer] = useState(true);
   
   // Change background animation every 30 seconds
   useEffect(() => {
@@ -116,10 +120,48 @@ const MusicPlayer = () => {
     });
   };
 
+  // Toggle enhanced UI
+  const toggleEnhancedUI = () => {
+    setShowEnhancedUI(prev => !prev);
+    toast({
+      title: showEnhancedUI ? "Standard UI" : "Enhanced UI enabled",
+      description: showEnhancedUI ? 
+        "Using standard player controls" : 
+        "Showing enhanced player controls with additional features",
+      variant: "default",
+    });
+  };
+
+  // Toggle volume visualizer
+  const toggleVolumeVisualizer = () => {
+    setShowVolumeVisualizer(prev => !prev);
+  };
+
   return (
     <>
       <YouTubePlayerContainer />
+      
+      {/* Volume Peaks Visualizer */}
+      {showVolumeVisualizer && isPlaying && (
+        <VisualVolumePeaks position="right" barCount={30} className="animate-fade-in" />
+      )}
+      
+      {/* Enhanced Player UI */}
+      {showEnhancedUI && currentTrack && (
+        <EnhancedPlayerUI />
+      )}
+      
       <div className="fixed bottom-0 left-0 right-0 bg-black/60 backdrop-blur-lg glass-panel border-t border-white/10 z-50 animate-slide-in">
+        {/* Particle background for glassmorphism effect */}
+        <div className="absolute inset-0 opacity-10 z-0 overflow-hidden pointer-events-none">
+          <ParticleBackground 
+            density={5} 
+            interactive={false} 
+            colors={['#9b87f5', '#D946EF', '#0EA5E9']}
+            mood={isPlaying ? 'energetic' : 'calm'}
+          />
+        </div>
+        
         {/* Animated background gradient */}
         <div className="absolute inset-0 opacity-30 z-0 overflow-hidden">
           {animatedBg === 0 && (
@@ -226,6 +268,39 @@ const MusicPlayer = () => {
                     <div className="w-1 h-1 rounded-full bg-white"></div>
                   </div>
                 </Button>
+
+                {/* Enhanced UI toggle button */}
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className={cn(
+                    "h-6 w-6 p-0 mr-2 transition-colors",
+                    showEnhancedUI && "text-neon-pink"
+                  )}
+                  onClick={toggleEnhancedUI}
+                >
+                  <Sparkle className={cn(
+                    "h-4 w-4",
+                    showEnhancedUI && "animate-twinkle text-neon-pink"
+                  )} />
+                </Button>
+                
+                {/* Volume visualizer toggle */}
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className={cn(
+                    "h-6 w-6 p-0 mr-2 transition-colors",
+                    showVolumeVisualizer && "text-neon-blue"
+                  )}
+                  onClick={toggleVolumeVisualizer}
+                >
+                  <AudioWaveform className={cn(
+                    "h-4 w-4",
+                    showVolumeVisualizer && "animate-pulse text-neon-blue"
+                  )} />
+                </Button>
+                
                 {/* Small visualizer bars on mobile */}
                 <div className="flex items-end h-4 gap-[1px] ml-1">
                   {visualizerBars().slice(0, 8).map((height, i) => (
@@ -246,6 +321,7 @@ const MusicPlayer = () => {
 
           {/* Center section: Controls and progress */}
           <div className="flex flex-col items-center justify-center w-2/4 animate-fade-in py-4" style={{animationDelay: '0.1s'}}>
+            {/* Player controls */}
             <div className="flex items-center gap-4">
               <Button 
                 size="icon" 

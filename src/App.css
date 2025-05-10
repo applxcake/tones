@@ -1,4 +1,3 @@
-
 /* This file is kept minimal as most styles are handled via Tailwind CSS */
 /* Only global app-specific styles that can't be handled with Tailwind should go here */
 
@@ -388,4 +387,119 @@
 .vinyl-container {
   transform-origin: center;
   backface-visibility: hidden;
+}
+
+/* New animations for the requested effects */
+
+/* Liquid audio visualizer animation */
+@keyframes float-liquid {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-20px) scale(0.8);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateY(-40px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* Flame animation */
+@keyframes flame {
+  0%, 100% {
+    transform: scaleY(1) translateY(0);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scaleY(1.2) translateY(-5px);
+    opacity: 1;
+  }
+}
+
+/* Smoke float animation */
+@keyframes float-smoke {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-100px) scale(2);
+    opacity: 0;
+  }
+}
+
+/* BPM pulse animation */
+@keyframes bpm-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+/* BPM ring animation */
+@keyframes bpm-ring {
+  0% {
+    transform: scale(0.95);
+    border-color: rgba(217, 70, 239, 0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+    border-color: rgba(217, 70, 239, 0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.1);
+    border-color: rgba(217, 70, 239, 0);
+    opacity: 0;
+  }
+}
+
+/* Scrolling music notes animation */
+@keyframes scroll-notes {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Gold gradient for lyric highlights */
+.text-gradient-gold {
+  background: linear-gradient(90deg, #FEF7CD, #FEC6A1, #FFDEE2);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: colorWave 3s ease infinite;
+}
+
+/* Animation classes */
+.animate-float-liquid {
+  animation: float-liquid 3s ease-out forwards;
+}
+
+.animate-flame {
+  animation: flame 1s ease-in-out infinite;
+}
+
+.animate-float-smoke {
+  animation: float-smoke 3s ease-out forwards;
+}
+
+.animate-bpm-pulse {
+  animation: bpm-pulse 1s ease-in-out infinite;
+}
+
+.animate-bpm-ring {
+  animation: bpm-ring 1s ease-out infinite;
+}
+
+.animate-scroll-notes {
+  animation: scroll-notes 15s linear infinite;
 }

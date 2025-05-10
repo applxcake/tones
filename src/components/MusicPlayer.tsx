@@ -378,34 +378,36 @@ const MusicPlayer = () => {
             </div>
 
             <div 
-              className="w-full max-w-md mt-1 px-4 flex items-center gap-2 cursor-pointer"
+              className="w-full max-w-md mt-1 px-4 flex items-center gap-2 relative"
               ref={progressBarRef}
               onClick={handleProgressClick}
             >
               <span className="text-xs text-gray-400 animate-fade-in" style={{animationDelay: '0.3s'}}>{formatTime(currentTime)}</span>
-              <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden relative">
-                {/* Pulsing glow under progress bar */}
-                <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/20 via-neon-pink/20 to-neon-purple/20 animate-pulse"></div>
-                <div 
-                  className="h-full bg-gradient-to-r from-neon-purple to-neon-pink rounded-full absolute top-0 left-0 transition-all duration-300 ease-in-out"
-                  style={{ width: `${progress}%` }}
-                />
-                <div 
-                  className="absolute top-0 left-0 right-0 bottom-0 opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
-                >
-                  <Progress value={progress} className="h-2" />
-                </div>
-                <div 
-                  className="absolute top-1/2 transform -translate-y-1/2 bg-white rounded-full w-3 h-3 shadow-glow transition-all duration-300 ease-in-out"
-                  style={{ left: `${progress}%` }}
-                ></div>
-                
-                {/* Ripple effect when clicked */}
-                {isPlaying && (
-                  <div className="absolute top-1/2 left-0 transform -translate-y-1/2 pointer-events-none" style={{ left: `${progress}%` }}>
-                    <div className="w-3 h-3 bg-white/50 rounded-full animate-ripple absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+              <div className="w-full h-4 flex items-center cursor-pointer">
+                <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden relative">
+                  {/* Pulsing glow under progress bar */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/20 via-neon-pink/20 to-neon-purple/20 animate-pulse"></div>
+                  <div 
+                    className="h-full bg-gradient-to-r from-neon-purple to-neon-pink rounded-full absolute top-0 left-0 transition-all duration-300 ease-in-out"
+                    style={{ width: `${progress}%` }}
+                  />
+                  <div 
+                    className="absolute top-0 left-0 right-0 bottom-0 opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    <Progress value={progress} className="h-2" />
                   </div>
-                )}
+                  <div 
+                    className="absolute top-1/2 transform -translate-y-1/2 bg-white rounded-full w-3 h-3 shadow-glow transition-all duration-300 ease-in-out"
+                    style={{ left: `${progress}%` }}
+                  ></div>
+                  
+                  {/* Ripple effect when clicked */}
+                  {isPlaying && (
+                    <div className="absolute top-1/2 left-0 transform -translate-y-1/2 pointer-events-none" style={{ left: `${progress}%` }}>
+                      <div className="w-3 h-3 bg-white/50 rounded-full animate-ripple absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+                    </div>
+                  )}
+                </div>
               </div>
               <span className="text-xs text-gray-400 animate-fade-in" style={{animationDelay: '0.4s'}}>{formatTime(duration)}</span>
             </div>

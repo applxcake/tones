@@ -30,6 +30,12 @@ declare namespace YT {
     data: PlayerState;
     target: Player;
   }
+  
+  // Add interface for error event
+  interface OnErrorEvent {
+    data: number; // Error code
+    target: Player;
+  }
 }
 
 interface Window {
@@ -46,10 +52,12 @@ interface Window {
           rel?: 0 | 1;
           modestbranding?: 0 | 1;
           fs?: 0 | 1;
+          // Add any additional player variables needed
         };
         events?: {
           onReady?: (event: YT.PlayerEvent) => void;
           onStateChange?: (event: YT.OnStateChangeEvent) => void;
+          onError?: (event: YT.OnErrorEvent) => void; // Add onError event
         };
       }
     ) => YT.Player;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Carousel,
@@ -20,28 +19,7 @@ interface TrendingCarouselProps {
   className?: string;
 }
 
-// Create a new custom hook for scroll animations
-const useInView = (options = {}) => {
-  const ref = useRef<HTMLElement>(null);
-  const [isInView, setIsInView] = useState(false);
-  
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    
-    const observer = new IntersectionObserver(([entry]) => {
-      setIsInView(entry.isIntersecting);
-    }, options);
-    
-    observer.observe(element);
-    
-    return () => {
-      observer.disconnect();
-    };
-  }, [options]);
-  
-  return [ref, isInView] as const;
-};
+// Removed the duplicate local useInView hook - we'll use the imported one
 
 const TrendingCarousel = ({ title, songs, className }: TrendingCarouselProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -50,7 +28,7 @@ const TrendingCarousel = ({ title, songs, className }: TrendingCarouselProps) =>
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [isClicked, setIsClicked] = useState(false);
   
-  // Animation for scroll-in effect
+  // Animation for scroll-in effect - use the imported hook
   const [containerRef, isContainerInView] = useInView({ threshold: 0.2 });
   const [titleRef, isTitleInView] = useInView({ threshold: 0.5 });
   
@@ -104,8 +82,7 @@ const TrendingCarousel = ({ title, songs, className }: TrendingCarouselProps) =>
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onClick={handleClickAnimation}
-      // @ts-ignore - TypeScript doesn't know about the ref from our custom hook
-      ref={containerRef}
+      ref={containerRef as React.RefObject<HTMLDivElement>}
     >
       <div className={cn(
         "relative transform transition-all duration-500 delay-100", 
@@ -116,8 +93,7 @@ const TrendingCarousel = ({ title, songs, className }: TrendingCarouselProps) =>
             "text-2xl font-bold mb-6 flex items-center text-gradient",
             isTitleInView ? "animate-fade-in" : "opacity-0"
           )}
-          // @ts-ignore - TypeScript doesn't know about the ref from our custom hook
-          ref={titleRef}
+          ref={titleRef as React.RefObject<HTMLHeadingElement>}
         >
           <span>{title}</span>
           <span className="ml-2 relative">

@@ -75,15 +75,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           // Create/update profile in profiles table
           try {
-            // Cast to unknown first, then to Record<string, any> to bypass TypeScript strictness
-            const params = {
-              user_id: session.user.id,
-              user_username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
-              user_created_at: new Date().toISOString()
-            };
-            
-            // Call RPC function with type assertion
-            const { error } = await supabase.rpc('upsert_profile', params as unknown as Record<string, unknown>);
+            // Use a simple object and type assertion with any to bypass TypeScript's strict checking
+            const { error } = await supabase.rpc(
+              'upsert_profile', 
+              {
+                user_id: session.user.id,
+                user_username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
+                user_created_at: new Date().toISOString()
+              } as any // Use 'any' type assertion to bypass TypeScript strictness
+            );
             
             if (error) {
               console.error('Error updating user profile:', error);

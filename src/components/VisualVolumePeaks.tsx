@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -16,18 +17,20 @@ const VisualVolumePeaks: React.FC<VisualVolumePeaksProps> = ({
   const { isPlaying } = usePlayer();
   const [peaks, setPeaks] = useState<number[]>([]);
   const animationRef = useRef<number>();
+  const peaksRef = useRef<number[]>(Array(barCount).fill(0.1));
 
   // Generate random peaks based on playing state
   useEffect(() => {
     const generatePeaks = () => {
       if (!isPlaying) {
         // When paused, all bars are low
-        setPeaks(Array(barCount).fill(0).map(() => Math.random() * 0.15));
+        peaksRef.current = peaksRef.current.map(() => Math.random() * 0.15);
+        setPeaks([...peaksRef.current]);
         return;
       }
 
       // Create random peaks with some coherence
-      const newPeaks = [...(peaks.length ? peaks : Array(barCount).fill(0.1))];
+      const newPeaks = [...peaksRef.current];
       
       for (let i = 0; i < barCount; i++) {
         // More variation in the middle, less at the edges
@@ -51,7 +54,8 @@ const VisualVolumePeaks: React.FC<VisualVolumePeaksProps> = ({
         newPeaks[i] = (newPeaks[i-1] + newPeaks[i] * 2 + newPeaks[i+1]) / 4;
       }
       
-      setPeaks(newPeaks);
+      peaksRef.current = newPeaks;
+      setPeaks([...newPeaks]);
     };
 
     // Animate peaks
@@ -66,7 +70,7 @@ const VisualVolumePeaks: React.FC<VisualVolumePeaksProps> = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isPlaying, barCount, peaks]);
+  }, [isPlaying, barCount]); // Remove the unnecessary peaks dependency
 
   return (
     <div 

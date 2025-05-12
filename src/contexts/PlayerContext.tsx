@@ -34,6 +34,7 @@ interface PlayerContextType {
   prevTrack: () => void;
   seekToPosition: (position: number) => void;
   toggleLoopMode: () => void;
+  setDuration: (duration: number) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -49,10 +50,64 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [loopMode, setLoopMode] = useState<LoopMode>('none');
+  const [lastProgressUpdateTime, setLastProgressUpdateTime] = useState(0);
+
+  // Set up a progress tracking timer
+  useEffect(() => {
+    if (!isPlaying) return;
+    
+    const timer = setInterval(() => {
+      // Only update if we have a current track and the last update wasn't too recent
+      if (currentTrack) {
+        const now = Date.now();
+        if (now - lastProgressUpdateTime > 900) {  // Update roughly every second
+          setLastProgressUpdateTime(now);
+          // Calculate progress increment based on playback rate
+          const elapsedSeconds = 1 * playbackRate;
+          const newProgressIncrement = (elapsedSeconds / duration) * 100;
+          
+          setProgress(prev => {
+            const newProgress = prev + newProgressIncrement;
+            // Loop back to beginning or play next track when reaching the end
+            if (newProgress >= 100) {
+              if (loopMode === 'one') {
+                return 0;
+              } else if (loopMode === 'all' && queue.length === 0) {
+                return 0;
+              } else if (queue.length > 0) {
+                // Next track will be triggered in the useEffect below
+                return newProgress;
+              }
+              return 100; // Stop at 100% if no more tracks and not looping
+            }
+            return Math.min(newProgress, 100);
+          });
+        }
+      }
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [isPlaying, currentTrack, duration, playbackRate, loopMode, lastProgressUpdateTime, queue]);
+
+  // Monitor progress to trigger next track when reaching the end
+  useEffect(() => {
+    if (progress >= 99.5 && currentTrack) {
+      if (loopMode === 'one') {
+        // Reset progress for current track
+        setProgress(0);
+      } else if (queue.length > 0 || loopMode === 'all') {
+        nextTrack();
+      } else {
+        // Stop playing when reaching the end
+        setIsPlaying(false);
+      }
+    }
+  }, [progress, currentTrack, loopMode]);
 
   const playTrack = useCallback(async (song: Song) => {
     setCurrentTrack(song);
     setIsPlaying(true);
+    setProgress(0); // Reset progress for new track
 
     // Update recently played list locally
     setRecentlyPlayed(prev => {
@@ -127,6 +182,12 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Add new functions for player navigation
   const nextTrack = () => {
+    // If queue is empty and loop mode is 'all', play the first song in recently played
+    if (queue.length === 0 && loopMode === 'all' && recentlyPlayed.length > 0) {
+      playTrack(recentlyPlayed[0]);
+      return;
+    }
+    
     // If queue is empty, do nothing
     if (queue.length === 0) return;
     
@@ -148,8 +209,9 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   // Add function to seek to a position in the current track
   const seekToPosition = (newProgress: number) => {
     setProgress(newProgress);
-    // Here we would also need to update the actual player position
-    // This would interact with the YouTube player API in a real implementation
+    
+    // Also update the last progress update time to prevent immediate timer updates
+    setLastProgressUpdateTime(Date.now());
   };
   
   // Add function to toggle loop mode
@@ -251,6 +313,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     prevTrack,
     seekToPosition,
     toggleLoopMode,
+    setDuration
   };
 
   return (

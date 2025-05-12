@@ -14,6 +14,7 @@ import { Toggle } from "@/components/ui/toggle";
 import VisualVolumePeaks from './VisualVolumePeaks';
 import EnhancedPlayerUI from './EnhancedPlayerUI';
 import ParticleBackground from './ParticleBackground';
+import YTPlayer from './YTPlayer';
 
 // Add a container for the invisible YouTube player
 const YouTubePlayerContainer = () => {
@@ -57,7 +58,7 @@ const MusicPlayer = () => {
 
   // Show nothing if no track is selected
   if (!currentTrack) {
-    return <YouTubePlayerContainer />;
+    return <YTPlayer />;
   }
   
   // Format time (seconds to MM:SS)
@@ -139,7 +140,7 @@ const MusicPlayer = () => {
 
   return (
     <>
-      <YouTubePlayerContainer />
+      <YTPlayer />
       
       {/* Volume Peaks Visualizer */}
       {showVolumeVisualizer && isPlaying && (

@@ -119,3 +119,14 @@ CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE
 -- Recently played policies
 CREATE POLICY "Users can view their recently played" ON public.recently_played FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert their recently played" ON public.recently_played FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Create a stored procedure for upserting profiles
+CREATE OR REPLACE FUNCTION upsert_profile(user_id UUID, user_username TEXT, user_created_at TIMESTAMPTZ)
+RETURNS VOID AS $$
+BEGIN
+  INSERT INTO profiles (id, username, created_at)
+  VALUES (user_id, user_username, user_created_at)
+  ON CONFLICT (id) 
+  DO UPDATE SET username = EXCLUDED.username;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

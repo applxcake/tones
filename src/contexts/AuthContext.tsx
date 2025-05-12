@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,12 +75,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           // Create/update profile in profiles table
           try {
-            // Use type assertion to specify the correct type for the RPC function parameters
-            const { error } = await supabase.rpc('upsert_profile', {
-              user_id: session.user.id,
-              user_username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
-              user_created_at: new Date().toISOString()
-            } as Record<string, any>); // Use Record<string, any> to bypass TypeScript's type checking for RPC params
+            // Use a more forceful type assertion with 'any' to bypass TypeScript's limitations with RPC
+            const { error } = await supabase.rpc(
+              'upsert_profile', 
+              {
+                user_id: session.user.id,
+                user_username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
+                user_created_at: new Date().toISOString()
+              } as any
+            );
             
             if (error) {
               console.error('Error updating user profile:', error);

@@ -4,9 +4,9 @@ import { YouTubeVideo } from './youtubeService';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 
-// Create interfaces for playlists and playlist songs
+// Updated interfaces for playlists and playlist songs to use string IDs
 export interface Playlist {
-  id: string; // Changed from number to string to match actual implementation
+  id: string;
   name: string;
   description?: string;
   imageUrl?: string;
@@ -221,12 +221,12 @@ export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, 
     // Add the song to the playlist
     const { error: playlistSongInsertError } = await supabase
       .from('playlist_songs')
-      .insert([{
+      .insert({
         id: generateId(),
         playlist_id: playlistId,
         song_id: song.id,
         added_at: new Date().toISOString()
-      }]);
+      });
     
     if (playlistSongInsertError) throw playlistSongInsertError;
     

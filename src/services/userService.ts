@@ -1,4 +1,3 @@
-
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
@@ -89,7 +88,7 @@ export const getCurrentUser = async (userId?: string) => {
     }
     
     // If we can connect, try to get user data
-    // Since "profiles" isn't in our types, we'll use a more direct approach with mock data
+    // Since we need to create a composite view of user data from multiple tables
     
     // 1. Check follows to get followers
     const { data: followers } = await supabase

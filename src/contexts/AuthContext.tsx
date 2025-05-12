@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -75,15 +74,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           // Create/update profile in profiles table
           try {
-            // Use type assertion with any to completely bypass TypeScript's checks for RPC parameters
-            const { error } = await supabase.rpc(
-              'upsert_profile', 
-              {
-                user_id: session.user.id,
-                user_username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
-                user_created_at: new Date().toISOString()
-              } as any  // Using "as any" to bypass TypeScript type checking
-            );
+            // Use a different approach to bypass TypeScript's type checking for RPC parameters
+            const params = {
+              user_id: session.user.id,
+              user_username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
+              user_created_at: new Date().toISOString()
+            };
+            
+            // Call the RPC function with type assertion at the function call level
+            const { error } = await (supabase.rpc as any)('upsert_profile', params);
             
             if (error) {
               console.error('Error updating user profile:', error);

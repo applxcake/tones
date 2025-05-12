@@ -1,5 +1,7 @@
+
 import { toast } from '@/components/ui/use-toast';
-import { executeQuery, generateId } from '@/integrations/tidb/client';
+import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface User {
   id: string;
@@ -13,25 +15,43 @@ export interface User {
   likedSongs?: string[];
 }
 
+// Generate a unique ID (using uuid)
+export function generateId(): string {
+  return uuidv4();
+}
+
 // Get current user - returns a promise
 export const getCurrentUser = async (userId?: string) => {
   if (!userId) return null;
   
   try {
-    // Get user from TiDB database
-    const userData = await executeQuery(
-      'SELECT * FROM users WHERE id = ?',
-      [userId]
-    );
+    // Get user profile from Supabase
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
     
-    if (!userData || userData.length === 0) {
-      // User doesn't exist yet, create a new user
+    if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "no rows found" error
+      throw profileError;
+    }
+    
+    if (!profileData) {
+      // User profile doesn't exist yet, create a new one
       const username = `User_${userId.substring(0, 5)}`;
       
-      await executeQuery(
-        'INSERT INTO users (id, username, created_at) VALUES (?, ?, ?)',
-        [userId, username, new Date().toISOString()]
-      );
+      const { data: newProfile, error: insertError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: userId,
+          username,
+          bio: '',
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+      
+      if (insertError) throw insertError;
       
       return {
         id: userId,
@@ -43,50 +63,40 @@ export const getCurrentUser = async (userId?: string) => {
       };
     }
     
-    const user = userData[0];
+    // Get followers
+    const { data: followers, error: followersError } = await supabase
+      .from('follows')
+      .select('follower_id')
+      .eq('following_id', userId);
     
-    // Get followers - now storing the actual follower objects instead of just count
-    const followers = await executeQuery(
-      'SELECT follower_id FROM follows WHERE following_id = ?',
-      [userId]
-    );
+    if (followersError) throw followersError;
     
-    // Get following - now storing the actual following objects instead of just count 
-    const following = await executeQuery(
-      'SELECT following_id FROM follows WHERE follower_id = ?',
-      [userId]
-    );
+    // Get following
+    const { data: following, error: followingError } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', userId);
+    
+    if (followingError) throw followingError;
     
     // Get liked songs
-    const likedSongs = await executeQuery(
-      'SELECT song_id FROM liked_songs WHERE user_id = ?',
-      [userId]
-    );
+    const { data: likedSongs, error: likedSongsError } = await supabase
+      .from('liked_songs')
+      .select('song_id')
+      .eq('user_id', userId);
     
-    // Get profile picture from user_profiles table (if exists)
-    const profileData = await executeQuery(
-      'SELECT * FROM user_profiles WHERE user_id = ?',
-      [userId]
-    );
-    
-    // If profile picture exists in user_profiles but not in users table, update users table
-    if (profileData.length > 0 && profileData[0].profile_picture_url && !user.avatar) {
-      await executeQuery(
-        'UPDATE users SET avatar = ? WHERE id = ?',
-        [profileData[0].profile_picture_url, userId]
-      );
-    }
+    if (likedSongsError) throw likedSongsError;
     
     return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      avatar: user.avatar || (profileData.length > 0 ? profileData[0].profile_picture_url : undefined),
-      bio: user.bio || '',
+      id: profileData.id,
+      username: profileData.username,
+      email: profileData.email,
+      avatar: profileData.avatar_url,
+      bio: profileData.bio || '',
       followers: followers.map(f => f.follower_id) || [],
       following: following.map(f => f.following_id) || [],
       likedSongs: likedSongs.map(ls => ls.song_id) || [],
-      createdAt: user.created_at,
+      createdAt: profileData.created_at,
     };
   } catch (error) {
     console.error('Error fetching current user:', error);
@@ -97,10 +107,14 @@ export const getCurrentUser = async (userId?: string) => {
 // Get all users
 export const getAllUsers = async () => {
   try {
-    // Query all users from database
-    const users = await executeQuery('SELECT * FROM users');
+    // Query all users from Supabase
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*');
     
-    if (!users || users.length === 0) {
+    if (profilesError) throw profilesError;
+    
+    if (!profiles || profiles.length === 0) {
       return [
         {
           id: 'user2',
@@ -133,28 +147,33 @@ export const getAllUsers = async () => {
     }
     
     // Process database users
-    return Promise.all(users.map(async (user) => {
-      // Get followers and following counts for each user
-      const { rowCount: followersCount } = await executeQuery(
-        'SELECT COUNT(*) FROM follows WHERE following_id = ?',
-        [user.id]
-      );
+    return Promise.all(profiles.map(async (profile) => {
+      // Get followers count
+      const { data: followers, error: followersError } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', profile.id);
       
-      const { rowCount: followingCount } = await executeQuery(
-        'SELECT COUNT(*) FROM follows WHERE follower_id = ?',
-        [user.id]
-      );
+      const followersCount = followers ? followers.length : 0;
+      
+      // Get following count
+      const { data: following, error: followingError } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', profile.id);
+      
+      const followingCount = following ? following.length : 0;
       
       return {
-        id: user.id,
-        username: user.username,
-        avatar: user.avatar || `https://i.pravatar.cc/150?u=${user.username}`,
-        bio: user.bio || '',
-        followers: [],  // Will be populated when needed
-        following: [], // Will be populated when needed
-        followersCount: followersCount || 0,
-        followingCount: followingCount || 0,
-        createdAt: user.created_at,
+        id: profile.id,
+        username: profile.username,
+        avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${profile.username}`,
+        bio: profile.bio || '',
+        followers: [],
+        following: [],
+        followersCount,
+        followingCount,
+        createdAt: profile.created_at,
       };
     }));
   } catch (error) {
@@ -168,58 +187,65 @@ export const getUserById = async (userId: string) => {
   if (!userId) return null;
   
   try {
-    // Get users from database
-    const userData = await executeQuery(
-      'SELECT * FROM users WHERE id = ?',
-      [userId]
-    );
+    // Get user from Supabase
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-    if (userData && userData.length > 0) {
-      // User exists in the database
-      const user = userData[0];
-      
-      // Get followers
-      const followers = await executeQuery(
-        'SELECT follower_id FROM follows WHERE following_id = ?',
-        [userId]
-      );
-      
-      // Get following
-      const following = await executeQuery(
-        'SELECT following_id FROM follows WHERE follower_id = ?',
-        [userId]
-      );
-
-      // Return user with followers and following
-      return {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        avatar: user.avatar,
-        bio: user.bio || '',
-        followers: followers.map(f => f.follower_id) || [],
-        following: following.map(f => f.following_id) || [],
-        createdAt: user.created_at,
-      };
-    }
-    
-    // If not found in database, check if it's one of our sample users
-    if (['user2', 'user3', 'user4'].includes(userId)) {
-      const mockUsers = await getAllUsers();
-      const mockUser = mockUsers.find(user => user.id === userId);
-      
-      if (mockUser) {
-        // Create the mock user in PostgreSQL for persistence
-        await executeQuery(
-          'INSERT INTO users (id, username, avatar, bio, created_at) VALUES (?, ?, ?, ?, ?)',
-          [mockUser.id, mockUser.username, mockUser.avatar, mockUser.bio, mockUser.createdAt]
-        );
+    if (profileError) {
+      // Check if it's one of our sample users
+      if (['user2', 'user3', 'user4'].includes(userId)) {
+        const mockUsers = await getAllUsers();
+        const mockUser = mockUsers.find(user => user.id === userId);
         
-        return mockUser;
+        if (mockUser) {
+          // Create the mock user in Supabase for persistence
+          await supabase
+            .from('profiles')
+            .insert([{
+              id: mockUser.id,
+              username: mockUser.username,
+              avatar_url: mockUser.avatar,
+              bio: mockUser.bio,
+              created_at: mockUser.createdAt
+            }]);
+          
+          return mockUser;
+        }
       }
+      
+      throw profileError;
     }
     
-    return null;
+    // Get followers
+    const { data: followers, error: followersError } = await supabase
+      .from('follows')
+      .select('follower_id')
+      .eq('following_id', userId);
+    
+    if (followersError) throw followersError;
+    
+    // Get following
+    const { data: following, error: followingError } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', userId);
+    
+    if (followingError) throw followingError;
+
+    // Return user with followers and following
+    return {
+      id: profile.id,
+      username: profile.username,
+      email: profile.email,
+      avatar: profile.avatar_url,
+      bio: profile.bio || '',
+      followers: followers.map(f => f.follower_id) || [],
+      following: following.map(f => f.following_id) || [],
+      createdAt: profile.created_at,
+    };
   } catch (error) {
     console.error('Error fetching user:', error);
     return null;
@@ -251,12 +277,16 @@ export const followUser = async (userId: string, currentUserId?: string) => {
     }
     
     // Check if already following
-    const existingFollow = await executeQuery(
-      'SELECT * FROM follows WHERE follower_id = ? AND following_id = ?',
-      [currentUserId, userId]
-    );
+    const { data: existingFollow, error: checkError } = await supabase
+      .from('follows')
+      .select('*')
+      .eq('follower_id', currentUserId)
+      .eq('following_id', userId)
+      .maybeSingle();
+    
+    if (checkError) throw checkError;
       
-    if (existingFollow && existingFollow.length > 0) {
+    if (existingFollow) {
       toast({
         title: "Already Following",
         description: `You are already following this user.`,
@@ -265,10 +295,16 @@ export const followUser = async (userId: string, currentUserId?: string) => {
     }
     
     // Create follow relationship
-    await executeQuery(
-      'INSERT INTO follows (id, follower_id, following_id, created_at) VALUES (?, ?, ?, ?)',
-      [generateId(), currentUserId, userId, new Date().toISOString()]
-    );
+    const { error: insertError } = await supabase
+      .from('follows')
+      .insert([{
+        id: generateId(),
+        follower_id: currentUserId,
+        following_id: userId,
+        created_at: new Date().toISOString()
+      }]);
+    
+    if (insertError) throw insertError;
       
     toast({
       title: "Following",
@@ -302,10 +338,13 @@ export const unfollowUser = async (userId: string, currentUserId?: string) => {
     // Get user info for the toast message
     const userToUnfollow = await getUserById(userId);
     
-    const result = await executeQuery(
-      'DELETE FROM follows WHERE follower_id = ? AND following_id = ?',
-      [currentUserId, userId]
-    );
+    const { error } = await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', currentUserId)
+      .eq('following_id', userId);
+    
+    if (error) throw error;
       
     toast({
       title: "Unfollowed",
@@ -329,42 +368,44 @@ export const searchUsers = async (query: string) => {
   if (!query) return [];
   
   try {
-    // Search in database users
+    // Search in Supabase
     const normalizedQuery = query.toLowerCase();
     
-    const users = await executeQuery(
-      "SELECT * FROM users WHERE LOWER(username) LIKE ? OR LOWER(bio) LIKE ?",
-      [`%${normalizedQuery}%`, `%${normalizedQuery}%`]
-    );
+    const { data: users, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .or(`username.ilike.%${normalizedQuery}%,bio.ilike.%${normalizedQuery}%`);
+    
+    if (error) throw error;
     
     if (users && users.length > 0) {
       return Promise.all(users.map(async (user) => {
         // Get followers and following counts
-        const followersCount = await executeQuery(
-          'SELECT COUNT(*) FROM follows WHERE following_id = ?',
-          [user.id]
-        );
+        const { data: followers } = await supabase
+          .from('follows')
+          .select('*', { count: 'exact', head: true })
+          .eq('following_id', user.id);
         
-        const followingCount = await executeQuery(
-          'SELECT COUNT(*) FROM follows WHERE follower_id = ?',
-          [user.id]
-        );
+        const { data: following } = await supabase
+          .from('follows')
+          .select('*', { count: 'exact', head: true })
+          .eq('follower_id', user.id);
         
         return {
           id: user.id,
           username: user.username,
-          avatar: user.avatar || `https://i.pravatar.cc/150?u=${user.username}`,
+          avatar: user.avatar_url || `https://i.pravatar.cc/150?u=${user.username}`,
           bio: user.bio || '',
           followers: [],
           following: [],
-          followersCount: parseInt(followersCount[0]?.count || '0'),
-          followingCount: parseInt(followingCount[0]?.count || '0'),
+          followersCount: followers ? followers.length : 0,
+          followingCount: following ? following.length : 0,
           createdAt: user.created_at,
         };
       }));
     }
     
-    // Fallback to mock users if no results from database
+    // Fallback to mock users if no results from Supabase
     const allUsers = await getAllUsers();
     return allUsers.filter(user => 
       user.username.toLowerCase().includes(normalizedQuery) || 
@@ -388,53 +429,43 @@ export const updateUserProfile = async (profile: Partial<User>, userId?: string)
   }
   
   try {
-    const userExists = await executeQuery(
-      'SELECT id FROM users WHERE id = ?',
-      [userId]
-    );
+    const { data: existingProfile, error: checkError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
     
-    if (!userExists || userExists.length === 0) {
-      // Create user if they don't exist
-      await executeQuery(
-        'INSERT INTO users (id, username, email, bio, avatar, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-        [
-          userId, 
-          profile.username || `User_${userId.substring(0, 5)}`,
-          profile.email,
-          profile.bio,
-          profile.avatar,
-          new Date().toISOString()
-        ]
-      );
+    const updates = {
+      username: profile.username,
+      email: profile.email,
+      bio: profile.bio,
+      avatar_url: profile.avatar,
+      updated_at: new Date().toISOString()
+    };
+    
+    if (!existingProfile) {
+      // Create new profile
+      const { data, error: insertError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: userId,
+          ...updates,
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+        
+      if (insertError) throw insertError;
     } else {
-      // Update existing user
-      await executeQuery(
-        'UPDATE users SET username = COALESCE(?, username), email = COALESCE(?, email), bio = COALESCE(?, bio), avatar = COALESCE(?, avatar) WHERE id = ?',
-        [profile.username, profile.email, profile.bio, profile.avatar, userId]
-      );
-    }
-    
-    // Save profile picture URL to user_profiles table for better organization
-    if (profile.avatar) {
-      // Check if profile exists in user_profiles
-      const existingProfile = await executeQuery(
-        'SELECT user_id FROM user_profiles WHERE user_id = ?',
-        [userId]
-      );
-      
-      if (existingProfile && existingProfile.length > 0) {
-        // Update existing profile
-        await executeQuery(
-          'UPDATE user_profiles SET profile_picture_url = ? WHERE user_id = ?',
-          [profile.avatar, userId]
-        );
-      } else {
-        // Create new profile
-        await executeQuery(
-          'INSERT INTO user_profiles (user_id, profile_picture_url) VALUES (?, ?)',
-          [userId, profile.avatar]
-        );
-      }
+      // Update existing profile
+      const { data, error: updateError } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId)
+        .select()
+        .single();
+        
+      if (updateError) throw updateError;
     }
     
     // Return updated user data
@@ -474,29 +505,15 @@ export const uploadProfilePicture = async (imageUrl: string, userId?: string) =>
   }
   
   try {
-    // Update the user's avatar in users table
-    await executeQuery(
-      'UPDATE users SET avatar = ? WHERE id = ?',
-      [imageUrl, userId]
-    );
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ 
+        avatar_url: imageUrl,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
     
-    // Update or create in user_profiles table
-    const existingProfile = await executeQuery(
-      'SELECT user_id FROM user_profiles WHERE user_id = ?',
-      [userId]
-    );
-    
-    if (existingProfile && existingProfile.length > 0) {
-      await executeQuery(
-        'UPDATE user_profiles SET profile_picture_url = ? WHERE user_id = ?',
-        [imageUrl, userId]
-      );
-    } else {
-      await executeQuery(
-        'INSERT INTO user_profiles (user_id, profile_picture_url) VALUES (?, ?)',
-        [userId, imageUrl]
-      );
-    }
+    if (error) throw error;
     
     toast({
       title: "Profile Picture Updated",

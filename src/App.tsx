@@ -20,8 +20,7 @@ import UserProfile from '@/pages/UserProfile';
 import Layout from '@/components/Layout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Toaster } from '@/components/ui/toaster';
-import TiDBInitializer from '@/components/TiDBInitializer';
-import NeonDBInitializer from '@/components/NeonDBInitializer';
+import SupabaseInitializer from '@/components/SupabaseInitializer';
 
 // Context providers
 import { PlayerProvider } from '@/contexts/PlayerContext';
@@ -36,8 +35,7 @@ function App() {
       <AuthProvider>
         <PlayerProvider>
           <BrowserRouter>
-            <TiDBInitializer />
-            <NeonDBInitializer />
+            <SupabaseInitializer />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />

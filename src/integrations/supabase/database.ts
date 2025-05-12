@@ -2,15 +2,19 @@
 import { supabase } from './client';
 import { toast } from '@/components/ui/use-toast';
 import { v4 as uuidv4 } from 'uuid';
+import { Database } from './types';
+
+// Define table names as a type to avoid string literals
+export type TableName = 'follows' | 'liked_songs' | 'songs' | 'playlist_songs' | 'playlists' | 'recently_played' | 'profiles';
 
 // Generate a unique ID (using uuid)
 export function generateId(): string {
   return uuidv4();
 }
 
-// Generic function to insert a record
-export async function insertRecord<T extends object>(
-  table: string, 
+// Type-safe generic function to insert a record
+export async function insertRecord<T extends Record<string, any>>(
+  table: TableName, 
   data: T
 ): Promise<{ data: any; error: any }> {
   try {
@@ -28,9 +32,9 @@ export async function insertRecord<T extends object>(
   }
 }
 
-// Generic function to fetch records
+// Type-safe generic function to fetch records
 export async function fetchRecords<T = any>(
-  table: string,
+  table: TableName,
   query: {
     column?: string;
     value?: any;
@@ -49,7 +53,7 @@ export async function fetchRecords<T = any>(
     
     // Apply additional filters if provided
     if (query.filters && query.filters.length > 0) {
-      query.filters.forEach(filter => {
+      for (const filter of query.filters) {
         switch (filter.operator) {
           case 'eq':
             queryBuilder = queryBuilder.eq(filter.column, filter.value);
@@ -73,7 +77,7 @@ export async function fetchRecords<T = any>(
             queryBuilder = queryBuilder.like(filter.column, `%${filter.value}%`);
             break;
         }
-      });
+      }
     }
     
     // Apply order if provided
@@ -92,16 +96,16 @@ export async function fetchRecords<T = any>(
     const { data, error } = await queryBuilder;
     
     if (error) throw error;
-    return { data: data || [], error: null };
+    return { data: data as T[] || [], error: null };
   } catch (error) {
     console.error(`Error fetching from ${table}:`, error);
     return { data: [], error };
   }
 }
 
-// Generic function to fetch a single record
+// Type-safe generic function to fetch a single record
 export async function fetchRecord<T = any>(
-  table: string,
+  table: TableName,
   id: string | number,
   idColumn: string = 'id'
 ): Promise<{ data: T | null; error: any }> {
@@ -113,16 +117,16 @@ export async function fetchRecord<T = any>(
       .single();
     
     if (error) throw error;
-    return { data, error: null };
+    return { data: data as T, error: null };
   } catch (error) {
     console.error(`Error fetching from ${table} with id ${id}:`, error);
     return { data: null, error };
   }
 }
 
-// Generic function to update a record
-export async function updateRecord<T extends object>(
-  table: string,
+// Type-safe generic function to update a record
+export async function updateRecord<T extends Record<string, any>>(
+  table: TableName,
   id: string | number,
   data: Partial<T>,
   idColumn: string = 'id'
@@ -143,9 +147,9 @@ export async function updateRecord<T extends object>(
   }
 }
 
-// Generic function to delete a record
+// Type-safe generic function to delete a record
 export async function deleteRecord(
-  table: string,
+  table: TableName,
   id: string | number,
   idColumn: string = 'id'
 ): Promise<{ success: boolean; error: any }> {
@@ -163,9 +167,9 @@ export async function deleteRecord(
   }
 }
 
-// Function to handle relationships - fetch related records
+// Type-safe function to handle relationships - fetch related records
 export async function fetchRelatedRecords<T = any>(
-  table: string,
+  table: TableName,
   foreignKey: string,
   foreignValue: string | number,
   select: string = '*'
@@ -177,7 +181,7 @@ export async function fetchRelatedRecords<T = any>(
       .eq(foreignKey, foreignValue);
     
     if (error) throw error;
-    return { data: data || [], error: null };
+    return { data: data as T[] || [], error: null };
   } catch (error) {
     console.error(`Error fetching related records from ${table}:`, error);
     return { data: [], error };
@@ -197,7 +201,7 @@ export async function getUserPlaylists(userId: string) {
     
     // For each playlist, get its songs
     const playlistsWithSongs = await Promise.all(
-      playlists.map(async (playlist) => {
+      (playlists || []).map(async (playlist) => {
         const { data: playlistSongs, error: songsError } = await supabase
           .from('playlist_songs')
           .select(`
@@ -208,7 +212,7 @@ export async function getUserPlaylists(userId: string) {
           
         if (songsError) throw songsError;
         
-        const songs = playlistSongs.map(item => ({
+        const songs = (playlistSongs || []).map(item => ({
           id: item.songs.id,
           title: item.songs.title,
           thumbnailUrl: item.songs.thumbnail_url,
@@ -231,7 +235,7 @@ export async function getUserPlaylists(userId: string) {
 }
 
 // User profile operations
-export async function updateUserProfile(userId: string, profileData: any) {
+export async function updateUserProfile(userId: string, profileData: Record<string, any>) {
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -281,8 +285,5 @@ export async function uploadFile(
 // Helper function to create all necessary tables
 export const setupSupabaseTables = async () => {
   console.log('Setting up Supabase tables...');
-  // We don't need to create tables manually in Supabase
-  // as they are created through the Supabase dashboard
-  // This function is kept for compatibility with the existing code
   return true;
 };

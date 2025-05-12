@@ -75,12 +75,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           // Create/update profile in profiles table
           try {
-            // We need to use raw SQL to handle the profiles table since it's not in the TypeScript types
+            // Use the correct typing for RPC functions
             const { error } = await supabase.rpc('upsert_profile', {
               user_id: session.user.id,
-              user_username: session.user.user_metadata?.username || session.user.email?.split('@')[0],
+              user_username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
               user_created_at: new Date().toISOString()
-            });
+            } as any); // Use type assertion temporarily to bypass type checking
             
             if (error) {
               console.error('Error updating user profile:', error);

@@ -22,6 +22,10 @@ const SupabaseInitializer = () => {
         
         console.log('Supabase connected successfully');
         setInitialized(true);
+        toast({
+          title: "Database Connected",
+          description: "Successfully connected to Supabase database.",
+        });
       } catch (error) {
         console.error('Supabase connection error:', error);
         toast({

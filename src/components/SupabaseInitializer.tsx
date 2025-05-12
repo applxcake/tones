@@ -9,23 +9,13 @@ const SupabaseInitializer = () => {
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        // First try to check if any tables exist
-        const { data: tables, error: tablesError } = await supabase
-          .rpc('sqlc', {
-            query: "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
-          })
-          .throwOnError();
-        
-        if (tablesError) {
-          // If can't check schema, try a specific table
-          // Test Supabase connection by fetching any system table
-          const { data, error } = await supabase
-            .from('songs')
-            .select('id')
-            .limit(1);
+        // Test Supabase connection by fetching any table
+        const { data, error } = await supabase
+          .from('songs')
+          .select('id')
+          .limit(1);
             
-          if (error) throw error;
-        }
+        if (error) throw error;
         
         console.log('Supabase connected successfully');
         setInitialized(true);

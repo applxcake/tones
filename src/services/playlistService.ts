@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Create interfaces for playlists and playlist songs
 export interface Playlist {
-  id: number;
+  id: string; // Changed from number to string to match actual implementation
   name: string;
   description?: string;
   imageUrl?: string;
@@ -147,7 +147,7 @@ export const createPlaylist = async (name: string, description = '', userId?: st
 };
 
 // Add a song to a playlist
-export const addSongToPlaylist = async (playlistId: string | number, song: YouTubeVideo, userId?: string): Promise<boolean> => {
+export const addSongToPlaylist = async (playlistId: string, song: YouTubeVideo, userId?: string): Promise<boolean> => {
   if (!userId) {
     toast({
       title: "Error adding song",
@@ -248,7 +248,7 @@ export const addSongToPlaylist = async (playlistId: string | number, song: YouTu
 };
 
 // Remove a song from a playlist
-export const removeSongFromPlaylist = async (playlistId: string | number, songId: string): Promise<boolean> => {
+export const removeSongFromPlaylist = async (playlistId: string, songId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('playlist_songs')
@@ -276,7 +276,7 @@ export const removeSongFromPlaylist = async (playlistId: string | number, songId
 };
 
 // Delete a playlist
-export const deletePlaylist = async (playlistId: string | number): Promise<boolean> => {
+export const deletePlaylist = async (playlistId: string): Promise<boolean> => {
   try {
     // First delete all playlist songs
     const { error: songsDeleteError } = await supabase
@@ -312,7 +312,7 @@ export const deletePlaylist = async (playlistId: string | number): Promise<boole
 };
 
 // Get a playlist by ID
-export const getPlaylistById = async (playlistId: string | number): Promise<Playlist | null> => {
+export const getPlaylistById = async (playlistId: string): Promise<Playlist | null> => {
   try {
     // Get the playlist
     const { data: playlist, error: playlistError } = await supabase

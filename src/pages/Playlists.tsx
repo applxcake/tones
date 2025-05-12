@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { getUserPlaylists, createPlaylist, deletePlaylist } from '@/services/playlistService';
+import { getUserPlaylists, createPlaylist, deletePlaylist, Playlist } from '@/services/playlistService';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -25,7 +25,7 @@ const Playlists = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [playlistName, setPlaylistName] = useState('');
   const [playlistDescription, setPlaylistDescription] = useState('');
-  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -60,14 +60,14 @@ const Playlists = () => {
     }
   };
 
-  const handleDeletePlaylist = async (id: string | number) => {
+  const handleDeletePlaylist = async (id: string) => {
     const success = await deletePlaylist(id);
     if (success) {
       setPlaylists(prev => prev.filter(playlist => playlist.id !== id));
     }
   };
 
-  const viewPlaylist = (id: string | number) => {
+  const viewPlaylist = (id: string) => {
     navigate(`/playlists/${id}`);
   };
 

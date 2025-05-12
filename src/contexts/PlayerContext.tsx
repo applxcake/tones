@@ -16,10 +16,11 @@ interface PlayerContextType {
   playbackRate: number;
   recentlyPlayed: Song[];
   likedSongs: Song[];
-  progress: number; // Add progress property
-  duration: number; // Add duration property
-  loopMode: LoopMode; // Add loopMode property
+  progress: number; 
+  duration: number; 
+  loopMode: LoopMode; 
   setLikedSongs: React.Dispatch<React.SetStateAction<Song[]>>;
+  setRecentlyPlayed: React.Dispatch<React.SetStateAction<Song[]>>;
   playTrack: (song: Song) => void;
   togglePlayPause: () => void;
   addToQueue: (song: Song) => void;
@@ -29,10 +30,10 @@ interface PlayerContextType {
   setPlaybackRate: (playbackRate: number) => void;
   isLiked: (songId: string) => boolean;
   toggleLike: (song: Song) => Promise<boolean>;
-  nextTrack: () => void; // Add nextTrack function
-  prevTrack: () => void; // Add prevTrack function
-  seekToPosition: (position: number) => void; // Add seekToPosition function
-  toggleLoopMode: () => void; // Add toggleLoopMode function
+  nextTrack: () => void;
+  prevTrack: () => void;
+  seekToPosition: (position: number) => void;
+  toggleLoopMode: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -45,20 +46,56 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [recentlyPlayed, setRecentlyPlayed] = useState<Song[]>([]);
   const [likedSongs, setLikedSongs] = useState<Song[]>([]);
-  const [progress, setProgress] = useState(0); // Add progress state
-  const [duration, setDuration] = useState(0); // Add duration state
-  const [loopMode, setLoopMode] = useState<LoopMode>('none'); // Add loopMode state
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [loopMode, setLoopMode] = useState<LoopMode>('none');
 
-  const playTrack = (song: Song) => {
+  const playTrack = useCallback(async (song: Song) => {
     setCurrentTrack(song);
     setIsPlaying(true);
 
-    // Update recently played list
+    // Update recently played list locally
     setRecentlyPlayed(prev => {
       const newRecentlyPlayed = [song, ...prev.filter(s => s.id !== song.id)].slice(0, 20);
       return newRecentlyPlayed;
     });
-  };
+
+    // Save to Supabase if user is logged in
+    try {
+      // Check if user is logged in
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // First ensure the song exists in the songs table
+        const { data: songExists } = await supabase
+          .from('songs')
+          .select('id')
+          .eq('id', song.id)
+          .maybeSingle();
+          
+        if (!songExists) {
+          // Add song to songs table
+          await supabase.from('songs').insert({
+            id: song.id,
+            title: song.title,
+            channel_title: song.channelTitle,
+            thumbnail_url: song.thumbnailUrl,
+          });
+        }
+        
+        // Add to recently_played
+        await supabase.from('recently_played').insert({
+          user_id: user.id,
+          song_id: song.id,
+          played_at: new Date().toISOString()
+        });
+        
+        console.log('Saved song to recently played in Supabase');
+      }
+    } catch (error) {
+      console.error('Error saving recently played song:', error);
+      // Continue without interrupting user experience
+    }
+  }, []);
 
   const togglePlayPause = () => {
     setIsPlaying(!isPlaying);
@@ -169,7 +206,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
           
           // Add to liked_songs
           await supabase.from('liked_songs').insert({
-            id: crypto.randomUUID(),
             user_id: user.id,
             song_id: song.id,
             liked_at: new Date().toISOString()
@@ -197,10 +233,11 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     playbackRate,
     recentlyPlayed,
     likedSongs,
-    progress,  // Add progress to context value
-    duration,  // Add duration to context value
-    loopMode,  // Add loopMode to context value
+    progress,
+    duration,
+    loopMode,
     setLikedSongs,
+    setRecentlyPlayed,
     playTrack,
     togglePlayPause,
     addToQueue,
@@ -210,10 +247,10 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     setPlaybackRate: setPlaybackRateValue,
     isLiked,
     toggleLike,
-    nextTrack,  // Add nextTrack to context value
-    prevTrack,  // Add prevTrack to context value
-    seekToPosition,  // Add seekToPosition to context value
-    toggleLoopMode,  // Add toggleLoopMode to context value
+    nextTrack,
+    prevTrack,
+    seekToPosition,
+    toggleLoopMode,
   };
 
   return (

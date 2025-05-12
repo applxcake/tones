@@ -8,7 +8,7 @@ import { usePlayer } from '@/contexts/PlayerContext';
 const SupabaseInitializer = () => {
   const [initialized, setInitialized] = useState(false);
   const { user } = useAuth();
-  const { likedSongs, setLikedSongs } = usePlayer();
+  const { likedSongs, setLikedSongs, recentlyPlayed, setRecentlyPlayed } = usePlayer();
 
   // Check if Supabase is connected and load user data
   useEffect(() => {
@@ -84,6 +84,38 @@ const SupabaseInitializer = () => {
         // Update the player context with liked songs from Supabase
         setLikedSongs(formattedLikedSongs);
         console.log('Loaded liked songs from Supabase:', formattedLikedSongs.length);
+      }
+
+      // Load recently played songs
+      const { data: recentlyPlayedData, error: recentlyPlayedError } = await supabase
+        .from('recently_played')
+        .select(`
+          song_id,
+          played_at,
+          songs:song_id (
+            id,
+            title,
+            channel_title,
+            thumbnail_url
+          )
+        `)
+        .eq('user_id', userId)
+        .order('played_at', { ascending: false })
+        .limit(20);
+
+      if (!recentlyPlayedError && recentlyPlayedData && recentlyPlayedData.length > 0) {
+        // Transform the data to match our app's expected format
+        const formattedRecentlyPlayed = recentlyPlayedData.map(item => ({
+          id: item.songs.id,
+          title: item.songs.title,
+          channelTitle: item.songs.channel_title || '',
+          thumbnailUrl: item.songs.thumbnail_url || '',
+          publishedAt: item.played_at || new Date().toISOString()
+        }));
+        
+        // Update the player context with recently played songs from Supabase
+        setRecentlyPlayed(formattedRecentlyPlayed);
+        console.log('Loaded recently played from Supabase:', formattedRecentlyPlayed.length);
       }
     } catch (error) {
       console.error('Error syncing user data:', error);

@@ -28,34 +28,69 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check active sessions and set the user
-    setIsLoading(true);
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && session.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          username: session.user.user_metadata.username,
-        });
-      }
-      setIsLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    const initializeAuth = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Restore session on load
+        const { data: { session } } = await supabase.auth.getSession();
+        
         if (session && session.user) {
           setUser({
             id: session.user.id,
             email: session.user.email || '',
-            username: session.user.user_metadata.username,
+            username: session.user.user_metadata?.username,
           });
+          
+          console.log('Auth session restored successfully');
+        } else {
+          console.log('No active auth session found');
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Error restoring auth session:', error);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log(`Auth state changed: ${event}`);
+        
+        if (session && session.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            username: session.user.user_metadata?.username,
+          });
+          
+          // Create/update profile in profiles table
+          try {
+            const { error } = await supabase.from('profiles').upsert({
+              id: session.user.id,
+              username: session.user.user_metadata?.username || session.user.email?.split('@')[0],
+              created_at: new Date().toISOString()
+            }, { onConflict: 'id' });
+            
+            if (error) {
+              console.error('Error updating user profile:', error);
+            }
+          } catch (error) {
+            console.error('Error updating profile on auth change:', error);
+          }
         } else {
           setUser(null);
         }
+        
         setIsLoading(false);
       }
     );
@@ -69,6 +104,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     const result = await supabase.auth.signInWithPassword({ email, password });
     setIsLoading(false);
+    
+    if (result.error) {
+      toast({
+        title: "Sign in failed",
+        description: result.error.message,
+        variant: "destructive"
+      });
+    } else if (result.data?.user) {
+      toast({
+        title: "Signed in successfully",
+        description: `Welcome back, ${result.data.user.email?.split('@')[0]}!`,
+      });
+    }
+    
     return result;
   };
 
@@ -84,7 +133,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
     
-    if (!result.error) {
+    if (result.error) {
+      toast({
+        title: "Sign up failed",
+        description: result.error.message,
+        variant: "destructive"
+      });
+    } else {
       toast({
         title: "Account created successfully",
         description: "Please check your email to verify your account.",
@@ -97,7 +152,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     setIsLoading(true);
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      toast({
+        title: "Sign out failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out.",
+      });
+    }
+    
     setIsLoading(false);
   };
 

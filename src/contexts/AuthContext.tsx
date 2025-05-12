@@ -75,14 +75,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           // Create/update profile in profiles table
           try {
-            // Call RPC function using the raw() method to bypass TypeScript's type checking
+            // Use type assertion with any to completely bypass TypeScript's checks for RPC parameters
             const { error } = await supabase.rpc(
               'upsert_profile', 
               {
                 user_id: session.user.id,
                 user_username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
                 user_created_at: new Date().toISOString()
-              } satisfies Record<string, unknown>
+              } as any  // Using "as any" to bypass TypeScript type checking
             );
             
             if (error) {

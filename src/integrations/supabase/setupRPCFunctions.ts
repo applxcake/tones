@@ -1,28 +1,39 @@
 
 import { supabase } from './client';
 
-// Function to set up all required RPC functions for the application
+// Simplified function to check if a table exists
+export const checkTableExists = async (tableName: string): Promise<boolean> => {
+  try {
+    // Instead of calling RPC functions which may not exist,
+    // we'll just check if we can query the table
+    if (tableName === 'songs') {
+      const { data, error } = await supabase
+        .from('songs')
+        .select('id')
+        .limit(1);
+      return !error;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error(`Error checking if table ${tableName} exists:`, error);
+    return false;
+  }
+};
+
+// Placeholder for future RPC setup functionality
 export const setupRPCFunctions = async () => {
   console.log('Setting up RPC functions for Supabase...');
   
   try {
-    // We can't directly create functions via the client API,
-    // but we can check if the functions exist with a simple call
+    const songsExist = await checkTableExists('songs');
     
-    // First, check if an existing function exists
-    const { data: testData, error: testError } = await supabase
-      .rpc('get_profile_by_id', { user_id_param: 'test' })
-      .throwOnError();
-    
-    // If no error, functions probably exist
-    if (!testError) {
-      console.log('RPC functions already set up');
+    if (songsExist) {
+      console.log('Required tables exist');
       return true;
     }
     
-    console.log('RPC functions not set up, please contact an administrator');
-    console.log('Using fallback mock data instead');
-    
+    console.log('Required tables do not exist, using fallback mock data');
     return false;
   } catch (error) {
     console.error('Error setting up RPC functions:', error);
@@ -30,12 +41,3 @@ export const setupRPCFunctions = async () => {
     return false;
   }
 };
-
-// These are the functions we'd need to create on the Supabase side:
-// - get_profile_by_id(user_id_param) - Gets a profile by ID
-// - get_all_profiles() - Gets all profiles
-// - get_followers(user_id_param) - Gets followers of a user
-// - get_following(user_id_param) - Gets users followed by a user
-// - get_liked_songs(user_id_param) - Gets liked songs for a user
-// - count_followers(user_id_param) - Counts followers of a user
-// - count_following(user_id_param) - Counts users followed by a user

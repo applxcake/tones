@@ -9,7 +9,7 @@ const SupabaseInitializer = () => {
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        // Test Supabase connection by fetching any table
+        // Test Supabase connection by fetching from a table that we know exists
         const { data, error } = await supabase
           .from('songs')
           .select('id')

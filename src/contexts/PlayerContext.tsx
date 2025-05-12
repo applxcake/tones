@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
@@ -5,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Define the types
 type Song = YouTubeVideo;
+type LoopMode = 'none' | 'all' | 'one';
 
 interface PlayerContextType {
   currentTrack: Song | null;
@@ -14,6 +16,9 @@ interface PlayerContextType {
   playbackRate: number;
   recentlyPlayed: Song[];
   likedSongs: Song[];
+  progress: number; // Add progress property
+  duration: number; // Add duration property
+  loopMode: LoopMode; // Add loopMode property
   setLikedSongs: React.Dispatch<React.SetStateAction<Song[]>>;
   playTrack: (song: Song) => void;
   togglePlayPause: () => void;
@@ -24,6 +29,10 @@ interface PlayerContextType {
   setPlaybackRate: (playbackRate: number) => void;
   isLiked: (songId: string) => boolean;
   toggleLike: (song: Song) => Promise<boolean>;
+  nextTrack: () => void; // Add nextTrack function
+  prevTrack: () => void; // Add prevTrack function
+  seekToPosition: (position: number) => void; // Add seekToPosition function
+  toggleLoopMode: () => void; // Add toggleLoopMode function
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -36,6 +45,9 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [recentlyPlayed, setRecentlyPlayed] = useState<Song[]>([]);
   const [likedSongs, setLikedSongs] = useState<Song[]>([]);
+  const [progress, setProgress] = useState(0); // Add progress state
+  const [duration, setDuration] = useState(0); // Add duration state
+  const [loopMode, setLoopMode] = useState<LoopMode>('none'); // Add loopMode state
 
   const playTrack = (song: Song) => {
     setCurrentTrack(song);
@@ -75,6 +87,42 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const isLiked = useCallback((songId: string): boolean => {
     return likedSongs.some(song => song.id === songId);
   }, [likedSongs]);
+
+  // Add new functions for player navigation
+  const nextTrack = () => {
+    // If queue is empty, do nothing
+    if (queue.length === 0) return;
+    
+    // Play the next song in queue
+    const nextSong = queue[0];
+    setQueue(prev => prev.slice(1));
+    playTrack(nextSong);
+  };
+  
+  const prevTrack = () => {
+    // If no recent tracks, do nothing
+    if (recentlyPlayed.length <= 1) return;
+    
+    // Play the previous song from recently played
+    const prevSong = recentlyPlayed[1]; // Current track is at index 0
+    playTrack(prevSong);
+  };
+  
+  // Add function to seek to a position in the current track
+  const seekToPosition = (newProgress: number) => {
+    setProgress(newProgress);
+    // Here we would also need to update the actual player position
+    // This would interact with the YouTube player API in a real implementation
+  };
+  
+  // Add function to toggle loop mode
+  const toggleLoopMode = () => {
+    setLoopMode(current => {
+      if (current === 'none') return 'all';
+      if (current === 'all') return 'one';
+      return 'none';
+    });
+  };
 
   // Modified toggleLike function to sync with Supabase
   const toggleLike = async (song: Song): Promise<boolean> => {
@@ -149,6 +197,9 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     playbackRate,
     recentlyPlayed,
     likedSongs,
+    progress,  // Add progress to context value
+    duration,  // Add duration to context value
+    loopMode,  // Add loopMode to context value
     setLikedSongs,
     playTrack,
     togglePlayPause,
@@ -159,6 +210,10 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     setPlaybackRate: setPlaybackRateValue,
     isLiked,
     toggleLike,
+    nextTrack,  // Add nextTrack to context value
+    prevTrack,  // Add prevTrack to context value
+    seekToPosition,  // Add seekToPosition to context value
+    toggleLoopMode,  // Add toggleLoopMode to context value
   };
 
   return (

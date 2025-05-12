@@ -72,12 +72,13 @@ const SupabaseInitializer = () => {
         .eq('user_id', userId);
 
       if (!likedSongsError && likedSongsData && likedSongsData.length > 0) {
-        // Transform the data to match our app's expected format
+        // Transform the data to match our app's expected format with publishedAt property
         const formattedLikedSongs = likedSongsData.map(item => ({
           id: item.songs.id,
           title: item.songs.title,
           channelTitle: item.songs.channel_title || '',
           thumbnailUrl: item.songs.thumbnail_url || '',
+          publishedAt: new Date().toISOString() // Add default publishedAt date for compatibility
         }));
         
         // Update the player context with liked songs from Supabase

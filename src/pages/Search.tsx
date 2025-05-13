@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -27,19 +28,25 @@ const Search = () => {
     }
   }, [location.search]);
 
-  // Search for videos - Updated to fix the onError TypeScript issue
+  // Search for videos - Fixed the TypeScript issue with useQuery
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['searchVideos', searchQuery],
     queryFn: () => searchVideos(searchQuery),
     enabled: searchQuery.length > 0 && activeTab === 'songs',
-    onSuccess: (data) => {
-      setSearchResults(data.items);
-      setNextPageToken(data.nextPageToken);
-    },
-    onError: () => {
-      toast.error("Error fetching search results. Using available content instead.");
+    meta: {
+      onError: () => {
+        toast.error("Error fetching search results. Using available content instead.");
+      }
     }
   });
+
+  // Update results when data changes
+  useEffect(() => {
+    if (data) {
+      setSearchResults(data.items);
+      setNextPageToken(data.nextPageToken);
+    }
+  }, [data]);
 
   // Search for users when tab is 'users'
   useEffect(() => {

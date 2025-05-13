@@ -11,6 +11,7 @@ import GenreExplorer from '@/components/GenreExplorer';
 import SearchBar from '@/components/SearchBar';
 import TrendingCarousel from '@/components/TrendingCarousel';
 import { Sparkle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Home = () => {
   const [trendingSongs, setTrendingSongs] = useState([]);
@@ -130,14 +131,28 @@ const Home = () => {
   if (loading) {
     return (
       <div className="pt-6 pb-24 animate-slide-in">
-        <div className="flex justify-center py-12">
-          <div className="flex gap-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div 
-                key={i}
-                className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
-                style={{ animationDelay: `${i * 0.15}s` }}
-              />
+        {/* Loading skeleton for header */}
+        <div className="mb-8">
+          <Skeleton className="h-10 w-full max-w-md mb-6" />
+          <Skeleton className="h-20 w-full mb-8 rounded-lg" />
+        </div>
+        
+        {/* Loading skeleton for trending carousel */}
+        <div className="mb-10">
+          <Skeleton className="h-6 w-48 mb-4" />
+          <div className="flex overflow-hidden gap-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-40 w-64 rounded-lg flex-shrink-0" />
+            ))}
+          </div>
+        </div>
+        
+        {/* Loading skeleton for new releases */}
+        <div className="mb-10">
+          <Skeleton className="h-6 w-48 mb-4" />
+          <div className="flex overflow-hidden gap-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-40 w-40 rounded-lg flex-shrink-0" />
             ))}
           </div>
         </div>

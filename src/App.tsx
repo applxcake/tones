@@ -21,6 +21,7 @@ import Layout from '@/components/Layout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Toaster } from '@/components/ui/toaster';
 import SupabaseInitializer from '@/components/SupabaseInitializer';
+import MiniPlayer from '@/components/MiniPlayer';
 
 // Context providers
 import { PlayerProvider } from '@/contexts/PlayerContext';
@@ -62,6 +63,7 @@ function App() {
               
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <MiniPlayer />
           </BrowserRouter>
           <Toaster />
         </PlayerProvider>

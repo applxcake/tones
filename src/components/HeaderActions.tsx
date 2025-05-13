@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const HeaderActions = () => {
   const { user } = useAuth();
@@ -15,17 +16,19 @@ const HeaderActions = () => {
       
       {user ? (
         <Link to="/profile">
-          <Button variant="ghost" className="rounded-full h-8 w-8 p-0">
+          <Avatar className="h-8 w-8 hover:ring-2 hover:ring-neon-purple transition-all">
             {user.avatarUrl ? (
-              <img 
+              <AvatarImage 
                 src={user.avatarUrl} 
                 alt={user.username || 'User'} 
-                className="h-8 w-8 rounded-full object-cover"
+                className="object-cover"
               />
             ) : (
-              <User className="h-4 w-4" />
+              <AvatarFallback className="bg-muted">
+                <User className="h-4 w-4" />
+              </AvatarFallback>
             )}
-          </Button>
+          </Avatar>
         </Link>
       ) : (
         <Link to="/login">

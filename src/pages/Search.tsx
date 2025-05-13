@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { searchVideos, YouTubeVideo } from '@/services/youtubeService';
 import { searchUsers } from '@/services/userService';
 import SearchBar from '@/components/SearchBar';
@@ -27,10 +29,13 @@ const Search = () => {
   }, [location.search]);
 
   // Search for videos
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['searchVideos', searchQuery],
     queryFn: () => searchVideos(searchQuery),
     enabled: searchQuery.length > 0 && activeTab === 'songs',
+    onError: () => {
+      toast.error("Error fetching search results. Using available content instead.");
+    }
   });
 
   // Update results when data changes
@@ -45,8 +50,14 @@ const Search = () => {
   useEffect(() => {
     if (searchQuery && activeTab === 'users') {
       const fetchUsers = async () => {
-        const results = await searchUsers(searchQuery);
-        setUserResults(results);
+        try {
+          const results = await searchUsers(searchQuery);
+          setUserResults(results);
+        } catch (error) {
+          console.error("Error searching users:", error);
+          toast.error("Couldn't load user search results.");
+          setUserResults([]);
+        }
       };
       fetchUsers();
     }
@@ -60,9 +71,14 @@ const Search = () => {
   // Load more results
   const loadMore = async () => {
     if (nextPageToken) {
-      const nextPage = await searchVideos(searchQuery, nextPageToken);
-      setSearchResults((prevResults) => [...prevResults, ...nextPage.items]);
-      setNextPageToken(nextPage.nextPageToken);
+      try {
+        const nextPage = await searchVideos(searchQuery, nextPageToken);
+        setSearchResults((prevResults) => [...prevResults, ...nextPage.items]);
+        setNextPageToken(nextPage.nextPageToken);
+      } catch (error) {
+        console.error("Error loading more results:", error);
+        toast.error("Couldn't load additional results.");
+      }
     }
   };
 
@@ -70,6 +86,9 @@ const Search = () => {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
   };
+
+  // Show error state if error occurs and no results
+  const showError = error && searchResults.length === 0;
 
   return (
     <div className="pt-6 pb-24 animate-slide-in">
@@ -102,6 +121,13 @@ const Search = () => {
                       />
                     ))}
                   </div>
+                </div>
+              ) : showError ? (
+                <div className="py-12 text-center">
+                  <p className="text-gray-400 mb-4">Unable to fetch songs for "{searchQuery}"</p>
+                  <Button onClick={() => refetch()} variant="outline" className="hover:neon-glow-purple">
+                    Try Again
+                  </Button>
                 </div>
               ) : searchResults.length === 0 ? (
                 <div className="py-12 text-center">

@@ -1,10 +1,11 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import ScrollableRow from '@/components/ScrollableRow';
 import SongTile from '@/components/SongTile';
 import UserCard from '@/components/UserCard';
-import { searchYouTubeVideos } from '@/services/youtubeService';
+import { searchYouTubeVideos, getTrendingMusic } from '@/services/youtubeService';
 import { getAllUsers } from '@/services/userService';
 import GenreExplorer from '@/components/GenreExplorer';
 import SearchBar from '@/components/SearchBar';
@@ -23,8 +24,9 @@ const Home = () => {
       try {
         setLoading(true);
         
-        // Fetch trending songs
-        const trending = await searchYouTubeVideos('music trending');
+        // Use getTrendingMusic instead of searchYouTubeVideos for trending songs
+        // This will automatically return mock data if API fails
+        const trending = await getTrendingMusic();
         setTrendingSongs(trending);
         
         // Fetch new releases
@@ -36,6 +38,16 @@ const Home = () => {
         setRecommendedUsers(users);
       } catch (error) {
         console.error('Error fetching data:', error);
+        // Show toast notification
+        toast.error("Couldn't fetch all music data. Using available content instead.");
+        
+        // Ensure we have some data even if the API fails
+        if (trendingSongs.length === 0) {
+          setTrendingSongs(getMockTrendingSongs());
+        }
+        if (newReleases.length === 0) {
+          setNewReleases(getMockNewReleases());
+        }
       } finally {
         setLoading(false);
       }
@@ -46,6 +58,73 @@ const Home = () => {
 
   const handleSearch = (query: string) => {
     navigate(`/search?q=${encodeURIComponent(query)}`);
+  };
+
+  // Mock data to use when API fails
+  const getMockTrendingSongs = () => {
+    return [
+      {
+        id: 'trending1',
+        title: 'Top Hit - Currently Trending',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=10',
+        channelTitle: 'Trending Music',
+        publishedAt: new Date().toISOString(),
+      },
+      {
+        id: 'trending2',
+        title: 'Popular Music Video',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=11',
+        channelTitle: 'Music Channel',
+        publishedAt: new Date().toISOString(),
+      },
+      {
+        id: 'trending3',
+        title: 'Viral Song of the Week',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=12',
+        channelTitle: 'Viral Hits',
+        publishedAt: new Date().toISOString(),
+      },
+      {
+        id: 'trending4',
+        title: 'New Release - Hot Track',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=13',
+        channelTitle: 'New Releases',
+        publishedAt: new Date().toISOString(),
+      },
+    ];
+  };
+
+  const getMockNewReleases = () => {
+    return [
+      {
+        id: 'release1',
+        title: 'Brand New Single - Just Released',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=20',
+        channelTitle: 'Music Now',
+        publishedAt: new Date().toISOString(),
+      },
+      {
+        id: 'release2',
+        title: 'Fresh Music Video - This Week',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=21',
+        channelTitle: 'New Music Channel',
+        publishedAt: new Date().toISOString(),
+      },
+      {
+        id: 'release3',
+        title: 'Latest Album Track - Out Now',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=22',
+        channelTitle: 'Album Releases',
+        publishedAt: new Date().toISOString(),
+      },
+      {
+        id: 'release4',
+        title: 'New Collaboration - Just Dropped',
+        thumbnailUrl: 'https://i.pravatar.cc/300?img=23',
+        channelTitle: 'Collabs Channel',
+        publishedAt: new Date().toISOString(),
+      },
+    ];
   };
 
   if (loading) {

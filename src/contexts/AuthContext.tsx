@@ -6,6 +6,7 @@ type User = {
   id: string;
   email: string;
   username?: string;
+  avatarUrl?: string;  // Added avatarUrl property
 };
 
 interface AuthContextType {
@@ -43,6 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             id: session.user.id,
             email: session.user.email || '',
             username: session.user.user_metadata?.username,
+            avatarUrl: session.user.user_metadata?.avatar_url,
           });
           
           console.log('Auth session restored successfully');
@@ -70,6 +72,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             id: session.user.id,
             email: session.user.email || '',
             username: session.user.user_metadata?.username,
+            avatarUrl: session.user.user_metadata?.avatar_url,
           });
           
           // Create/update profile in profiles table

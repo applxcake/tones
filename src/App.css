@@ -1,3 +1,4 @@
+
 /* This file is kept minimal as most styles are handled via Tailwind CSS */
 /* Only global app-specific styles that can't be handled with Tailwind should go here */
 
@@ -502,4 +503,152 @@
 
 .animate-scroll-notes {
   animation: scroll-notes 15s linear infinite;
+}
+
+/* NEW ANIMATIONS as requested by user */
+
+/* 3D tilt effect animations */
+@keyframes tilt-x {
+  0%, 100% { transform: perspective(800px) rotateX(0deg); }
+  50% { transform: perspective(800px) rotateX(3deg); }
+}
+
+@keyframes tilt-y {
+  0%, 100% { transform: perspective(800px) rotateY(0deg); }
+  50% { transform: perspective(800px) rotateY(3deg); }
+}
+
+.animate-tilt-x {
+  animation: tilt-x 5s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+.animate-tilt-y {
+  animation: tilt-y 5s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+/* Play button explosion animations */
+@keyframes explode-1 {
+  0% { 
+    transform: translate(-50%, -50%) scale(0.2); 
+    opacity: 0.8;
+    top: 50%;
+    left: 50%;
+  }
+  100% { 
+    transform: translate(-100%, -100%) scale(2); 
+    opacity: 0;
+    top: 50%;
+    left: 50%;
+  }
+}
+
+@keyframes explode-2 {
+  0% { 
+    transform: translate(-50%, -50%) scale(0.2); 
+    opacity: 0.8;
+    top: 50%;
+    left: 50%;
+  }
+  100% { 
+    transform: translate(0%, -100%) scale(2); 
+    opacity: 0;
+    top: 50%;
+    left: 50%;
+  }
+}
+
+@keyframes explode-3 {
+  0% { 
+    transform: translate(-50%, -50%) scale(0.2); 
+    opacity: 0.8;
+    top: 50%;
+    left: 50%;
+  }
+  100% { 
+    transform: translate(-100%, 0%) scale(2); 
+    opacity: 0;
+    top: 50%;
+    left: 50%;
+  }
+}
+
+/* Progress bar pulse animation */
+@keyframes pulse-progress {
+  0%, 100% { 
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+    background-size: 200% 100%;
+    background-position: 100% 0;
+  }
+  50% { 
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+    background-size: 200% 100%;
+    background-position: 0% 0;
+  }
+}
+
+.animate-pulse-progress {
+  animation: pulse-progress 2s linear infinite;
+}
+
+/* Scroll snap for horizontal playlists */
+.scroll-snap-container {
+  scroll-snap-type: x mandatory;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  display: flex;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scroll-snap-item {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* Glassmorphism styles */
+.glass-panel {
+  background: rgba(30, 30, 40, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Loading skeleton animation */
+.skeleton {
+  background: linear-gradient(90deg, rgba(50, 50, 60, 0.6) 25%, rgba(70, 70, 80, 0.6) 50%, rgba(50, 50, 60, 0.6) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+/* Heart animation */
+@keyframes popHeart {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+.animate-pop-heart {
+  animation: popHeart 0.3s ease-out;
+}
+
+/* Sliding drawer animation */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOutRight {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+.animate-slide-out-right {
+  animation: slideOutRight 0.3s ease-out forwards;
 }

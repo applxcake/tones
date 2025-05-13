@@ -68,7 +68,13 @@ const SongTile = ({ song, className }: SongTileProps) => {
       onClick={handleClick}
       style={{
         transition: "all 0.3s ease-out, transform 0.15s ease-out",
+        transformStyle: "preserve-3d", // Enable 3D space for the element
       }}
+      // Add 3D tilt effect on hover
+      className={cn(
+        "hover:transform hover:perspective-600 hover:rotate-y-2 hover:shadow-xl",
+        "transition-all duration-300"
+      )}
     >
       <div className="aspect-square relative">
         <img 
@@ -91,7 +97,8 @@ const SongTile = ({ song, className }: SongTileProps) => {
             variant="secondary" 
             className={cn(
               "rounded-full bg-neon-purple/80 hover:bg-neon-purple text-white neon-glow-purple h-12 w-12 animate-scale-in transition-all duration-300",
-              isClicked && "scale-90"
+              isClicked && "scale-90",
+              "group relative overflow-hidden" // Add group for hover effects
             )}
             onClick={handlePlayClick}
           >
@@ -105,6 +112,9 @@ const SongTile = ({ song, className }: SongTileProps) => {
             {isClicked && (
               <span className="absolute inset-0 bg-white/30 rounded-full animate-ripple"></span>
             )}
+            
+            {/* Music note explosion on hover */}
+            <span className="absolute inset-0 pointer-events-none group-hover:before:content-['🎵'] group-hover:before:animate-explode-1 group-hover:after:content-['🎵'] group-hover:after:animate-explode-2"></span>
           </Button>
         </div>
         
@@ -148,7 +158,10 @@ const SongTile = ({ song, className }: SongTileProps) => {
         {/* Animated progress indicator for current track */}
         {isCurrentTrack && (
           <div className="mt-1 h-0.5 bg-gray-700 rounded-full overflow-hidden">
-            <div className="h-full w-full bg-gradient-to-r from-neon-purple to-neon-pink animate-progress"></div>
+            <div className="h-full w-full bg-gradient-to-r from-neon-purple to-neon-pink animate-progress relative">
+              {/* Pulsing effect on progress bar */}
+              <div className="absolute inset-0 animate-pulse-progress bg-white opacity-50"></div>
+            </div>
           </div>
         )}
       </div>

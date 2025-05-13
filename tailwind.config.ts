@@ -149,6 +149,24 @@ export default {
 				'glimmer': {
 					'0%': { backgroundPosition: '200% center', opacity: '0.2' },
 					'100%': { backgroundPosition: '-200% center', opacity: '0.5' }
+				},
+				// Adding new animations for requested features
+				'tilt': {
+					'0%, 100%': { transform: 'perspective(600px) rotateY(0deg)' },
+					'50%': { transform: 'perspective(600px) rotateY(3deg)' }
+				},
+				'explosion': {
+					'0%': { transform: 'scale(0)', opacity: '0.8' },
+					'100%': { transform: 'scale(3)', opacity: '0' }
+				},
+				'progress-pulse': {
+					'0%, 100%': { transform: 'scaleX(1)' },
+					'50%': { transform: 'scaleX(1.05)' }
+				},
+				'heart-pop': {
+					'0%': { transform: 'scale(1)' },
+					'50%': { transform: 'scale(1.4)' },
+					'100%': { transform: 'scale(1)' }
 				}
 			},
 			animation: {
@@ -169,8 +187,47 @@ export default {
 				'bounce-subtle': 'bounce-subtle 2s ease-in-out infinite',
 				'fade-in-scale': 'fade-in-scale 0.5s forwards',
 				'float-lr': 'float-lr 3s ease-in-out infinite',
-				'glimmer': 'glimmer 3s linear infinite'
-			}
+				'glimmer': 'glimmer 3s linear infinite',
+				// Adding new animation classes for requested features
+				'tilt': 'tilt 5s ease-in-out infinite',
+				'explosion': 'explosion 0.6s ease-out forwards',
+				'progress-pulse': 'progress-pulse 2s infinite',
+				'heart-pop': 'heart-pop 0.3s ease-out'
+			},
+			// Add transformStyle for 3D effects
+			transformStyle: {
+				'flat': 'flat',
+				'3d': 'preserve-3d'
+			},
+			// Add perspective for 3D transformations
+			perspective: {
+				'none': 'none',
+				'500': '500px',
+				'600': '600px',
+				'800': '800px',
+				'1000': '1000px',
+				'1200': '1200px'
+			},
+			// Add rotate for 3D transformations
+			rotate: {
+				'y-1': 'rotateY(1deg)',
+				'y-2': 'rotateY(2deg)',
+				'y-3': 'rotateY(3deg)',
+				'y-6': 'rotateY(6deg)',
+				'x-1': 'rotateX(1deg)',
+				'x-2': 'rotateX(2deg)',
+				'x-3': 'rotateX(3deg)',
+				'x-6': 'rotateX(6deg)',
+			},
+			// Add backdrop blur classes
+			backdropBlur: {
+				'xs': '2px',
+				'sm': '4px',
+				'md': '8px',
+				'lg': '12px',
+				'xl': '16px',
+				'2xl': '24px',
+			},
 		}
 	},
 	plugins: [require("tailwindcss-animate")],

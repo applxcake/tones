@@ -117,10 +117,24 @@ const Search = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                   {Array.from({ length: 10 }).map((_, i) => (
                     <div key={i} className="glass-panel rounded-lg overflow-hidden">
-                      <Skeleton className="aspect-square w-full" />
+                      <Skeleton className="aspect-square w-full skeleton" />
                       <div className="p-3">
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-3 w-3/4" />
+                        <Skeleton className="h-4 w-full mb-2 skeleton" style={{animationDelay: `${i * 0.05}s`}} />
+                        <Skeleton className="h-3 w-3/4 skeleton" style={{animationDelay: `${i * 0.1}s`}} />
+                        
+                        {/* Add loading shimmer effect bars */}
+                        <div className="flex gap-1 mt-2">
+                          {Array.from({ length: 5 }).map((_, j) => (
+                            <Skeleton 
+                              key={j} 
+                              className="h-2 w-full skeleton" 
+                              style={{ 
+                                animationDelay: `${j * 0.1 + i * 0.05}s`,
+                                height: `${4 + Math.random() * 4}px`
+                              }} 
+                            />
+                          ))}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -138,9 +152,11 @@ const Search = () => {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 scroll-snap-container">
                     {searchResults.map((video) => (
-                      <SongTile key={video.id} song={video} />
+                      <div className="scroll-snap-item" key={video.id}>
+                        <SongTile song={video} />
+                      </div>
                     ))}
                   </div>
 
@@ -149,7 +165,7 @@ const Search = () => {
                       <Button 
                         onClick={loadMore} 
                         variant="outline" 
-                        className="hover:neon-glow-purple"
+                        className="hover:neon-glow-purple animate-pulse-shadow"
                       >
                         Load More
                       </Button>

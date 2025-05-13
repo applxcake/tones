@@ -61,14 +61,27 @@ const VisualVolumePeaks = ({
       {peaks.map((height, i) => (
         <div
           key={i}
-          className="w-1 rounded-full animate-pulse"
+          className="w-1 rounded-full animate-pulse relative group"
           style={{
             height: `${height}px`,
             animationDelay: `${i * 0.05}s`,
             backgroundColor: i % 3 === 0 ? '#9b87f5' : i % 3 === 1 ? '#D946EF' : '#0EA5E9',
-            opacity: 0.8
+            opacity: 0.8,
+            boxShadow: '0 0 5px rgba(155, 135, 245, 0.7)'
           }}
-        />
+        >
+          {/* Add small floating particles above each bar for enhanced visual effect */}
+          {isPlaying && Math.random() > 0.7 && (
+            <span 
+              className="absolute w-1 h-1 rounded-full bg-white/50 animate-float-liquid" 
+              style={{ 
+                bottom: '100%',
+                left: '0',
+                animationDuration: `${1 + Math.random() * 2}s`
+              }}
+            />
+          )}
+        </div>
       ))}
     </div>
   );

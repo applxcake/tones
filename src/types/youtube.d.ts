@@ -2,7 +2,7 @@
 // Type definitions for YouTube IFrame API
 declare namespace YT {
   interface Player {
-    loadVideoById: (options: {videoId: string, startSeconds?: number}) => void;
+    loadVideoById: (options: {videoId: string, startSeconds?: number, suggestedQuality?: string}) => void;
     pauseVideo: () => void;
     playVideo: () => void;
     seekTo: (seconds: number, allowSeekAhead: boolean) => void;
@@ -10,6 +10,7 @@ declare namespace YT {
     getDuration: () => number;
     setVolume: (volume: number) => void;
     getVolume: () => number;
+    setPlaybackRate: (rate: number) => void;
     destroy: () => void;
   }
 
@@ -52,12 +53,14 @@ interface Window {
           rel?: 0 | 1;
           modestbranding?: 0 | 1;
           fs?: 0 | 1;
+          disablekb?: 0 | 1;  // Added this property
+          origin?: string;    // Added this property
           // Add any additional player variables needed
         };
         events?: {
           onReady?: (event: YT.PlayerEvent) => void;
           onStateChange?: (event: YT.OnStateChangeEvent) => void;
-          onError?: (event: YT.OnErrorEvent) => void; // Add onError event
+          onError?: (event: YT.OnErrorEvent) => void;
         };
       }
     ) => YT.Player;

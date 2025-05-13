@@ -22,10 +22,12 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { Toaster } from '@/components/ui/toaster';
 import SupabaseInitializer from '@/components/SupabaseInitializer';
 import MiniPlayer from '@/components/MiniPlayer';
+import SongQueueDrawer from '@/components/SongQueueDrawer';
 
 // Context providers
 import { PlayerProvider } from '@/contexts/PlayerContext';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 
 // Create a client outside of the component
 const queryClient = new QueryClient({
@@ -40,34 +42,37 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <PlayerProvider>
-          <BrowserRouter>
-            <SupabaseInitializer />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/login" element={<Auth />} /> 
-              <Route path="/signup" element={<Auth defaultTab="signup" />} />
-              
-              <Route element={<Layout />}>
-                <Route path="/home" element={<Home />} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/explore" element={<Explore />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/playlists" element={<Playlists />} />
-                <Route path="/playlists/:id" element={<PlaylistDetails />} />
-                <Route path="/users/:id" element={<UserProfile />} />
-              </Route>
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <MiniPlayer />
-          </BrowserRouter>
-          <Toaster />
-        </PlayerProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <PlayerProvider>
+            <BrowserRouter>
+              <SupabaseInitializer />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/login" element={<Auth />} /> 
+                <Route path="/signup" element={<Auth defaultTab="signup" />} />
+                
+                <Route element={<Layout />}>
+                  <Route path="/home" element={<Home />} />
+                  <Route path="/search" element={<Search />} />
+                  <Route path="/explore" element={<Explore />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/playlists" element={<Playlists />} />
+                  <Route path="/playlists/:id" element={<PlaylistDetails />} />
+                  <Route path="/users/:id" element={<UserProfile />} />
+                </Route>
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <MiniPlayer />
+              <SongQueueDrawer />
+            </BrowserRouter>
+            <Toaster />
+          </PlayerProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

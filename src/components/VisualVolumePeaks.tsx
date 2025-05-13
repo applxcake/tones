@@ -1,106 +1,74 @@
 
-import React, { useEffect, useState, useRef } from 'react';
-import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 import { usePlayer } from '@/contexts/PlayerContext';
+import { cn } from '@/lib/utils';
 
 interface VisualVolumePeaksProps {
-  position?: 'left' | 'right';
-  className?: string;
+  position?: 'left' | 'right' | 'center';
   barCount?: number;
+  className?: string;
 }
 
-const VisualVolumePeaks: React.FC<VisualVolumePeaksProps> = ({
-  position = 'right',
-  className,
-  barCount = 40
-}) => {
-  const { isPlaying } = usePlayer();
+const VisualVolumePeaks = ({ 
+  position = 'right', 
+  barCount = 8,
+  className 
+}: VisualVolumePeaksProps) => {
+  const { volume, isPlaying } = usePlayer();
   const [peaks, setPeaks] = useState<number[]>([]);
-  const animationRef = useRef<number>();
-  const peaksRef = useRef<number[]>(Array(barCount).fill(0.1));
-
-  // Generate random peaks based on playing state
+  
+  // Generate new peaks on volume change or when playing status changes
   useEffect(() => {
     const generatePeaks = () => {
       if (!isPlaying) {
-        // When paused, all bars are low
-        peaksRef.current = peaksRef.current.map(() => Math.random() * 0.15);
-        setPeaks([...peaksRef.current]);
-        return;
-      }
-
-      // Create random peaks with some coherence
-      const newPeaks = [...peaksRef.current];
-      
-      for (let i = 0; i < barCount; i++) {
-        // More variation in the middle, less at the edges
-        const distFromCenter = Math.abs(i - barCount / 2) / (barCount / 2);
-        const variationFactor = 1 - distFromCenter * 0.7; // Higher in center
-        
-        // Randomly adjust each peak with some momentum
-        let newValue = newPeaks[i] + (Math.random() - 0.5) * 0.2 * variationFactor;
-        
-        // Add occasional spikes
-        if (Math.random() < 0.05 * variationFactor) {
-          newValue = Math.random() * 0.6 + 0.4;
-        }
-        
-        // Keep within bounds
-        newPeaks[i] = Math.max(0.05, Math.min(1, newValue));
+        return Array(barCount).fill(1); // Minimal height when not playing
       }
       
-      // Smooth the transitions between adjacent bars
-      for (let i = 1; i < barCount - 1; i++) {
-        newPeaks[i] = (newPeaks[i-1] + newPeaks[i] * 2 + newPeaks[i+1]) / 4;
+      // Generate random heights influenced by volume level
+      const maxHeight = volume * 30;
+      return Array.from({ length: barCount }, () => {
+        const baseHeight = Math.random() * maxHeight;
+        // Make some bars taller to create visual interest
+        return Math.max(1, Math.min(30, baseHeight + (Math.random() > 0.7 ? 5 : 0)));
+      });
+    };
+    
+    // Update peaks regularly while playing
+    const interval = setInterval(() => {
+      if (isPlaying) {
+        setPeaks(generatePeaks());
       }
-      
-      peaksRef.current = newPeaks;
-      setPeaks([...newPeaks]);
-    };
-
-    // Animate peaks
-    const animate = () => {
-      generatePeaks();
-      animationRef.current = requestAnimationFrame(animate);
-    };
-
-    animate();
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, [isPlaying, barCount]); // Remove the unnecessary peaks dependency
-
+    }, 150);
+    
+    // Initial generation
+    setPeaks(generatePeaks());
+    
+    return () => clearInterval(interval);
+  }, [volume, isPlaying, barCount]);
+  
+  const positionClasses = {
+    left: "left-4 top-1/2 -translate-y-1/2",
+    right: "right-4 top-1/2 -translate-y-1/2",
+    center: "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+  };
+  
   return (
-    <div 
-      className={cn(
-        "fixed top-0 bottom-0 w-3 flex flex-col justify-evenly z-50",
-        position === 'left' ? "left-0" : "right-0",
-        className
-      )}
-    >
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm -z-10" />
-      
-      {peaks.map((peak, index) => (
+    <div className={cn(
+      "fixed z-40 flex items-end gap-[1px]",
+      positionClasses[position],
+      className
+    )}>
+      {peaks.map((height, i) => (
         <div
-          key={index}
-          className="w-full h-1 flex items-center justify-center"
-        >
-          <div 
-            className={cn(
-              "h-[2px] rounded-full transition-all duration-100 ease-out",
-              isPlaying ? "bg-neon-purple" : "bg-gray-500"
-            )}
-            style={{ 
-              width: `${peak * 100}%`,
-              opacity: isPlaying ? 0.7 + (peak * 0.3) : 0.3,
-              boxShadow: isPlaying 
-                ? `0 0 ${Math.round(peak * 5)}px ${Math.round(peak * 2)}px rgba(155,135,245,${peak * 0.5})` 
-                : 'none'
-            }}
-          />
-        </div>
+          key={i}
+          className="w-1 rounded-full animate-pulse"
+          style={{
+            height: `${height}px`,
+            animationDelay: `${i * 0.05}s`,
+            backgroundColor: i % 3 === 0 ? '#9b87f5' : i % 3 === 1 ? '#D946EF' : '#0EA5E9',
+            opacity: 0.8
+          }}
+        />
       ))}
     </div>
   );

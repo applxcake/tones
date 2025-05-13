@@ -2,14 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { usePlayer } from '@/contexts/PlayerContext';
 
-// YouTube IFrame API type declaration
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
-  }
-}
-
+// Remove the global declaration since it's already defined in youtube.d.ts
 const YTPlayer: React.FC = () => {
   const { 
     currentTrack, 
@@ -21,10 +14,11 @@ const YTPlayer: React.FC = () => {
     loopMode
   } = usePlayer();
   
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<YT.Player | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const loadingApiRef = useRef<boolean>(false);
   const hasApiLoadedRef = useRef<boolean>(false);
+  const playerElementId = 'youtube-player-container';
   
   // Load YouTube API script
   useEffect(() => {
@@ -66,7 +60,8 @@ const YTPlayer: React.FC = () => {
     if (!hasApiLoadedRef.current || !containerRef.current) return;
     
     try {
-      playerRef.current = new window.YT.Player(containerRef.current, {
+      // Fix: Use the element ID instead of the DOM reference
+      playerRef.current = new window.YT.Player(playerElementId, {
         height: '1',
         width: '1',
         playerVars: {
@@ -90,7 +85,7 @@ const YTPlayer: React.FC = () => {
   };
 
   // Player event handlers
-  const onPlayerReady = (event: any) => {
+  const onPlayerReady = (event: YT.PlayerEvent) => {
     console.log('YouTube player ready');
     applyPlayerSettings();
     
@@ -99,7 +94,7 @@ const YTPlayer: React.FC = () => {
     }
   };
 
-  const onPlayerStateChange = (event: any) => {
+  const onPlayerStateChange = (event: YT.OnStateChangeEvent) => {
     const playerState = event.data;
     
     // Update duration when video loads
@@ -122,7 +117,7 @@ const YTPlayer: React.FC = () => {
     }
   };
 
-  const onPlayerError = (event: any) => {
+  const onPlayerError = (event: YT.OnErrorEvent) => {
     console.error('YouTube player error:', event.data);
   };
 
@@ -211,7 +206,7 @@ const YTPlayer: React.FC = () => {
         // If not supposed to be playing, pause immediately after loading
         if (!isPlaying) {
           setTimeout(() => {
-            playerRef.current.pauseVideo();
+            playerRef.current?.pauseVideo();
           }, 100);
         }
       } catch (error) {
@@ -220,7 +215,8 @@ const YTPlayer: React.FC = () => {
     }
   };
 
-  return <div id="youtube-player-container" ref={containerRef} className="hidden" />;
+  // Return a div with the specific ID needed by the YouTube API
+  return <div id={playerElementId} className="hidden" ref={containerRef} />;
 };
 
 export default YTPlayer;

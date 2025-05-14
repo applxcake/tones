@@ -87,8 +87,8 @@ export default {
 					to: { height: '0', opacity: '0' }
 				},
 				'pulse-glow': {
-					'0%, 100%': { opacity: '1' },
-					'50%': { opacity: '0.6' }
+					'0%, 100%': { opacity: '1', boxShadow: '0 0 5px rgba(155, 135, 245, 0.5)' },
+					'50%': { opacity: '0.6', boxShadow: '0 0 20px rgba(155, 135, 245, 0.8)' }
 				},
 				'slide-in': {
 					'0%': { transform: 'translateY(10px)', opacity: '0' },
@@ -167,7 +167,25 @@ export default {
 					'0%': { transform: 'scale(1)' },
 					'50%': { transform: 'scale(1.4)' },
 					'100%': { transform: 'scale(1)' }
-				}
+				},
+				// New additional animations
+				'float': {
+					'0%': { transform: 'translateY(0) rotate(0deg)' },
+					'50%': { transform: 'translateY(-20px) rotate(10deg)' },
+					'100%': { transform: 'translateY(0) rotate(0deg)' }
+				},
+				'float-liquid': {
+					'0%': { transform: 'translateY(0) scale(1)', opacity: '0.7' },
+					'100%': { transform: 'translateY(-30px) scale(0)', opacity: '0' }
+				},
+				'floatUpwards': {
+					'0%': { transform: 'translateY(0)', opacity: '0.7' },
+					'100%': { transform: 'translateY(-50px)', opacity: '0' }
+				},
+				'pulse-soft': {
+					'0%, 100%': { opacity: '1', transform: 'scale(1)' },
+					'50%': { opacity: '0.7', transform: 'scale(0.97)' }
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
@@ -192,7 +210,11 @@ export default {
 				'tilt': 'tilt 5s ease-in-out infinite',
 				'explosion': 'explosion 0.6s ease-out forwards',
 				'progress-pulse': 'progress-pulse 2s infinite',
-				'heart-pop': 'heart-pop 0.3s ease-out'
+				'heart-pop': 'heart-pop 0.3s ease-out',
+				// New additional animations
+				'float': 'float 10s ease-in-out infinite',
+				'float-liquid': 'float-liquid 1.5s ease-out forwards',
+				'pulse-soft': 'pulse-soft 4s ease-in-out infinite',
 			},
 			// Add transformStyle for 3D effects
 			transformStyle: {
@@ -227,6 +249,13 @@ export default {
 				'lg': '12px',
 				'xl': '16px',
 				'2xl': '24px',
+			},
+			// Add transition durations
+			transitionDuration: {
+				'2000': '2000ms',
+				'3000': '3000ms',
+				'4000': '4000ms',
+				'5000': '5000ms',
 			},
 		}
 	},

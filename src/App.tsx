@@ -23,6 +23,7 @@ import { Toaster } from '@/components/ui/toaster';
 import SupabaseInitializer from '@/components/SupabaseInitializer';
 import MiniPlayer from '@/components/MiniPlayer';
 import SongQueueDrawer from '@/components/SongQueueDrawer';
+import AnimatedBackground from '@/components/AnimatedBackground';
 
 // Context providers
 import { PlayerProvider } from '@/contexts/PlayerContext';
@@ -47,6 +48,7 @@ function App() {
           <PlayerProvider>
             <BrowserRouter>
               <SupabaseInitializer />
+              <AnimatedBackground density={8} speed="slow" className="opacity-20" />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />

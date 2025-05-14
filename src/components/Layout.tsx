@@ -7,6 +7,9 @@ import MusicPlayer from '@/components/MusicPlayer';
 import MobileNav from '@/components/MobileNav';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import AnimatedBackground from '@/components/AnimatedBackground';
+import FloatingElements from '@/components/FloatingElements';
+import LyricFlashHighlight from '@/components/LyricFlashHighlight';
 
 const Layout = () => {
   const isMobile = useIsMobile();
@@ -43,28 +46,12 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden relative">
-      {/* Background gradient effect */}
-      <div className="fixed inset-0 bg-gradient-to-br from-black via-background to-black/80 z-0"></div>
+      {/* Enhanced background with animated elements */}
+      <AnimatedBackground density={12} speed="slow" colorScheme="purple" />
+      <FloatingElements count={15} type="mixed" className="z-0 opacity-30" />
       
-      {/* Animated particles or circles for visual interest */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full opacity-20"
-            style={{
-              width: `${Math.random() * 300 + 100}px`,
-              height: `${Math.random() * 300 + 100}px`,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              background: `radial-gradient(circle, rgba(155,135,245,0.3) 0%, rgba(0,0,0,0) 70%)`,
-              transform: `scale(${Math.random() * 0.5 + 0.5})`,
-              animation: `float ${Math.random() * 10 + 10}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 5}s`
-            }}
-          />
-        ))}
-      </div>
+      {/* Add lyric flash highlights */}
+      <LyricFlashHighlight className="z-50" />
       
       {/* Overlay for mobile when sidebar is open */}
       {sidebarOpen && (
@@ -85,16 +72,19 @@ const Layout = () => {
         <AppSidebar onToggleSidebar={toggleSidebar} />
       </div>
       
-      {/* Sidebar toggle button with animation */}
+      {/* Sidebar toggle button with enhanced animation */}
       <Button 
         variant="ghost" 
         size="icon" 
         className={`fixed top-4 z-40 transition-all duration-300 ${
           sidebarOpen ? 'left-[260px]' : 'left-4'
-        } animate-fade-in hover:bg-white/10 backdrop-blur-md`}
+        } animate-pulse-slow hover:bg-white/10 backdrop-blur-md hover:rotate-12 hover:scale-110`}
         onClick={toggleSidebar}
       >
-        {sidebarOpen ? <ChevronLeft className="text-neon-purple" /> : <ChevronRight className="text-neon-purple" />}
+        {sidebarOpen ? 
+          <ChevronLeft className="text-neon-purple animate-pulse-soft" /> : 
+          <ChevronRight className="text-neon-purple animate-pulse-soft" />
+        }
         <span className="sr-only">{sidebarOpen ? 'Close sidebar' : 'Open sidebar'}</span>
       </Button>
       

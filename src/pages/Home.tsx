@@ -9,10 +9,12 @@ import { getAllUsers } from '@/services/userService';
 import GenreExplorer from '@/components/GenreExplorer';
 import SearchBar from '@/components/SearchBar';
 import TrendingCarousel from '@/components/TrendingCarousel';
-import { Sparkle, Music, Volume2 } from 'lucide-react';
+import { Sparkle, Music, Volume2, Disc, Radio, Headphones } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import VisualVolumePeaks from '@/components/VisualVolumePeaks';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import GlitchText from '@/components/GlitchText';
+import NeonBorder from '@/components/NeonBorder';
 
 const Home = () => {
   const [trendingSongs, setTrendingSongs] = useState([]);
@@ -21,6 +23,8 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [activeBackground, setActiveBackground] = useState(0);
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(true);
+  const [activeFeaturedGenre, setActiveFeaturedGenre] = useState(0);
+  const [showFeatureAnimation, setShowFeatureAnimation] = useState(false);
   const navigate = useNavigate();
   const containerRef = useRef(null);
 
@@ -256,6 +260,22 @@ const Home = () => {
     );
   };
 
+  // Featured genre icons
+  const featuredGenreIcons = [
+    <Music key="music" className="h-8 w-8 text-neon-purple" />,
+    <Headphones key="headphones" className="h-8 w-8 text-neon-pink" />,
+    <Radio key="radio" className="h-8 w-8 text-neon-blue" />,
+    <Disc key="disc" className="h-8 w-8 text-white" />
+  ];
+  
+  // Featured genre data
+  const featuredGenres = [
+    { title: "Pop", color: "bg-neon-purple/40" },
+    { title: "Hip Hop", color: "bg-neon-pink/40" },
+    { title: "Electronic", color: "bg-neon-blue/40" },
+    { title: "Rock", color: "bg-white/20" }
+  ];
+  
   if (loading) {
     return (
       <div className="pt-6 pb-24 animate-slide-in relative">
@@ -304,6 +324,36 @@ const Home = () => {
         
         {/* Visual volume peaks during loading */}
         <VisualVolumePeaks position="center" barCount={10} className="opacity-50" />
+        
+        {/* Enhanced loading spinner */}
+        <div className="fixed bottom-10 right-10 z-50">
+          <svg className="w-16 h-16" viewBox="0 0 120 120">
+            <circle
+              cx="60"
+              cy="60"
+              r="45"
+              fill="none"
+              stroke="rgba(155, 135, 245, 0.3)"
+              strokeWidth="8"
+            />
+            <circle
+              cx="60"
+              cy="60"
+              r="45"
+              fill="none"
+              stroke="#9b87f5"
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray="280"
+              strokeDashoffset="280"
+              className="animate-spinner"
+              transform="rotate(-90, 60, 60)"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Music size={18} className="text-neon-purple animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -332,67 +382,65 @@ const Home = () => {
       <FloatingMusicNotes />
       
       {/* Welcome animation overlay */}
-      {showWelcomeAnimation && (
-        <motion.div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          variants={welcomeVariants}
-        >
-          <div className="text-center">
-            <motion.div 
-              className="text-5xl font-bold mb-4 text-neon-purple"
-              animate={{ 
-                scale: [1, 1.2, 1],
-                textShadow: [
-                  "0 0 10px rgba(155, 135, 245, 0.5)",
-                  "0 0 20px rgba(155, 135, 245, 0.8)",
-                  "0 0 10px rgba(155, 135, 245, 0.5)"
-                ]
-              }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <span className="text-neon-purple">T</span>
-              <span className="text-neon-pink">o</span>
-              <span className="text-neon-blue">n</span>
-              <span className="text-neon-purple">e</span>
-              <span className="text-neon-pink">s</span>
-            </motion.div>
-            <motion.p 
-              className="text-gray-300"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.2 }}
-            >
-              Your musical journey begins...
-            </motion.p>
-            <motion.div className="mt-4 flex justify-center gap-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <motion.div 
-                  key={i}
-                  className="h-2 w-2 rounded-full bg-neon-purple"
-                  animate={{
-                    y: [0, -10, 0],
-                    backgroundColor: [
-                      "rgb(155, 135, 245)", // neon-purple
-                      "rgb(217, 70, 239)",  // neon-pink
-                      "rgb(14, 165, 233)",  // neon-blue
-                      "rgb(155, 135, 245)"  // neon-purple
-                    ]
-                  }}
-                  transition={{ 
-                    duration: 1,
-                    repeat: Infinity, 
-                    delay: i * 0.15,
-                    ease: "easeInOut"
-                  }}
-                />
-              ))}
-            </motion.div>
-          </div>
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {showWelcomeAnimation && (
+          <motion.div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={welcomeVariants}
+          >
+            <div className="text-center">
+              <motion.div 
+                className="text-5xl font-bold mb-4 text-neon-purple"
+                animate={{ 
+                  scale: [1, 1.2, 1],
+                  textShadow: [
+                    "0 0 10px rgba(155, 135, 245, 0.5)",
+                    "0 0 20px rgba(155, 135, 245, 0.8)",
+                    "0 0 10px rgba(155, 135, 245, 0.5)"
+                  ]
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <GlitchText text="TONES" glitchInterval={2000} />
+              </motion.div>
+              <motion.p 
+                className="text-gray-300 typewriter"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.2 }}
+              >
+                Your musical journey begins...
+              </motion.p>
+              <motion.div className="mt-4 flex justify-center gap-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <motion.div 
+                    key={i}
+                    className="h-2 w-2 rounded-full bg-neon-purple"
+                    animate={{
+                      y: [0, -10, 0],
+                      backgroundColor: [
+                        "rgb(155, 135, 245)", // neon-purple
+                        "rgb(217, 70, 239)",  // neon-pink
+                        "rgb(14, 165, 233)",  // neon-blue
+                        "rgb(155, 135, 245)"  // neon-purple
+                      ]
+                    }}
+                    transition={{ 
+                      duration: 1,
+                      repeat: Infinity, 
+                      delay: i * 0.15,
+                      ease: "easeInOut"
+                    }}
+                  />
+                ))}
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="mb-8">
         <motion.div variants={itemVariants}>
@@ -403,8 +451,9 @@ const Home = () => {
           className="text-3xl font-bold flex items-center"
           variants={itemVariants}
         >
-          Welcome to Tones 
-          <Sparkle className="h-6 w-6 ml-2 text-neon-purple animate-pulse" />
+          Welcome to 
+          <span className="gradient-text ml-2 mr-2">Tones</span>
+          <Sparkle className="h-6 w-6 text-neon-purple animate-pulse" />
         </motion.h1>
         
         {/* Enhanced graphic design under welcome message */}
@@ -417,7 +466,11 @@ const Home = () => {
           
           <div className="relative z-10 p-6 flex flex-col md:flex-row items-center justify-between">
             <div className="mb-4 md:mb-0 md:w-1/2">
-              <h2 className="text-2xl font-bold mb-2">Discover Your Sound</h2>
+              <GlitchText 
+                text="Discover Your Sound" 
+                className="text-2xl font-bold mb-2"
+                glitchInterval={10000}
+              />
               <p className="text-gray-300 mb-4">
                 Explore trending tracks, create custom playlists, and find your perfect musical rhythm.
               </p>
@@ -441,9 +494,10 @@ const Home = () => {
                 ))}
               </div>
             </div>
-            <div className="flex justify-center">
+            
+            <div className="perspective-600">
               <motion.div 
-                className="grid grid-cols-3 gap-2"
+                className="grid grid-cols-3 gap-2 transform-style-3d"
                 animate={{ rotate: [0, 5, -5, 0] }}
                 transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
               >
@@ -459,9 +513,10 @@ const Home = () => {
                     }}
                     animate={{
                       scale: [1, 1.1, 1],
+                      rotateY: i % 2 === 0 ? [0, 180, 360] : [0, -180, -360]
                     }}
                     transition={{
-                      duration: 3,
+                      duration: 8,
                       delay: i * 0.2,
                       repeat: Infinity,
                       ease: "easeInOut"
@@ -507,6 +562,67 @@ const Home = () => {
             </div>
           </div>
         </motion.div>
+        
+        {/* New Featured Genres Section with Interactive Elements */}
+        <motion.div
+          className="mb-10 overflow-hidden"
+          variants={itemVariants}
+        >
+          <h2 className="text-2xl font-bold mb-4 flex items-center">
+            Featured Genres
+            <span className="ml-2 relative">
+              <motion.span
+                animate={{
+                  scale: showFeatureAnimation ? [1, 1.4, 1] : 1
+                }}
+                transition={{ duration: 0.5 }}
+              >
+                ✨
+              </motion.span>
+            </span>
+          </h2>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {featuredGenres.map((genre, i) => (
+              <motion.div
+                key={i}
+                className={cn(
+                  "rounded-lg p-4 glass-panel shine-effect transition-all",
+                  genre.color,
+                  activeFeaturedGenre === i && "ring-2 ring-white/30"
+                )}
+                whileHover={{ y: -5, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                animate={{
+                  y: activeFeaturedGenre === i ? -5 : 0,
+                  scale: activeFeaturedGenre === i ? 1.02 : 1
+                }}
+              >
+                <div className="flex flex-col items-center justify-center h-full py-6 text-center">
+                  <motion.div
+                    animate={{
+                      rotateY: activeFeaturedGenre === i ? [0, 360] : 0
+                    }}
+                    transition={{ duration: 1.5, ease: "easeInOut" }}
+                    className="mb-3"
+                  >
+                    {featuredGenreIcons[i]}
+                  </motion.div>
+                  <h3 className="font-bold">{genre.title}</h3>
+                  
+                  {activeFeaturedGenre === i && (
+                    <motion.div
+                      className="mt-2 w-10 h-0.5 bg-white rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: 40 }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
       </div>
       
       <motion.section 
@@ -532,11 +648,21 @@ const Home = () => {
             </div>
           </motion.div>
         </h2>
-        <ScrollableRow title="New Releases">
-          {newReleases.map((song) => (
-            <SongTile key={song.id} song={song} className="min-w-[200px] max-w-[200px]" />
-          ))}
-        </ScrollableRow>
+        
+        <NeonBorder color="blue" active={!isMobile} className="p-4 mb-6 rounded-xl">
+          <ScrollableRow title="New Releases">
+            {newReleases.map((song, index) => (
+              <motion.div
+                key={song.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 * index, duration: 0.4 }}
+              >
+                <SongTile song={song} className="min-w-[200px] max-w-[200px]" />
+              </motion.div>
+            ))}
+          </ScrollableRow>
+        </NeonBorder>
       </motion.section>
       
       {recommendedUsers.length > 0 && (
@@ -544,19 +670,32 @@ const Home = () => {
           className="mb-10"
           variants={itemVariants}
         >
-          <h2 className="text-2xl font-bold mb-6">People to Follow</h2>
-          <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recommendedUsers.slice(0, 6).map((user, index) => (
-              <motion.div
-                key={user.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-              >
-                <UserCard user={user} />
-              </motion.div>
-            ))}
-          </motion.div>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">People to Follow</h2>
+            <motion.button
+              className="text-sm text-neon-purple cyber-glow rounded-full px-4 py-1 border border-neon-purple/30"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              View All
+            </motion.button>
+          </div>
+          
+          <div className="glass-panel p-6 rounded-xl">
+            <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {recommendedUsers.slice(0, 6).map((user, index) => (
+                <motion.div
+                  key={user.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * index }}
+                  className="card-3d shine-effect"
+                >
+                  <UserCard user={user} />
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
         </motion.section>
       )}
       
@@ -576,7 +715,7 @@ const Home = () => {
           {Array.from({ length: 50 }).map((_, i) => (
             <motion.div
               key={i}
-              className="w-1 bg-neon-purple rounded-t"
+              className="w-1 rounded-t"
               animate={{ height: [2, 20, 2] }}
               transition={{
                 duration: 1 + Math.random() * 1.5,

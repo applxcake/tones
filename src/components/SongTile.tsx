@@ -1,11 +1,14 @@
 
 import { useState, useEffect } from 'react';
-import { Play, Pause, Sparkle } from 'lucide-react';
+import { Play, Pause, Sparkle, Music } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { Button } from '@/components/ui/button';
 import SongOptionsMenu from '@/components/SongOptionsMenu';
 import { YouTubeVideo } from '@/services/youtubeService';
+import { motion, AnimatePresence } from 'framer-motion';
+import NeonBorder from './NeonBorder';
+import PulseDot from './PulseDot';
 
 interface SongTileProps {
   song: YouTubeVideo;
@@ -17,14 +20,20 @@ const SongTile = ({ song, className }: SongTileProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isClicked, setIsClicked] = useState(false);
   const [hasAnimated, setHasAnimated] = useState(false);
+  const [showMusicNotes, setShowMusicNotes] = useState(false);
   
   const isCurrentTrack = currentTrack?.id === song.id;
   
-  // Click animation
+  // Enhanced click animation
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsClicked(true);
-    setTimeout(() => setIsClicked(false), 300);
+    setShowMusicNotes(true);
+    
+    setTimeout(() => {
+      setIsClicked(false);
+      setTimeout(() => setShowMusicNotes(false), 1000);
+    }, 300);
   };
   
   const handlePlayClick = (e: React.MouseEvent) => {
@@ -53,15 +62,47 @@ const SongTile = ({ song, className }: SongTileProps) => {
     };
   }, [song.id, hasAnimated]);
   
+  // Music note explosion effect
+  const MusicNotes = () => {
+    if (!showMusicNotes) return null;
+    
+    return (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute text-white"
+            initial={{ 
+              x: "50%", 
+              y: "50%", 
+              scale: 0.5,
+              opacity: 0.8 
+            }}
+            animate={{ 
+              x: `${50 + (Math.random() * 100 - 50)}%`,
+              y: `${50 + (Math.random() * 100 - 50)}%`,
+              scale: 0,
+              opacity: 0
+            }}
+            transition={{ 
+              duration: 0.8 + Math.random() * 0.5,
+              ease: "easeOut"
+            }}
+          >
+            <Music size={16} />
+          </motion.div>
+        ))}
+      </div>
+    );
+  };
+  
   return (
-    <div 
+    <motion.div 
       id={`song-${song.id}`}
       className={cn(
-        "glass-panel rounded-lg overflow-hidden relative hover-scale animate-fade-in",
+        "overflow-hidden relative hover-scale animate-fade-in rounded-lg",
         className,
         isClicked && "scale-95",
-        hasAnimated ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0",
-        isCurrentTrack && "ring-2 ring-neon-purple ring-opacity-60",
         "hover:transform hover:perspective-600 hover:rotate-y-2 hover:shadow-xl",
         "transition-all duration-300"
       )}
@@ -72,97 +113,157 @@ const SongTile = ({ song, className }: SongTileProps) => {
         transition: "all 0.3s ease-out, transform 0.15s ease-out",
         transformStyle: "preserve-3d", // Enable 3D space for the element
       }}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ 
+        opacity: hasAnimated ? 1 : 0,
+        y: hasAnimated ? 0 : 20,
+        scale: hasAnimated ? 1 : 0.95 
+      }}
+      whileHover={{ 
+        y: -5,
+        transition: { duration: 0.2 }
+      }}
+      whileTap={{ scale: 0.97 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
     >
-      <div className="aspect-square relative">
-        <img 
-          src={song.thumbnailUrl} 
-          alt={song.title}
-          className={cn(
-            "w-full h-full object-cover transition-transform duration-700",
-            isHovered && "scale-105"
-          )}
-          loading="lazy"
-        />
-        <div 
-          className={cn(
-            "absolute inset-0 flex items-center justify-center bg-black/60 transition-all duration-300",
-            (isHovered || isCurrentTrack) ? "opacity-100" : "opacity-0"
-          )}
-        >
-          <Button 
-            size="icon" 
-            variant="secondary" 
+      <NeonBorder 
+        active={isCurrentTrack} 
+        color={isCurrentTrack ? "rainbow" : "purple"}
+        className="glass-panel overflow-hidden"
+        pulsate={isCurrentTrack && isPlaying}
+      >
+        <div className="aspect-square relative">
+          <img 
+            src={song.thumbnailUrl} 
+            alt={song.title}
             className={cn(
-              "rounded-full bg-neon-purple/80 hover:bg-neon-purple text-white neon-glow-purple h-12 w-12 animate-scale-in transition-all duration-300",
-              isClicked && "scale-90",
-              "group relative overflow-hidden" // Add group for hover effects
+              "w-full h-full object-cover transition-transform duration-700",
+              isHovered && "scale-105 filter brightness-110"
             )}
-            onClick={handlePlayClick}
+            loading="lazy"
+          />
+          <div 
+            className={cn(
+              "absolute inset-0 flex items-center justify-center bg-black/60 transition-all duration-300",
+              (isHovered || isCurrentTrack) ? "opacity-100" : "opacity-0"
+            )}
           >
-            {(isCurrentTrack && isPlaying) ? (
-              <Pause className="h-6 w-6 animate-pulse-soft" />
-            ) : (
-              <Play className="h-6 w-6 ml-1" />
-            )}
-            
-            {/* Ripple effect on button click */}
-            {isClicked && (
-              <span className="absolute inset-0 bg-white/30 rounded-full animate-ripple"></span>
-            )}
-            
-            {/* Music note explosion on hover */}
-            <span className="absolute inset-0 pointer-events-none group-hover:before:content-['🎵'] group-hover:before:animate-explode-1 group-hover:after:content-['🎵'] group-hover:after:animate-explode-2"></span>
-          </Button>
-        </div>
-        
-        {/* Animated corner indicators for current track */}
-        {isCurrentTrack && (
-          <>
-            <div className="absolute top-2 left-2 w-3 h-3 bg-neon-pink rounded-full animate-pulse"></div>
-            <div className="absolute bottom-2 right-2 w-3 h-3 bg-neon-blue rounded-full animate-pulse" style={{ animationDelay: "0.5s" }}></div>
-          </>
-        )}
-        
-        <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
-          <SongOptionsMenu song={song} />
-        </div>
-        
-        {/* Animated sparkle effects on hover */}
-        {isHovered && (
-          <>
-            <Sparkle 
-              className="absolute top-1/4 left-1/4 text-neon-purple w-4 h-4 animate-float opacity-70" 
-              style={{ animationDelay: "0.2s" }}
-            />
-            <Sparkle 
-              className="absolute bottom-1/4 right-1/4 text-neon-pink w-3 h-3 animate-float opacity-70" 
-              style={{ animationDelay: "0.5s" }}
-            />
-          </>
-        )}
-      </div>
-      <div className={cn(
-        "p-3 transition-all duration-300",
-        isHovered && "bg-black/40"
-      )}>
-        <h3 className="font-medium truncate" title={song.title}>
-          {song.title}
-        </h3>
-        <p className="text-sm text-gray-400 truncate" title={song.channelTitle}>
-          {song.channelTitle}
-        </p>
-        
-        {/* Animated progress indicator for current track */}
-        {isCurrentTrack && (
-          <div className="mt-1 h-0.5 bg-gray-700 rounded-full overflow-hidden">
-            <div className="h-full w-full bg-gradient-to-r from-neon-purple to-neon-pink animate-progress relative">
-              {/* Pulsing effect on progress bar */}
-              <div className="absolute inset-0 animate-pulse-progress bg-white opacity-50"></div>
-            </div>
+            <Button 
+              size="icon" 
+              variant="secondary" 
+              className={cn(
+                "rounded-full bg-neon-purple/80 hover:bg-neon-purple text-white neon-glow-purple h-12 w-12 animate-scale-in transition-all duration-300",
+                isClicked && "scale-90",
+                "group relative overflow-hidden" // Add group for hover effects
+              )}
+              onClick={handlePlayClick}
+            >
+              {(isCurrentTrack && isPlaying) ? (
+                <Pause className="h-6 w-6 animate-pulse-soft" />
+              ) : (
+                <Play className="h-6 w-6 ml-1" />
+              )}
+              
+              {/* Ripple effect on button click */}
+              {isClicked && (
+                <span className="absolute inset-0 bg-white/30 rounded-full animate-ripple"></span>
+              )}
+            </Button>
           </div>
-        )}
-      </div>
-    </div>
+          
+          {/* Music notes explosion effect */}
+          <MusicNotes />
+          
+          {/* Animated corner indicators for current track */}
+          <AnimatePresence>
+            {isCurrentTrack && (
+              <>
+                <motion.div 
+                  className="absolute top-2 left-2"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <PulseDot color="pink" />
+                </motion.div>
+                <motion.div 
+                  className="absolute bottom-2 right-2"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                >
+                  <PulseDot color="blue" />
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+          
+          <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
+            <SongOptionsMenu song={song} />
+          </div>
+          
+          {/* Enhanced sparkle effects on hover */}
+          <AnimatePresence>
+            {isHovered && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 0.7, scale: 1, rotate: [0, 180] }}
+                  exit={{ opacity: 0, scale: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="absolute top-1/4 left-1/4"
+                >
+                  <Sparkle className="text-neon-purple w-4 h-4" />
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 0.7, scale: 1, rotate: [0, -180] }}
+                  exit={{ opacity: 0, scale: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className="absolute bottom-1/4 right-1/4"
+                >
+                  <Sparkle className="text-neon-pink w-3 h-3" />
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+        <div className={cn(
+          "p-3 transition-all duration-300",
+          isHovered && "bg-black/40"
+        )}>
+          <h3 className="font-medium truncate" title={song.title}>
+            {song.title}
+          </h3>
+          <p className="text-sm text-gray-400 truncate" title={song.channelTitle}>
+            {song.channelTitle}
+          </p>
+          
+          {/* Animated progress indicator for current track */}
+          {isCurrentTrack && (
+            <div className="mt-1 h-0.5 bg-gray-700 rounded-full overflow-hidden">
+              <motion.div 
+                className="h-full bg-gradient-to-r from-neon-purple to-neon-pink relative"
+                initial={{ width: "0%" }}
+                animate={{ 
+                  width: "100%",
+                  transition: { 
+                    duration: 30, 
+                    ease: "linear", 
+                    repeat: Infinity 
+                  }
+                }}
+              >
+                {/* Pulsing effect on progress bar */}
+                <div className="absolute inset-0 animate-pulse-progress bg-white opacity-50"></div>
+              </motion.div>
+            </div>
+          )}
+        </div>
+      </NeonBorder>
+    </motion.div>
   );
 };
 

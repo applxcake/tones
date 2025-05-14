@@ -1,4 +1,3 @@
-
 /* This file is kept minimal as most styles are handled via Tailwind CSS */
 /* Only global app-specific styles that can't be handled with Tailwind should go here */
 
@@ -167,13 +166,13 @@
 @keyframes textScramble {
   0% {
     opacity: 0;
+    filter: blur(4px);
     transform: translateX(-5px);
-    filter: blur(2px);
   }
   100% {
     opacity: 1;
-    transform: translateX(0);
     filter: blur(0);
+    transform: translateX(0);
   }
 }
 
@@ -339,7 +338,7 @@
 }
 
 .animate-text-scramble {
-  animation: textScramble 0.4s forwards;
+  animation: textScramble 0.5s forwards cubic-bezier(0.17, 0.67, 0.83, 0.67);
 }
 
 .animate-glow-pulse {
@@ -651,4 +650,176 @@
 
 .animate-slide-out-right {
   animation: slideOutRight 0.3s ease-out forwards;
+}
+
+/* Magnetic effect for buttons */
+.magnetic-button {
+  transition: transform 0.3s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* Gradient text animation */
+.gradient-text {
+  background: linear-gradient(to right, #9b87f5, #D946EF, #0EA5E9, #9b87f5);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient 8s linear infinite;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 300% center;
+  }
+}
+
+/* 3D Card Hover Effect */
+.card-3d {
+  transition: transform 0.5s;
+  transform-style: preserve-3d;
+}
+
+.card-3d:hover {
+  transform: rotateY(10deg) rotateX(5deg);
+}
+
+/* Shine effect on hover */
+.shine-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-effect::after {
+  content: "";
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  width: 70%;
+  height: 300%;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 30%,
+    transparent 60%
+  );
+  transform: rotate(25deg);
+  pointer-events: none;
+  transition: transform 0.8s;
+}
+
+.shine-effect:hover::after {
+  transform: translate(170%, -70%) rotate(25deg);
+}
+
+/* Fluid animation */
+@keyframes fluid {
+  0% {
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+  }
+  25% {
+    border-radius: 35% 65% 60% 40% / 55% 30% 70% 45%;
+  }
+  50% {
+    border-radius: 55% 45% 30% 70% / 55% 60% 40% 45%;
+  }
+  75% {
+    border-radius: 70% 30% 45% 55% / 40% 65% 35% 60%;
+  }
+  100% {
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+  }
+}
+
+.animate-fluid {
+  animation: fluid 20s ease-in-out infinite;
+}
+
+/* Typewriter effect */
+@keyframes typewriter {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes blinkCursor {
+  from {
+    border-right-color: rgba(255, 255, 255, 0.75);
+  }
+  to {
+    border-right-color: transparent;
+  }
+}
+
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 3px solid;
+  animation: typewriter 3s steps(40) 1s forwards, blinkCursor 1s step-end infinite;
+}
+
+/* Floating layers effect - adds subtle parallax on mouse move */
+.float-layer {
+  transition: transform 0.2s ease-out;
+}
+
+/* Neo brutalism effect */
+.neo-brutal {
+  box-shadow: 5px 5px 0px rgba(0, 0, 0, 0.9);
+  transition: all 0.2s ease;
+}
+
+.neo-brutal:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0px rgba(0, 0, 0, 0.9);
+}
+
+.neo-brutal:active {
+  transform: translate(2px, 2px);
+  box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.9);
+}
+
+/* Cyber glow effect */
+.cyber-glow {
+  box-shadow: 
+    0 0 5px rgba(155, 135, 245, 0.5),
+    0 0 10px rgba(155, 135, 245, 0.3),
+    0 0 15px rgba(155, 135, 245, 0.2),
+    0 0 20px rgba(155, 135, 245, 0.1);
+  transition: all 0.3s ease;
+}
+
+.cyber-glow:hover {
+  box-shadow: 
+    0 0 5px rgba(155, 135, 245, 0.5),
+    0 0 10px rgba(155, 135, 245, 0.5),
+    0 0 15px rgba(155, 135, 245, 0.4),
+    0 0 20px rgba(155, 135, 245, 0.3),
+    0 0 25px rgba(155, 135, 245, 0.2);
+}
+
+/* Spinner animation */
+@keyframes spinner {
+  0% {
+    transform: rotate(0deg);
+    stroke-dashoffset: 280;
+  }
+  
+  50% {
+    stroke-dashoffset: 75;
+  }
+  
+  100% {
+    transform: rotate(360deg);
+    stroke-dashoffset: 280;
+  }
+}
+
+.animate-spinner {
+  animation: spinner 2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
 }

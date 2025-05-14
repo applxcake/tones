@@ -61,7 +61,9 @@ const SongTile = ({ song, className }: SongTileProps) => {
         className,
         isClicked && "scale-95",
         hasAnimated ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0",
-        isCurrentTrack && "ring-2 ring-neon-purple ring-opacity-60"
+        isCurrentTrack && "ring-2 ring-neon-purple ring-opacity-60",
+        "hover:transform hover:perspective-600 hover:rotate-y-2 hover:shadow-xl",
+        "transition-all duration-300"
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -70,11 +72,6 @@ const SongTile = ({ song, className }: SongTileProps) => {
         transition: "all 0.3s ease-out, transform 0.15s ease-out",
         transformStyle: "preserve-3d", // Enable 3D space for the element
       }}
-      // Add 3D tilt effect on hover
-      className={cn(
-        "hover:transform hover:perspective-600 hover:rotate-y-2 hover:shadow-xl",
-        "transition-all duration-300"
-      )}
     >
       <div className="aspect-square relative">
         <img 

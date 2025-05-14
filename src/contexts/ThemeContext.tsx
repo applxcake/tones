@@ -12,22 +12,29 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  // Get initial theme from system preference or stored preference
-  const getInitialTheme = (): ThemeMode => {
-    // Check localStorage
-    const storedTheme = localStorage.getItem('theme') as ThemeMode;
-    if (storedTheme) {
-      return storedTheme;
-    }
-    // Check system preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-      return 'light';
-    }
-    // Default to dark
-    return 'dark';
-  };
-
-  const [mode, setMode] = useState<ThemeMode>(getInitialTheme);
+  // Initialize with a default theme (we'll update it in useEffect)
+  const [mode, setMode] = useState<ThemeMode>('dark');
+  
+  // Get and set the initial theme from localStorage or system preference
+  useEffect(() => {
+    const getInitialTheme = (): ThemeMode => {
+      // Check localStorage first
+      const storedTheme = localStorage.getItem('theme') as ThemeMode;
+      if (storedTheme === 'dark' || storedTheme === 'light') {
+        return storedTheme;
+      }
+      
+      // Check system preference
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        return 'light';
+      }
+      
+      // Default to dark
+      return 'dark';
+    };
+    
+    setMode(getInitialTheme());
+  }, []);
 
   // Apply the theme when it changes
   useEffect(() => {

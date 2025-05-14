@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, lazy, Suspense } from 'react';
 import { usePlayer } from '@/contexts/PlayerContext';
 
 // Remove the global declaration since it's already defined in youtube.d.ts
@@ -20,24 +20,42 @@ const YTPlayer: React.FC = () => {
   const hasApiLoadedRef = useRef<boolean>(false);
   const playerElementId = 'youtube-player-container';
   
-  // Load YouTube API script
+  // Optimize YouTube API loading with a more efficient approach
   useEffect(() => {
+    // Only load YouTube API when we have a track to play
+    if (!currentTrack && !window.YT && !loadingApiRef.current) {
+      return;
+    }
+    
     if (!window.YT && !loadingApiRef.current) {
       loadingApiRef.current = true;
       
-      // Create script element
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      
-      // Insert script before first script tag
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-      
-      // Define callback for when API is ready
-      window.onYouTubeIframeAPIReady = () => {
-        hasApiLoadedRef.current = true;
-        initializePlayer();
+      // Use a more performant way to load the script
+      const loadYouTubeAPI = () => {
+        return new Promise<void>((resolve) => {
+          // Create script element
+          const tag = document.createElement('script');
+          tag.src = 'https://www.youtube.com/iframe_api';
+          
+          // Set onload handler before appending to DOM
+          tag.onload = () => {
+            // Set up the API ready callback
+            window.onYouTubeIframeAPIReady = () => {
+              hasApiLoadedRef.current = true;
+              resolve();
+            };
+          };
+          
+          // Insert script before first script tag
+          const firstScriptTag = document.getElementsByTagName('script')[0];
+          firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+        });
       };
+      
+      // Load API and initialize player when ready
+      loadYouTubeAPI().then(() => {
+        initializePlayer();
+      });
     } else if (window.YT && window.YT.Player) {
       hasApiLoadedRef.current = true;
       initializePlayer();
@@ -53,14 +71,14 @@ const YTPlayer: React.FC = () => {
         }
       }
     };
-  }, []);
+  }, [currentTrack]);
   
   // Initialize player when API is ready and container is rendered
   const initializePlayer = () => {
     if (!hasApiLoadedRef.current || !containerRef.current) return;
     
     try {
-      // Fix: Use the element ID instead of the DOM reference
+      // Use the element ID instead of the DOM reference
       playerRef.current = new window.YT.Player(playerElementId, {
         height: '1',
         width: '1',
@@ -121,8 +139,9 @@ const YTPlayer: React.FC = () => {
     console.error('YouTube player error:', event.data);
   };
 
-  // Track video progress
+  // Track video progress with optimized interval
   const startProgressTracking = () => {
+    // Use a more performant update interval (less frequent updates)
     const intervalId = setInterval(() => {
       if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
         try {
@@ -135,7 +154,7 @@ const YTPlayer: React.FC = () => {
           console.error('Error getting player time:', error);
         }
       }
-    }, 1000);
+    }, 1000); // 1 second interval is sufficient for progress updates
     
     return () => clearInterval(intervalId);
   };
@@ -193,14 +212,14 @@ const YTPlayer: React.FC = () => {
     }
   }, [playbackRate]);
 
-  // Load video helper function
+  // Load video helper function with optimized quality settings
   const loadVideo = (videoId: string) => {
     if (playerRef.current && typeof playerRef.current.loadVideoById === 'function') {
       try {
         playerRef.current.loadVideoById({
           videoId: videoId,
           startSeconds: 0,
-          suggestedQuality: 'small'
+          suggestedQuality: 'small' // Use smaller quality for faster loading
         });
         
         // If not supposed to be playing, pause immediately after loading

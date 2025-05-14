@@ -15,6 +15,8 @@ import VisualVolumePeaks from '@/components/VisualVolumePeaks';
 import { motion, AnimatePresence } from 'framer-motion';
 import GlitchText from '@/components/GlitchText';
 import NeonBorder from '@/components/NeonBorder';
+import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Home = () => {
   const [trendingSongs, setTrendingSongs] = useState([]);
@@ -27,6 +29,7 @@ const Home = () => {
   const [showFeatureAnimation, setShowFeatureAnimation] = useState(false);
   const navigate = useNavigate();
   const containerRef = useRef(null);
+  const isMobile = useIsMobile();
 
   // Background animation cycle
   useEffect(() => {

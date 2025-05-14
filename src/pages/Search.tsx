@@ -19,6 +19,7 @@ const Search = () => {
   const [nextPageToken, setNextPageToken] = useState<string | undefined>();
   const [searchResults, setSearchResults] = useState<YouTubeVideo[]>([]);
   const [userResults, setUserResults] = useState<any[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Get search query from URL
   useEffect(() => {
@@ -35,10 +36,13 @@ const Search = () => {
     queryFn: () => searchVideos(searchQuery),
     enabled: searchQuery.length > 0 && activeTab === 'songs',
     meta: {
-      onError: () => {
+      onError: (error) => {
+        console.error("Search query error:", error);
         toast.error("Error fetching search results. Using available content instead.");
       }
-    }
+    },
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // Update results when data changes
@@ -73,15 +77,18 @@ const Search = () => {
 
   // Load more results
   const loadMore = async () => {
-    if (nextPageToken) {
-      try {
-        const nextPage = await searchVideos(searchQuery, nextPageToken);
-        setSearchResults((prevResults) => [...prevResults, ...nextPage.items]);
-        setNextPageToken(nextPage.nextPageToken);
-      } catch (error) {
-        console.error("Error loading more results:", error);
-        toast.error("Couldn't load additional results.");
-      }
+    if (!nextPageToken) return;
+    
+    try {
+      setIsLoadingMore(true);
+      const nextPage = await searchVideos(searchQuery, nextPageToken);
+      setSearchResults((prevResults) => [...prevResults, ...nextPage.items]);
+      setNextPageToken(nextPage.nextPageToken);
+    } catch (error) {
+      console.error("Error loading more results:", error);
+      toast.error("Couldn't load additional results.");
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -164,10 +171,11 @@ const Search = () => {
                     <div className="mt-8 flex justify-center">
                       <Button 
                         onClick={loadMore} 
-                        variant="outline" 
+                        variant="outline"
+                        disabled={isLoadingMore}
                         className="hover:neon-glow-purple animate-pulse-shadow"
                       >
-                        Load More
+                        {isLoadingMore ? "Loading..." : "Load More"}
                       </Button>
                     </div>
                   )}

@@ -25,30 +25,38 @@ const Home = () => {
       try {
         setLoading(true);
         
-        // Use getTrendingMusic instead of searchYouTubeVideos for trending songs
-        // This will automatically return mock data if API fails
-        const trending = await getTrendingMusic();
-        setTrendingSongs(trending);
-        
-        // Fetch new releases
-        const releases = await searchYouTubeVideos('new music releases');
-        setNewReleases(releases);
-        
-        // Fetch recommended users
-        const users = await getAllUsers();
-        setRecommendedUsers(users);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        // Show toast notification
-        toast.error("Couldn't fetch all music data. Using available content instead.");
-        
-        // Ensure we have some data even if the API fails
-        if (trendingSongs.length === 0) {
+        // First get trending songs (most important data)
+        let trending = [];
+        try {
+          trending = await getTrendingMusic();
+          setTrendingSongs(trending);
+        } catch (trendingError) {
+          console.error('Error fetching trending songs:', trendingError);
+          toast.error("Couldn't load trending music. Using backup content.");
           setTrendingSongs(getMockTrendingSongs());
         }
-        if (newReleases.length === 0) {
+        
+        // Then try to get new releases
+        try {
+          const releases = await searchYouTubeVideos('new music releases 2025');
+          setNewReleases(releases);
+        } catch (releaseError) {
+          console.error('Error fetching new releases:', releaseError);
+          toast.error("Couldn't load new releases. Using backup content.");
           setNewReleases(getMockNewReleases());
         }
+        
+        // Finally try to get users (less critical)
+        try {
+          const users = await getAllUsers();
+          setRecommendedUsers(users);
+        } catch (userError) {
+          console.error('Error fetching users:', userError);
+          // No toast for users as it's less critical
+        }
+      } catch (error) {
+        console.error('Error in main fetch routine:', error);
+        toast.error("Had trouble loading content. Please check your connection.");
       } finally {
         setLoading(false);
       }

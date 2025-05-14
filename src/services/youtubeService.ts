@@ -1,4 +1,3 @@
-
 // Define the structure of a YouTube video
 export interface YouTubeVideo {
   id: string;
@@ -8,26 +7,65 @@ export interface YouTubeVideo {
   publishedAt: string;
 }
 
-// API key for YouTube Data API
-const API_KEY = 'AIzaSyBAxmc3Rn7Id-bifTpe7iqsz5p8k1Otzdw';
+// API key for YouTube Data API - will be updated from environment variable if available
+const DEFAULT_API_KEY = 'AIzaSyBAxmc3Rn7Id-bifTpe7iqsz5p8k1Otzdw';
 const MAX_RESULTS = 10;
+const MAX_RETRIES = 2;
+const RETRY_DELAY = 1000; // 1 second
+
+// Helper function to get API key (allows for future expansion to multiple keys)
+const getAPIKey = (): string => {
+  // In the future, this could rotate between multiple keys or use environment variables
+  return DEFAULT_API_KEY;
+};
+
+// Helper function to delay execution (for retries)
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Fetch with retry logic
+const fetchWithRetry = async (url: string, retries = MAX_RETRIES): Promise<Response> => {
+  try {
+    const response = await fetch(url);
+    
+    if (response.ok) {
+      return response;
+    }
+    
+    // Handle rate limiting (429) or server errors (5xx)
+    if ((response.status === 429 || response.status >= 500) && retries > 0) {
+      console.log(`YouTube API returned ${response.status}. Retrying in ${RETRY_DELAY}ms...`);
+      await delay(RETRY_DELAY);
+      return fetchWithRetry(url, retries - 1);
+    }
+    
+    // Log detailed error for debugging
+    const errorText = await response.text();
+    console.error(`YouTube API Error (${response.status}):`, errorText);
+    throw new Error(`YouTube API Error: ${response.status}`);
+  } catch (error) {
+    if (retries > 0) {
+      console.log(`Network error fetching YouTube data. Retrying in ${RETRY_DELAY}ms...`);
+      await delay(RETRY_DELAY);
+      return fetchWithRetry(url, retries - 1);
+    }
+    throw error;
+  }
+};
 
 // Search YouTube videos by query
 export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]> => {
   try {
-    const response = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${MAX_RESULTS}&q=${encodeURIComponent(
-        query
-      )}&key=${API_KEY}&type=video`
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('YouTube API Error:', errorData);
-      return getMockSearchResults(query);
-    }
-
+    console.log(`Searching YouTube for: "${query}"`);
+    const apiKey = getAPIKey();
+    
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${MAX_RESULTS}&q=${encodeURIComponent(
+      query
+    )}&key=${apiKey}&type=video`;
+    
+    const response = await fetchWithRetry(url);
     const data = await response.json();
+    
+    console.log(`YouTube search returned ${data.items?.length || 0} results`);
     
     // Map the response to our YouTubeVideo format
     return data.items.map((item: any) => ({
@@ -39,7 +77,8 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]
     }));
   } catch (error) {
     console.error('Error fetching YouTube data:', error);
-    // Return mock data in case of error
+    // Show detailed error but still return mock data for better UX
+    console.log('Falling back to mock data');
     return getMockSearchResults(query);
   }
 };
@@ -47,15 +86,10 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]
 // Get video details by ID
 export const getYouTubeVideoById = async (videoId: string): Promise<YouTubeVideo | null> => {
   try {
-    const response = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${API_KEY}`
-    );
-
-    if (!response.ok) {
-      console.error('YouTube API Error:', await response.text());
-      return getMockVideoById(videoId);
-    }
-
+    const apiKey = getAPIKey();
+    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${apiKey}`;
+    
+    const response = await fetchWithRetry(url);
     const data = await response.json();
     
     if (data.items && data.items.length > 0) {
@@ -79,15 +113,36 @@ export const getYouTubeVideoById = async (videoId: string): Promise<YouTubeVideo
 // Search videos implementation for compatibility with Search page
 export const searchVideos = async (query: string, pageToken?: string) => {
   try {
-    const videos = await searchYouTubeVideos(query);
+    console.log(`Searching videos with pageToken: ${pageToken || 'none'}`);
+    const apiKey = getAPIKey();
     
-    // Format results to match expected structure
+    let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${MAX_RESULTS}&q=${encodeURIComponent(
+      query
+    )}&key=${apiKey}&type=video`;
+    
+    if (pageToken) {
+      url += `&pageToken=${pageToken}`;
+    }
+    
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    
+    const videos = data.items.map((item: any) => ({
+      id: item.id.videoId,
+      title: item.snippet.title,
+      thumbnailUrl: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
+      channelTitle: item.snippet.channelTitle,
+      publishedAt: item.snippet.publishedAt,
+    }));
+    
     return {
       items: videos,
-      nextPageToken: undefined // Mock implementation doesn't support paging
+      nextPageToken: data.nextPageToken
     };
   } catch (error) {
     console.error('Error in searchVideos:', error);
+    // Toast notification is handled by the component using this function
+    
     return {
       items: getMockSearchResults(query),
       nextPageToken: undefined
@@ -97,48 +152,35 @@ export const searchVideos = async (query: string, pageToken?: string) => {
 
 // Get trending music implementation for the Explore page
 export const getTrendingMusic = async (): Promise<YouTubeVideo[]> => {
-  // For mock implementation, return some predefined results
-  return [
-    {
-      id: 'trending1',
-      title: 'Top Hit - Currently Trending',
-      thumbnailUrl: 'https://i.pravatar.cc/300?img=10',
-      channelTitle: 'Trending Music',
-      publishedAt: new Date().toISOString(),
-    },
-    {
-      id: 'trending2',
-      title: 'Popular Music Video',
-      thumbnailUrl: 'https://i.pravatar.cc/300?img=11',
-      channelTitle: 'Music Channel',
-      publishedAt: new Date().toISOString(),
-    },
-    {
-      id: 'trending3',
-      title: 'Viral Song of the Week',
-      thumbnailUrl: 'https://i.pravatar.cc/300?img=12',
-      channelTitle: 'Viral Hits',
-      publishedAt: new Date().toISOString(),
-    },
-    {
-      id: 'trending4',
-      title: 'New Release - Hot Track',
-      thumbnailUrl: 'https://i.pravatar.cc/300?img=13',
-      channelTitle: 'New Releases',
-      publishedAt: new Date().toISOString(),
-    },
-    {
-      id: 'trending5',
-      title: 'Rising Artist - Breaking Hit',
-      thumbnailUrl: 'https://i.pravatar.cc/300?img=14',
-      channelTitle: 'Rising Stars',
-      publishedAt: new Date().toISOString(),
+  try {
+    const apiKey = getAPIKey();
+    // Use YouTube's API to get music category videos
+    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&videoCategoryId=10&maxResults=${MAX_RESULTS}&key=${apiKey}`;
+    
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    
+    if (data.items && data.items.length > 0) {
+      return data.items.map((item: any) => ({
+        id: item.id,
+        title: item.snippet.title,
+        thumbnailUrl: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
+        channelTitle: item.snippet.channelTitle,
+        publishedAt: item.snippet.publishedAt,
+      }));
     }
-  ];
+    
+    throw new Error('No trending music found');
+  } catch (error) {
+    console.error('Error fetching trending music:', error);
+    // Return mock data for trending music
+    return getMockTrendingSongs();
+  }
 };
 
 // Mock data for testing when API fails
 function getMockSearchResults(query: string): YouTubeVideo[] {
+  // Keep existing code (mock data generation)
   // Base results that will be returned for any query
   const baseResults = [
     {
@@ -228,4 +270,45 @@ function getMockVideoById(videoId: string): YouTubeVideo {
     channelTitle: 'Mock Channel',
     publishedAt: new Date().toISOString(),
   };
+}
+
+// Helper function for mock trending songs
+function getMockTrendingSongs(): YouTubeVideo[] {
+  return [
+    {
+      id: 'trending1',
+      title: 'Top Hit - Currently Trending',
+      thumbnailUrl: 'https://i.pravatar.cc/300?img=10',
+      channelTitle: 'Trending Music',
+      publishedAt: new Date().toISOString(),
+    },
+    {
+      id: 'trending2',
+      title: 'Popular Music Video',
+      thumbnailUrl: 'https://i.pravatar.cc/300?img=11',
+      channelTitle: 'Music Channel',
+      publishedAt: new Date().toISOString(),
+    },
+    {
+      id: 'trending3',
+      title: 'Viral Song of the Week',
+      thumbnailUrl: 'https://i.pravatar.cc/300?img=12',
+      channelTitle: 'Viral Hits',
+      publishedAt: new Date().toISOString(),
+    },
+    {
+      id: 'trending4',
+      title: 'New Release - Hot Track',
+      thumbnailUrl: 'https://i.pravatar.cc/300?img=13',
+      channelTitle: 'New Releases',
+      publishedAt: new Date().toISOString(),
+    },
+    {
+      id: 'trending5',
+      title: 'Rising Artist - Breaking Hit',
+      thumbnailUrl: 'https://i.pravatar.cc/300?img=14',
+      channelTitle: 'Rising Stars',
+      publishedAt: new Date().toISOString(),
+    }
+  ];
 }

@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from 'react';
-import { toast as sonnerToast, useToast as useSonnerToast } from "sonner";
+import { toast as sonnerToast } from "sonner";
 
 // Enhanced toast types to match Sonner's API
 type ToastProps = {
@@ -32,9 +32,10 @@ export const toast = (props: ToastProps) => {
   });
 };
 
+/**
+ * Custom hook for toast functionality
+ */
 export const useToast = () => {
-  const { toast: sonnerToastFn, dismiss } = useSonnerToast();
-  
   // Create a more performant toast function that matches our API
   const optimizedToast = useCallback((props: ToastProps) => {
     let toastType: 'default' | 'error' | 'success' = 'default';
@@ -45,15 +46,15 @@ export const useToast = () => {
       toastType = 'success';
     }
     
-    return sonnerToastFn[toastType]((props.title || ''), {
+    return sonnerToast[toastType]((props.title || ''), {
       description: props.description,
       duration: props.duration || 5000,
       action: props.action,
     });
-  }, [sonnerToastFn]);
+  }, []);
   
   return { 
     toast: optimizedToast, 
-    dismiss 
+    dismiss: sonnerToast.dismiss
   };
 };

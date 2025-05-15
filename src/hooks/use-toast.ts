@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { toast as sonnerToast } from "sonner";
 
 // Enhanced toast types to match Sonner's API

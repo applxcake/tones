@@ -24,12 +24,12 @@ const SongTile = ({
   isFavorited = false,
   onFavoriteChange 
 }: SongTileProps) => {
-  const { currentTrack, isPlaying, playTrack, togglePlayPause } = usePlayer();
+  const { currentTrack, isPlaying, playTrack, togglePlayPause, isCurrentSong } = usePlayer();
   const [imageLoaded, setImageLoaded] = useState(false);
-  const isCurrentSong = currentTrack?.id === song.id;
+  const isCurrentlyPlaying = isCurrentSong(song.id);
 
   const handlePlayPause = () => {
-    if (isCurrentSong && isPlaying) {
+    if (isCurrentlyPlaying && isPlaying) {
       togglePlayPause();
     } else {
       playTrack(song);
@@ -43,6 +43,7 @@ const SongTile = ({
       className={cn(
         "group relative bg-card rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300",
         "border border-border/50 hover:border-primary/30",
+        isCurrentlyPlaying && "ring-2 ring-green-500 border-green-500/50 shadow-green-500/20",
         className
       )}
     >
@@ -54,7 +55,8 @@ const SongTile = ({
           className={cn(
             "w-full h-full object-cover transition-all duration-300",
             imageLoaded ? "opacity-100" : "opacity-0",
-            "group-hover:scale-105"
+            "group-hover:scale-105",
+            isCurrentlyPlaying && isPlaying && "animate-pulse"
           )}
           onLoad={() => setImageLoaded(true)}
         />
@@ -71,11 +73,11 @@ const SongTile = ({
             className={cn(
               "opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-75 group-hover:scale-100",
               "bg-white/90 hover:bg-white text-black shadow-lg",
-              isCurrentSong && isPlaying && "opacity-100 scale-100"
+              isCurrentlyPlaying && "opacity-100 scale-100 bg-green-500 hover:bg-green-600 text-white"
             )}
             onClick={handlePlayPause}
           >
-            {isCurrentSong && isPlaying ? (
+            {isCurrentlyPlaying && isPlaying ? (
               <Pause className="h-5 w-5" />
             ) : (
               <Play className="h-5 w-5 ml-0.5" />
@@ -100,19 +102,30 @@ const SongTile = ({
         </div>
 
         {/* Now Playing Indicator */}
-        {isCurrentSong && (
+        {isCurrentlyPlaying && (
           <div className="absolute bottom-2 left-2">
-            <div className="flex items-center gap-1 bg-primary/90 text-primary-foreground px-2 py-1 rounded-full text-xs">
-              <div className="w-2 h-2 bg-current rounded-full animate-pulse" />
-              Now Playing
-            </div>
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="flex items-center gap-1 bg-green-500/90 text-white px-2 py-1 rounded-full text-xs"
+            >
+              <motion.div 
+                className="w-2 h-2 bg-current rounded-full"
+                animate={isPlaying ? { scale: [1, 1.5, 1] } : {}}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+              />
+              {isPlaying ? 'Playing' : 'Paused'}
+            </motion.div>
           </div>
         )}
       </div>
 
       {/* Song Info */}
       <div className="p-3">
-        <h3 className="font-medium text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors">
+        <h3 className={cn(
+          "font-medium text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors",
+          isCurrentlyPlaying && "text-green-500"
+        )}>
           {song.title}
         </h3>
         <p className="text-xs text-muted-foreground line-clamp-1">
@@ -121,7 +134,10 @@ const SongTile = ({
       </div>
 
       {/* Hover Glow Effect */}
-      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      <div className={cn(
+        "absolute inset-0 rounded-lg bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none",
+        isCurrentlyPlaying && "from-green-500/0 via-green-500/10 to-green-500/0 opacity-50"
+      )} />
     </motion.div>
   );
 };

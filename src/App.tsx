@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -15,6 +16,7 @@ import Playlists from '@/pages/Playlists';
 import PlaylistDetails from '@/pages/PlaylistDetails';
 import UserProfile from '@/pages/UserProfile';
 import Favorites from '@/pages/Favorites';
+import Downloads from '@/pages/Downloads';
 
 // Components
 import CleanLayout from '@/components/CleanLayout';
@@ -59,6 +61,7 @@ function App() {
                   <Route path="/explore" element={<Explore />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/favorites" element={<Favorites />} />
+                  <Route path="/downloads" element={<Downloads />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/playlists" element={<Playlists />} />
                   <Route path="/playlists/:id" element={<PlaylistDetails />} />

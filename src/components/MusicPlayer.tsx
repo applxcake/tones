@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -29,16 +30,22 @@ const MusicPlayer = () => {
     shuffleMode,
     toggleShuffle,
     loopMode,
-    toggleLoop
+    toggleLoop,
+    progress,
+    duration,
+    seekToPosition
   } = usePlayer();
   
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [previousVolume, setPreviousVolume] = useState(volume);
+
+  // Update current time based on progress
+  useEffect(() => {
+    setCurrentTime((progress / 100) * duration);
+  }, [progress, duration]);
 
   // Format time helper
   const formatTime = (seconds: number) => {
@@ -64,6 +71,11 @@ const MusicPlayer = () => {
     setIsLiked(!isLiked);
   };
 
+  // Handle progress bar changes
+  const handleProgressChange = ([value]: number[]) => {
+    seekToPosition(value);
+  };
+
   if (!currentTrack) {
     return null;
   }
@@ -80,18 +92,32 @@ const MusicPlayer = () => {
           {/* Left Section - Track Info */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="relative">
-              <img
+              <motion.img
                 src={currentTrack.thumbnailUrl}
                 alt={currentTrack.title}
                 className={cn(
                   "w-14 h-14 rounded-lg object-cover",
                   isPlaying && "animate-pulse-soft"
                 )}
+                animate={isPlaying ? { rotate: 360 } : {}}
+                transition={{ 
+                  duration: 30, 
+                  repeat: isPlaying ? Infinity : 0, 
+                  ease: "linear" 
+                }}
               />
               {isPlaying && (
-                <div className="absolute inset-0 bg-black/20 rounded-lg flex items-center justify-center">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                </div>
+                <motion.div 
+                  className="absolute inset-0 bg-black/20 rounded-lg flex items-center justify-center"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <motion.div 
+                    className="w-2 h-2 bg-green-500 rounded-full"
+                    animate={{ scale: [1, 1.5, 1] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                  />
+                </motion.div>
               )}
             </div>
             
@@ -114,7 +140,7 @@ const MusicPlayer = () => {
               )}
             >
               <motion.div
-                whileTap={{ scale: 1.2 }}
+                whileTap={{ scale: 1.3 }}
                 transition={{ duration: 0.1 }}
               >
                 <Heart className={cn("w-4 h-4", isLiked && "fill-current")} />
@@ -135,7 +161,9 @@ const MusicPlayer = () => {
                   shuffleMode && "text-green-500"
                 )}
               >
-                <Shuffle className="w-4 h-4" />
+                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                  <Shuffle className="w-4 h-4" />
+                </motion.div>
               </Button>
 
               <Button
@@ -144,7 +172,9 @@ const MusicPlayer = () => {
                 onClick={previousTrack}
                 className="w-8 h-8 text-zinc-400 hover:text-white transition-colors"
               >
-                <SkipBack className="w-4 h-4" />
+                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                  <SkipBack className="w-4 h-4" />
+                </motion.div>
               </Button>
 
               <Button
@@ -156,20 +186,20 @@ const MusicPlayer = () => {
                   {isPlaying ? (
                     <motion.div
                       key="pause"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0 }}
-                      transition={{ duration: 0.1 }}
+                      initial={{ scale: 0, rotate: 180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      exit={{ scale: 0, rotate: -180 }}
+                      transition={{ duration: 0.2 }}
                     >
                       <Pause className="w-5 h-5" />
                     </motion.div>
                   ) : (
                     <motion.div
                       key="play"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0 }}
-                      transition={{ duration: 0.1 }}
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      exit={{ scale: 0, rotate: 180 }}
+                      transition={{ duration: 0.2 }}
                     >
                       <Play className="w-5 h-5 ml-0.5" />
                     </motion.div>
@@ -183,7 +213,9 @@ const MusicPlayer = () => {
                 onClick={nextTrack}
                 className="w-8 h-8 text-zinc-400 hover:text-white transition-colors"
               >
-                <SkipForward className="w-4 h-4" />
+                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                  <SkipForward className="w-4 h-4" />
+                </motion.div>
               </Button>
 
               <Button
@@ -195,7 +227,9 @@ const MusicPlayer = () => {
                   loopMode !== 'none' && "text-green-500"
                 )}
               >
-                <Repeat className="w-4 h-4" />
+                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                  <Repeat className="w-4 h-4" />
+                </motion.div>
               </Button>
             </div>
 
@@ -208,7 +242,7 @@ const MusicPlayer = () => {
               <div className="flex-1 group">
                 <Slider
                   value={[progress]}
-                  onValueChange={([value]) => setProgress(value)}
+                  onValueChange={handleProgressChange}
                   max={100}
                   step={0.1}
                   className="w-full"
@@ -229,7 +263,9 @@ const MusicPlayer = () => {
               onClick={() => setShowQueue(!showQueue)}
               className="w-8 h-8 text-zinc-400 hover:text-white transition-colors"
             >
-              <List className="w-4 h-4" />
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                <List className="w-4 h-4" />
+              </motion.div>
             </Button>
 
             <div className="flex items-center gap-2">
@@ -239,11 +275,13 @@ const MusicPlayer = () => {
                 onClick={toggleMute}
                 className="w-8 h-8 text-zinc-400 hover:text-white transition-colors"
               >
-                {isMuted || volume === 0 ? (
-                  <VolumeX className="w-4 h-4" />
-                ) : (
-                  <Volume2 className="w-4 h-4" />
-                )}
+                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                  {isMuted || volume === 0 ? (
+                    <VolumeX className="w-4 h-4" />
+                  ) : (
+                    <Volume2 className="w-4 h-4" />
+                  )}
+                </motion.div>
               </Button>
               
               <div className="w-24 group">

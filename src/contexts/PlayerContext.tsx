@@ -20,6 +20,7 @@ interface PlayerContextType {
   loopMode: LoopMode; 
   shuffleMode: boolean;
   showQueue: boolean;
+  isCurrentSong: (songId: string) => boolean;
   setLikedSongs: React.Dispatch<React.SetStateAction<Song[]>>;
   setRecentlyPlayed: React.Dispatch<React.SetStateAction<Song[]>>;
   playTrack: (song: Song) => void;
@@ -58,6 +59,11 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const [shuffleMode, setShuffleMode] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
   const [lastProgressUpdateTime, setLastProgressUpdateTime] = useState(0);
+
+  // Helper function to check if a song is currently playing
+  const isCurrentSong = useCallback((songId: string): boolean => {
+    return currentTrack?.id === songId;
+  }, [currentTrack]);
 
   // Set up a progress tracking timer
   useEffect(() => {
@@ -112,9 +118,23 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   }, [progress, currentTrack, loopMode]);
 
   const playTrack = useCallback(async (song: Song) => {
+    // If the same song is currently playing, just toggle pause
+    if (currentTrack?.id === song.id && isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    
+    // If the same song is paused, resume it
+    if (currentTrack?.id === song.id && !isPlaying) {
+      setIsPlaying(true);
+      return;
+    }
+
+    // Play new song
     setCurrentTrack(song);
     setIsPlaying(true);
     setProgress(0); // Reset progress for new track
+    setDuration(180); // Mock duration - in real app this would come from audio metadata
 
     // Update recently played list locally
     setRecentlyPlayed(prev => {
@@ -157,7 +177,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       console.error('Error saving recently played song:', error);
       // Continue without interrupting user experience
     }
-  }, []);
+  }, [currentTrack, isPlaying]);
 
   const togglePlayPause = () => {
     setIsPlaying(!isPlaying);
@@ -165,6 +185,10 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
 
   const addToQueue = (song: Song) => {
     setQueue(prev => [...prev, song]);
+    toast({
+      title: "Added to Queue",
+      description: `${song.title} has been added to your queue.`,
+    });
   };
 
   const removeFromQueue = (songId: string) => {
@@ -318,6 +342,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     loopMode,
     shuffleMode,
     showQueue,
+    isCurrentSong,
     setLikedSongs,
     setRecentlyPlayed,
     playTrack,

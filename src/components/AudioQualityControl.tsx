@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Volume2, Equalizer } from 'lucide-react';
+import { Settings, Volume2, Settings2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface AudioSettings {
@@ -76,7 +76,7 @@ const AudioQualityControl = ({ onSettingsChange, className }: AudioQualityContro
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-medium text-sm flex items-center gap-2">
-              <Equalizer size={16} />
+              <Settings2 size={16} />
               Audio Settings
             </h4>
             <Button variant="ghost" size="sm" onClick={resetSettings}>

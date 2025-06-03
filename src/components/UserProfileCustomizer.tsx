@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,8 +56,8 @@ const UserProfileCustomizer = ({ className }: UserProfileCustomizerProps) => {
     } else if (user) {
       setProfile(prev => ({
         ...prev,
-        displayName: user.email?.split('@')[0] || '',
-        avatar: user.user_metadata?.avatar_url || '',
+        displayName: user.username || user.email?.split('@')[0] || '',
+        avatar: user.avatarUrl || '',
       }));
     }
   }, [user]);
@@ -87,7 +86,6 @@ const UserProfileCustomizer = ({ className }: UserProfileCustomizerProps) => {
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated!",
-        variant: "success"
       });
     } catch (error) {
       toast({

@@ -1,210 +1,198 @@
 
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { searchVideos, YouTubeVideo } from '@/services/youtubeService';
-import { searchUsers } from '@/services/userService';
+import { useSearchParams } from 'react-router-dom';
+import { useDebounce } from '@/hooks/use-debounce-value';
+import { searchVideos } from '@/services/youtubeService';
+import { toast } from '@/hooks/use-toast';
 import SearchBar from '@/components/SearchBar';
 import SongTile from '@/components/SongTile';
-import UserCard from '@/components/UserCard';
+import EnhancedSearchFilters, { SearchFilters } from '@/components/EnhancedSearchFilters';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Search as SearchIcon, Filter } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const Search = () => {
-  const location = useLocation();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('songs');
-  const [nextPageToken, setNextPageToken] = useState<string | undefined>();
-  const [searchResults, setSearchResults] = useState<YouTubeVideo[]>([]);
-  const [userResults, setUserResults] = useState<any[]>([]);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [nextPageToken, setNextPageToken] = useState(null);
+  const [filters, setFilters] = useState<SearchFilters>({});
+  const [hasSearched, setHasSearched] = useState(false);
+  
+  const debouncedQuery = useDebounce(query, 500);
 
-  // Get search query from URL
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const q = params.get('q');
-    if (q) {
-      setSearchQuery(q);
+    const urlQuery = searchParams.get('q');
+    if (urlQuery && urlQuery !== query) {
+      setQuery(urlQuery);
     }
-  }, [location.search]);
+  }, [searchParams]);
 
-  // Search for videos with proper React Query V5 format
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['searchVideos', searchQuery],
-    queryFn: () => searchVideos(searchQuery),
-    enabled: searchQuery.length > 0 && activeTab === 'songs',
-    meta: {
-      onError: (error) => {
-        console.error("Search query error:", error);
-        toast.error("Error fetching search results. Using available content instead.");
-      }
-    },
-    retry: 2,
-    retryDelay: 1000,
-  });
-
-  // Update results when data changes
   useEffect(() => {
-    if (data) {
-      setSearchResults(data.items);
-      setNextPageToken(data.nextPageToken);
+    if (debouncedQuery) {
+      handleSearch(debouncedQuery, true);
     }
-  }, [data]);
+  }, [debouncedQuery, filters]);
 
-  // Search for users when tab is 'users'
-  useEffect(() => {
-    if (searchQuery && activeTab === 'users') {
-      const fetchUsers = async () => {
-        try {
-          const results = await searchUsers(searchQuery);
-          setUserResults(results);
-        } catch (error) {
-          console.error("Error searching users:", error);
-          toast.error("Couldn't load user search results.");
-          setUserResults([]);
-        }
+  const buildSearchQuery = (baseQuery: string, searchFilters: SearchFilters) => {
+    let enhancedQuery = baseQuery;
+    
+    if (searchFilters.genre) {
+      enhancedQuery += ` ${searchFilters.genre} music`;
+    }
+    
+    if (searchFilters.duration) {
+      const durationMap = {
+        short: 'short',
+        medium: 'medium', 
+        long: 'long'
       };
-      fetchUsers();
+      enhancedQuery += ` ${durationMap[searchFilters.duration]} duration`;
     }
-  }, [searchQuery, activeTab]);
-
-  // Handle search submission
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
+    
+    return enhancedQuery;
   };
 
-  // Load more results
-  const loadMore = async () => {
-    if (!nextPageToken) return;
+  const handleSearch = async (searchQuery: string, isNewSearch = false) => {
+    if (!searchQuery.trim()) return;
+    
+    setLoading(true);
+    setHasSearched(true);
     
     try {
-      setIsLoadingMore(true);
-      const nextPage = await searchVideos(searchQuery, nextPageToken);
-      setSearchResults((prevResults) => [...prevResults, ...nextPage.items]);
-      setNextPageToken(nextPage.nextPageToken);
+      const enhancedQuery = buildSearchQuery(searchQuery, filters);
+      const pageToken = isNewSearch ? undefined : nextPageToken;
+      
+      const response = await searchVideos(enhancedQuery, pageToken);
+      
+      if (isNewSearch) {
+        setResults(response.items);
+        setSearchParams({ q: searchQuery });
+      } else {
+        setResults(prev => [...prev, ...response.items]);
+      }
+      
+      setNextPageToken(response.nextPageToken);
     } catch (error) {
-      console.error("Error loading more results:", error);
-      toast.error("Couldn't load additional results.");
+      console.error('Search error:', error);
+      toast({
+        title: "Search Error",
+        description: "Failed to search for videos. Please try again.",
+        variant: "destructive"
+      });
     } finally {
-      setIsLoadingMore(false);
+      setLoading(false);
     }
   };
 
-  // Change active tab
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
+  const handleLoadMore = () => {
+    if (nextPageToken && !loading) {
+      handleSearch(query, false);
+    }
   };
 
-  // Show error state if error occurs and no results
-  const showError = error && searchResults.length === 0;
+  const handleFiltersChange = (newFilters: SearchFilters) => {
+    setFilters(newFilters);
+  };
 
   return (
-    <div className="pt-6 pb-24 animate-slide-in">
-      <div className="flex flex-col items-center justify-center mb-10">
-        <h1 className="text-3xl font-bold mb-6 text-center">Find your favorites</h1>
-        <SearchBar onSearch={handleSearch} className="w-full max-w-2xl" />
+    <div className="space-y-6">
+      {/* Search Header */}
+      <div className="space-y-4">
+        <SearchBar 
+          onSearch={(searchQuery) => {
+            setQuery(searchQuery);
+            handleSearch(searchQuery, true);
+          }}
+          placeholder="Search for songs, artists, or albums..."
+          defaultValue={query}
+        />
+        
+        <EnhancedSearchFilters 
+          onFiltersChange={handleFiltersChange}
+          className="w-full"
+        />
       </div>
 
-      {searchQuery ? (
-        <div>
-          <Tabs defaultValue="songs" value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="w-full max-w-md mx-auto mb-8">
-              <TabsTrigger value="songs" className="flex-1">Songs</TabsTrigger>
-              <TabsTrigger value="users" className="flex-1">Users</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="songs">
-              <h2 className="text-xl font-semibold mb-4">
-                Songs matching "{searchQuery}"
-              </h2>
+      {/* Results */}
+      {hasSearched && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <SearchIcon className="h-6 w-6" />
+              Search Results
+              {query && (
+                <span className="text-muted-foreground font-normal">
+                  for "{query}"
+                </span>
+              )}
+            </h2>
+            {results.length > 0 && (
+              <span className="text-sm text-muted-foreground">
+                {results.length} results
+              </span>
+            )}
+          </div>
 
-              {isLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <div key={i} className="glass-panel rounded-lg overflow-hidden">
-                      <Skeleton className="aspect-square w-full skeleton" />
-                      <div className="p-3">
-                        <Skeleton className="h-4 w-full mb-2 skeleton" style={{animationDelay: `${i * 0.05}s`}} />
-                        <Skeleton className="h-3 w-3/4 skeleton" style={{animationDelay: `${i * 0.1}s`}} />
-                        
-                        {/* Add loading shimmer effect bars */}
-                        <div className="flex gap-1 mt-2">
-                          {Array.from({ length: 5 }).map((_, j) => (
-                            <Skeleton 
-                              key={j} 
-                              className="h-2 w-full skeleton" 
-                              style={{ 
-                                animationDelay: `${j * 0.1 + i * 0.05}s`,
-                                height: `${4 + Math.random() * 4}px`
-                              }} 
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+          {loading && results.length === 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="aspect-square rounded-lg" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-3/4" />
                 </div>
-              ) : showError ? (
-                <div className="py-12 text-center">
-                  <p className="text-gray-400 mb-4">Unable to fetch songs for "{searchQuery}"</p>
-                  <Button onClick={() => refetch()} variant="outline" className="hover:neon-glow-purple">
-                    Try Again
+              ))}
+            </div>
+          ) : results.length === 0 ? (
+            <div className="text-center py-12">
+              <SearchIcon className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-semibold mb-2">No results found</h3>
+              <p className="text-muted-foreground">
+                Try adjusting your search terms or filters
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {results.map((song, index) => (
+                  <motion.div
+                    key={song.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <SongTile song={song} showFavoriteButton />
+                  </motion.div>
+                ))}
+              </div>
+              
+              {nextPageToken && (
+                <div className="text-center pt-6">
+                  <Button 
+                    onClick={handleLoadMore}
+                    disabled={loading}
+                    variant="outline"
+                    size="lg"
+                  >
+                    {loading ? 'Loading...' : 'Load More Results'}
                   </Button>
                 </div>
-              ) : searchResults.length === 0 ? (
-                <div className="py-12 text-center">
-                  <p className="text-gray-400">No songs found for "{searchQuery}"</p>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 scroll-snap-container">
-                    {searchResults.map((video) => (
-                      <div className="scroll-snap-item" key={video.id}>
-                        <SongTile song={video} />
-                      </div>
-                    ))}
-                  </div>
-
-                  {nextPageToken && (
-                    <div className="mt-8 flex justify-center">
-                      <Button 
-                        onClick={loadMore} 
-                        variant="outline"
-                        disabled={isLoadingMore}
-                        className="hover:neon-glow-purple animate-pulse-shadow"
-                      >
-                        {isLoadingMore ? "Loading..." : "Load More"}
-                      </Button>
-                    </div>
-                  )}
-                </>
               )}
-            </TabsContent>
-            
-            <TabsContent value="users">
-              <h2 className="text-xl font-semibold mb-4">
-                Users matching "{searchQuery}"
-              </h2>
-
-              {userResults.length === 0 ? (
-                <div className="py-12 text-center">
-                  <p className="text-gray-400">No users found for "{searchQuery}"</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {userResults.map((user) => (
-                    <UserCard key={user.id} user={user} />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+            </>
+          )}
         </div>
-      ) : (
-        <div className="py-12 text-center max-w-md mx-auto">
-          <p className="text-gray-400">Search for your favorite music or connect with other users</p>
+      )}
+
+      {!hasSearched && (
+        <div className="text-center py-12">
+          <SearchIcon className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h3 className="text-xl font-semibold mb-2">Start your search</h3>
+          <p className="text-muted-foreground">
+            Enter a song, artist, or album name to find music
+          </p>
         </div>
       )}
     </div>

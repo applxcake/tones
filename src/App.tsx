@@ -60,6 +60,7 @@ function App() {
                   <Route path="/search" element={<Search />} />
                   <Route path="/explore" element={<Explore />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/favorites" element={<Favorites />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/playlists" element={<Playlists />} />
                   <Route path="/playlists/:id" element={<PlaylistDetails />} />

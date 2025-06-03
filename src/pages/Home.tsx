@@ -4,12 +4,15 @@ import { toast } from '@/hooks/use-toast';
 import ScrollableRow from '@/components/ScrollableRow';
 import SongTile from '@/components/SongTile';
 import UserCard from '@/components/UserCard';
+import RecommendationEngine from '@/components/RecommendationEngine';
+import UserProfileCustomizer from '@/components/UserProfileCustomizer';
+import AudioQualityControl from '@/components/AudioQualityControl';
 import { searchYouTubeVideos, getTrendingMusic } from '@/services/youtubeService';
 import { getAllUsers } from '@/services/userService';
 import GenreExplorer from '@/components/GenreExplorer';
 import SearchBar from '@/components/SearchBar';
 import TrendingCarousel from '@/components/TrendingCarousel';
-import { Sparkle, Music, Volume2, Disc, Radio, Headphones } from 'lucide-react';
+import { Sparkle, Music, Volume2, Disc, Radio, Headphones, Settings } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import VisualVolumePeaks from '@/components/VisualVolumePeaks';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -446,8 +449,9 @@ const Home = () => {
       </AnimatePresence>
 
       <div className="mb-8">
-        <motion.div variants={itemVariants}>
-          <SearchBar onSearch={handleSearch} className="mb-8" />
+        <motion.div variants={itemVariants} className="flex items-center justify-between mb-4">
+          <SearchBar onSearch={handleSearch} className="flex-1 mr-4" />
+          <AudioQualityControl />
         </motion.div>
         
         <motion.h1 
@@ -566,6 +570,14 @@ const Home = () => {
           </div>
         </motion.div>
         
+        {/* New Recommendations Section */}
+        <motion.section 
+          className="mb-10"
+          variants={itemVariants}
+        >
+          <RecommendationEngine />
+        </motion.section>
+        
         {/* New Featured Genres Section with Interactive Elements */}
         <motion.div
           className="mb-10 overflow-hidden"
@@ -661,11 +673,19 @@ const Home = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 * index, duration: 0.4 }}
               >
-                <SongTile song={song} className="min-w-[200px] max-w-[200px]" />
+                <SongTile song={song} className="min-w-[200px] max-w-[200px]" showFavoriteButton />
               </motion.div>
             ))}
           </ScrollableRow>
         </NeonBorder>
+      </motion.section>
+      
+      {/* Profile Customization Section */}
+      <motion.section 
+        className="mb-10"
+        variants={itemVariants}
+      >
+        <UserProfileCustomizer />
       </motion.section>
       
       {recommendedUsers.length > 0 && (

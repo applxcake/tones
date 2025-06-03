@@ -1,162 +1,107 @@
 
-import { useState, useEffect } from 'react';
-import { Grip, X, ListMusic, Music } from 'lucide-react';
-import { usePlayer } from '@/contexts/PlayerContext';
-import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Play, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { usePlayer } from '@/contexts/PlayerContext';
 
-interface SongQueueDrawerProps {
-  className?: string;
-}
-
-const SongQueueDrawer: React.FC<SongQueueDrawerProps> = ({ className }) => {
-  const { queue, removeFromQueue, clearQueue, playTrack } = usePlayer();
-  const [isOpen, setIsOpen] = useState(false);
-  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
-  const [localQueue, setLocalQueue] = useState(queue);
-  
-  // Update local queue when the actual queue changes
-  useEffect(() => {
-    setLocalQueue(queue);
-  }, [queue]);
-
-  // Handle drag start
-  const handleDragStart = (index: number) => {
-    setDraggingIndex(index);
-  };
-
-  // Handle drag over
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  // Handle drop to reorder
-  const handleDrop = (targetIndex: number) => {
-    if (draggingIndex === null) return;
-    
-    const newQueue = [...localQueue];
-    const [draggedItem] = newQueue.splice(draggingIndex, 1);
-    newQueue.splice(targetIndex, 0, draggedItem);
-    
-    // Update local state (real implementation would update context)
-    setLocalQueue(newQueue);
-    setDraggingIndex(null);
-  };
-
-  // Toggle the drawer
-  const toggleDrawer = () => {
-    setIsOpen(!isOpen);
-  };
+const SongQueueDrawer = () => {
+  const { queue, showQueue, setShowQueue, playTrack, currentTrack } = usePlayer();
 
   return (
-    <>
-      {/* Toggle button */}
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        onClick={toggleDrawer}
-        className={cn(
-          "fixed right-4 top-1/2 transform -translate-y-1/2 z-40",
-          "rounded-full h-12 w-12 bg-black/40 hover:bg-black/60 backdrop-blur-sm",
-          "border border-white/10 transition-all duration-300",
-          isOpen && "opacity-0 pointer-events-none"
-        )}
-      >
-        <ListMusic className="h-5 w-5 text-white" />
-      </Button>
-
-      {/* Queue Drawer */}
-      <div 
-        className={cn(
-          "fixed top-0 bottom-24 right-0 z-50 w-80 glass-panel border-l border-white/10",
-          "transform transition-transform duration-300 ease-out",
-          isOpen ? "translate-x-0" : "translate-x-full",
-          className
-        )}
-      >
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
-          <div className="flex items-center">
-            <ListMusic className="h-5 w-5 mr-2 text-neon-purple" />
-            <h3 className="font-bold">Play Queue</h3>
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={clearQueue}
-              disabled={localQueue.length === 0}
-              className="text-xs hover:text-red-400"
-            >
-              Clear
-            </Button>
-            <Button variant="ghost" size="icon" onClick={toggleDrawer} className="h-8 w-8">
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        
-        <div className="p-2 overflow-y-auto h-full pb-16">
-          {localQueue.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-gray-400">
-              <Music className="h-10 w-10 mb-2 opacity-30" />
-              <p>Your queue is empty</p>
-              <p className="text-xs mt-1">Add songs to your queue</p>
-            </div>
-          ) : (
-            <ul className="space-y-1">
-              {localQueue.map((song, index) => (
-                <li 
-                  key={`${song.id}-${index}`}
-                  draggable
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={handleDragOver}
-                  onDrop={() => handleDrop(index)}
-                  className={cn(
-                    "flex items-center p-2 rounded-lg hover:bg-white/5 transition-colors",
-                    "cursor-grab active:cursor-grabbing",
-                    draggingIndex === index && "opacity-50 bg-white/10"
-                  )}
+    <AnimatePresence>
+      {showQueue && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={() => setShowQueue(false)}
+          />
+          
+          {/* Drawer */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed top-0 right-0 w-96 h-full bg-zinc-950/95 backdrop-blur-md border-l border-zinc-800/50 z-50"
+          >
+            <div className="flex flex-col h-full">
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-zinc-800/50">
+                <h3 className="text-white font-semibold text-lg">Queue</h3>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setShowQueue(false)}
+                  className="w-8 h-8 text-zinc-400 hover:text-white"
                 >
-                  <div className="flex items-center mr-2">
-                    <Grip className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <div 
-                    className="w-10 h-10 rounded overflow-hidden flex-shrink-0 mr-3"
-                    onClick={() => playTrack(song)}
-                  >
-                    <img 
-                      src={song.thumbnailUrl} 
-                      alt={song.title} 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{song.title}</p>
-                    <p className="text-xs text-gray-400 truncate">{song.channelTitle}</p>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => removeFromQueue(song.id)}
-                    className="h-8 w-8 opacity-0 group-hover:opacity-100 hover:text-red-400"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
 
-      {/* Backdrop for closing when clicking outside */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
-          onClick={toggleDrawer}
-        />
+              {/* Queue Content */}
+              <div className="flex-1 overflow-y-auto p-4">
+                {queue.length > 0 ? (
+                  <div className="space-y-2">
+                    {queue.map((song, index) => (
+                      <div
+                        key={`${song.id}-${index}`}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-800/50 transition-colors group"
+                      >
+                        <div className="relative">
+                          <img
+                            src={song.thumbnailUrl}
+                            alt={song.title}
+                            className="w-12 h-12 rounded-md object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center rounded-md">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => playTrack(song)}
+                            >
+                              <Play className="w-4 h-4 text-white" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-white text-sm font-medium truncate">
+                            {song.title}
+                          </h4>
+                          <p className="text-zinc-400 text-xs truncate">
+                            {song.channelTitle}
+                          </p>
+                        </div>
+
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreHorizontal className="w-4 h-4 text-zinc-400" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-zinc-400">Queue is empty</p>
+                    <p className="text-zinc-500 text-sm mt-1">
+                      Add songs to see them here
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </>
       )}
-    </>
+    </AnimatePresence>
   );
 };
 

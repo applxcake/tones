@@ -9,13 +9,12 @@ import { useNavigate } from 'react-router-dom';
 import { getCurrentUser, updateUserProfile } from '@/services/userService';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Progress } from '@/components/ui/progress';
 
 const Settings = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('theme') || 'dark';
   });
@@ -35,39 +34,6 @@ const Settings = () => {
     document.documentElement.classList.remove('light', 'dark');
     document.documentElement.classList.add(theme);
     localStorage.setItem('theme', theme);
-    
-    // Update CSS variables for theme
-    if (theme === 'light') {
-      document.documentElement.style.setProperty('--background', '0 0% 100%');
-      document.documentElement.style.setProperty('--foreground', '240 10% 3.9%');
-      document.documentElement.style.setProperty('--card', '0 0% 100%');
-      document.documentElement.style.setProperty('--card-foreground', '240 10% 3.9%');
-      document.documentElement.style.setProperty('--popover', '0 0% 100%');
-      document.documentElement.style.setProperty('--popover-foreground', '240 10% 3.9%');
-      document.documentElement.style.setProperty('--primary', '240 5.9% 10%');
-      document.documentElement.style.setProperty('--primary-foreground', '0 0% 98%');
-      document.documentElement.style.setProperty('--secondary', '240 4.8% 95.9%');
-      document.documentElement.style.setProperty('--secondary-foreground', '240 5.9% 10%');
-      document.documentElement.style.setProperty('--muted', '240 4.8% 95.9%');
-      document.documentElement.style.setProperty('--muted-foreground', '240 3.8% 46.1%');
-      document.documentElement.style.setProperty('--accent', '240 4.8% 95.9%');
-      document.documentElement.style.setProperty('--accent-foreground', '240 5.9% 10%');
-    } else {
-      document.documentElement.style.setProperty('--background', '240 10% 3.9%');
-      document.documentElement.style.setProperty('--foreground', '0 0% 98%');
-      document.documentElement.style.setProperty('--card', '240 10% 3.9%');
-      document.documentElement.style.setProperty('--card-foreground', '0 0% 98%');
-      document.documentElement.style.setProperty('--popover', '240 10% 3.9%');
-      document.documentElement.style.setProperty('--popover-foreground', '0 0% 98%');
-      document.documentElement.style.setProperty('--primary', '262 80% 75%');
-      document.documentElement.style.setProperty('--primary-foreground', '240 5.9% 10%');
-      document.documentElement.style.setProperty('--secondary', '240 3.7% 15.9%');
-      document.documentElement.style.setProperty('--secondary-foreground', '0 0% 98%');
-      document.documentElement.style.setProperty('--muted', '240 3.7% 15.9%');
-      document.documentElement.style.setProperty('--muted-foreground', '240 5% 64.9%');
-      document.documentElement.style.setProperty('--accent', '262 80% 55%');
-      document.documentElement.style.setProperty('--accent-foreground', '0 0% 98%');
-    }
   }, [theme]);
 
   // Set language on mount and when changed
@@ -81,18 +47,28 @@ const Settings = () => {
     const fetchUserData = async () => {
       if (authUser) {
         setLoading(true);
-        const userData = await getCurrentUser(authUser.id);
-        setCurrentUser(userData);
-        
-        if (userData) {
-          setFormData({
-            username: userData.username || '',
-            email: userData.email || '',
-            bio: userData.bio || '',
-            avatar: userData.avatar || '',
+        try {
+          const userData = await getCurrentUser(authUser.id);
+          setCurrentUser(userData);
+          
+          if (userData) {
+            setFormData({
+              username: userData.username || '',
+              email: userData.email || '',
+              bio: userData.bio || '',
+              avatar: userData.avatar || '',
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          toast({
+            title: "Error loading profile",
+            description: "Could not load your profile data. Please try again.",
+            variant: "destructive"
           });
+        } finally {
+          setLoading(false);
         }
-        setLoading(false);
       }
     };
     
@@ -118,11 +94,26 @@ const Settings = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (authUser) {
-      await updateUserProfile(formData, authUser.id);
-      toast({
-        title: "Settings saved",
-        description: "Your profile has been updated successfully.",
-      });
+      setLoading(true);
+      try {
+        const updatedUser = await updateUserProfile(formData, authUser.id);
+        if (updatedUser) {
+          setCurrentUser(updatedUser);
+          toast({
+            title: "Settings saved",
+            description: "Your profile has been updated successfully.",
+          });
+        }
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        toast({
+          title: "Error saving settings",
+          description: "Could not update your profile. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -149,7 +140,6 @@ const Settings = () => {
       theme: "Theme",
       dark: "Dark (Default)",
       light: "Light",
-      system: "System Preference",
       savePreferences: "Save Preferences",
     },
     es: {
@@ -166,7 +156,6 @@ const Settings = () => {
       theme: "Tema",
       dark: "Oscuro (Predeterminado)",
       light: "Claro",
-      system: "Preferencia del sistema",
       savePreferences: "Guardar Preferencias",
     },
     fr: {
@@ -183,7 +172,6 @@ const Settings = () => {
       theme: "Thème",
       dark: "Sombre (Par défaut)",
       light: "Clair",
-      system: "Préférence système",
       savePreferences: "Enregistrer les préférences",
     },
     de: {
@@ -200,7 +188,6 @@ const Settings = () => {
       theme: "Thema",
       dark: "Dunkel (Standard)",
       light: "Hell",
-      system: "Systemeinstellung",
       savePreferences: "Einstellungen speichern",
     }
   };
@@ -208,30 +195,11 @@ const Settings = () => {
   // Get current translations based on language
   const t = translations[language as keyof typeof translations] || translations.en;
   
-  if (loading) {
-    return (
-      <div className="pt-6 pb-24 animate-slide-in">
-        <div className="flex justify-center py-12">
-          <div className="flex gap-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div 
-                key={i}
-                className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
-                style={{ animationDelay: `${i * 0.15}s` }}
-              />
-            ))}
-          </div>
-        </div>
-        <Progress value={30} className="w-1/2 mx-auto mt-4" />
-      </div>
-    );
-  }
-  
   return (
-    <div className="pt-6 pb-24 animate-slide-in">
+    <div className="pt-6 pb-24">
       <Button 
         variant="ghost" 
-        className="flex items-center mb-6 hover-scale"
+        className="flex items-center mb-6"
         onClick={() => navigate(-1)}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
@@ -242,17 +210,24 @@ const Settings = () => {
         <h1 className="text-3xl font-bold">{t.settings}</h1>
       </div>
       
-      <div className="glass-panel rounded-lg p-6 max-w-2xl mx-auto animate-fade-in">
+      <div className="bg-card rounded-lg p-6 max-w-2xl mx-auto border">
         <form onSubmit={handleSubmit}>
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row gap-6">
               <div className="md:w-1/3 flex justify-center">
                 <div className="relative">
-                  <div className="w-32 h-32 rounded-full glass-panel flex items-center justify-center overflow-hidden hover-scale">
+                  <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center overflow-hidden">
                     {formData.avatar ? (
-                      <img src={formData.avatar} alt={formData.username} className="w-full h-full object-cover" />
+                      <img 
+                        src={formData.avatar} 
+                        alt={formData.username} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
                     ) : (
-                      <User className="w-16 h-16 text-white/70" />
+                      <User className="w-16 h-16 text-muted-foreground" />
                     )}
                   </div>
                 </div>
@@ -266,7 +241,6 @@ const Settings = () => {
                     name="username"
                     value={formData.username}
                     onChange={handleChange}
-                    className="animate-fade-in"
                   />
                 </div>
                 
@@ -278,7 +252,6 @@ const Settings = () => {
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="animate-fade-in"
                   />
                 </div>
                 
@@ -291,7 +264,6 @@ const Settings = () => {
                     placeholder="https://example.com/avatar.jpg"
                     value={formData.avatar}
                     onChange={handleChange}
-                    className="animate-fade-in"
                   />
                 </div>
               </div>
@@ -306,12 +278,11 @@ const Settings = () => {
                 value={formData.bio}
                 onChange={handleChange}
                 rows={4}
-                className="animate-fade-in"
               />
             </div>
             
             <div className="pt-4">
-              <Button type="submit" className="flex items-center gap-2 hover-scale">
+              <Button type="submit" className="flex items-center gap-2" disabled={loading}>
                 <Save className="h-4 w-4" />
                 {t.saveChanges}
               </Button>
@@ -320,7 +291,7 @@ const Settings = () => {
         </form>
       </div>
       
-      <div className="mt-8 glass-panel rounded-lg p-6 max-w-2xl mx-auto animate-fade-in">
+      <div className="mt-8 bg-card rounded-lg p-6 max-w-2xl mx-auto border">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           {t.preferences}
         </h2>
@@ -337,7 +308,7 @@ const Settings = () => {
                 name="language"
                 value={language}
                 onChange={handleLanguageChange}
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 animate-fade-in"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <option value="en">English</option>
                 <option value="es">Español</option>
@@ -356,7 +327,7 @@ const Settings = () => {
                 name="theme"
                 value={theme}
                 onChange={handleThemeChange}
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 animate-fade-in"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <option value="dark">{t.dark}</option>
                 <option value="light">{t.light}</option>
@@ -365,7 +336,7 @@ const Settings = () => {
           </div>
           
           <div className="pt-4">
-            <Button type="submit" variant="outline" className="w-full hover-scale">
+            <Button type="submit" variant="outline" className="w-full">
               {t.savePreferences}
             </Button>
           </div>

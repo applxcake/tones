@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { usePlayer } from '@/contexts/PlayerContext';
+import AutoPlayToggle from '@/components/AutoPlayToggle';
 
 const MusicPlayer = () => {
   const { 
@@ -33,7 +34,8 @@ const MusicPlayer = () => {
     toggleLoop,
     progress,
     duration,
-    seekToPosition
+    seekToPosition,
+    setAutoPlayEnabled
   } = usePlayer();
   
   const [currentTime, setCurrentTime] = useState(0);
@@ -255,8 +257,10 @@ const MusicPlayer = () => {
             </div>
           </div>
 
-          {/* Right Section - Volume & Queue */}
+          {/* Right Section - Volume & Additional Controls */}
           <div className="flex items-center gap-3 flex-1 justify-end">
+            <AutoPlayToggle onToggle={setAutoPlayEnabled} />
+
             <Button
               size="icon"
               variant="ghost"

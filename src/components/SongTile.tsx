@@ -4,6 +4,7 @@ import { Play, Pause, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import FavoriteButton from '@/components/FavoriteButton';
 import SocialShareButton from '@/components/SocialShareButton';
+import DownloadButton from '@/components/DownloadButton';
 import { cn } from '@/lib/utils';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { YouTubeVideo } from '@/services/youtubeService';
@@ -87,6 +88,7 @@ const SongTile = ({
 
         {/* Action Buttons Overlay */}
         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <DownloadButton song={song} size="sm" className="bg-black/50 hover:bg-black/70 text-white" />
           {showFavoriteButton && (
             <FavoriteButton 
               song={song} 

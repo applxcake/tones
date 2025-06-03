@@ -25,6 +25,7 @@ import { Toaster } from '@/components/ui/toaster';
 import SupabaseInitializer from '@/components/SupabaseInitializer';
 import MiniPlayer from '@/components/MiniPlayer';
 import SongQueueDrawer from '@/components/SongQueueDrawer';
+import YTPlayer from '@/components/YTPlayer';
 
 // Context providers
 import { PlayerProvider } from '@/contexts/PlayerContext';
@@ -72,6 +73,7 @@ function App() {
               </Routes>
               <MiniPlayer />
               <SongQueueDrawer />
+              <YTPlayer />
             </BrowserRouter>
             <Toaster />
           </PlayerProvider>

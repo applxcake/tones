@@ -7,34 +7,15 @@ import SongTile from '@/components/SongTile';
 import { Download, HardDrive, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { YouTubeVideo } from '@/services/youtubeService';
-import { usePlayer } from '@/contexts/PlayerContext';
-
-// Mock downloaded songs data - in real app this would come from local storage or IndexedDB
-const mockDownloadedSongs: (YouTubeVideo & { size: string; downloadDate: string })[] = [
-  {
-    id: 'download1',
-    title: 'Downloaded Song 1',
-    channelTitle: 'Artist One',
-    thumbnailUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
-    publishedAt: '2024-01-01',
-    size: '4.2 MB',
-    downloadDate: '2024-01-15'
-  },
-  {
-    id: 'download2', 
-    title: 'Offline Track 2',
-    channelTitle: 'Artist Two',
-    thumbnailUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
-    publishedAt: '2024-01-02',
-    size: '3.8 MB',
-    downloadDate: '2024-01-16'
-  }
-];
 
 const Downloads = () => {
-  const [downloadedSongs, setDownloadedSongs] = useState(mockDownloadedSongs);
+  const [downloadedSongs, setDownloadedSongs] = useState<(YouTubeVideo & { size: string; downloadDate: string })[]>([]);
   const [offlineMode, setOfflineMode] = useState(false);
-  const { playTrack } = usePlayer();
+
+  useEffect(() => {
+    const downloads = JSON.parse(localStorage.getItem('downloadedSongs') || '[]');
+    setDownloadedSongs(downloads);
+  }, []);
 
   // Calculate total storage used
   const totalSize = downloadedSongs.reduce((total, song) => {
@@ -43,7 +24,9 @@ const Downloads = () => {
   }, 0);
 
   const handleRemoveDownload = (songId: string) => {
-    setDownloadedSongs(prev => prev.filter(song => song.id !== songId));
+    const updated = downloadedSongs.filter(song => song.id !== songId);
+    setDownloadedSongs(updated);
+    localStorage.setItem('downloadedSongs', JSON.stringify(updated));
   };
 
   return (

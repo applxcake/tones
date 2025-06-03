@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
@@ -20,6 +21,7 @@ interface PlayerContextType {
   loopMode: LoopMode; 
   shuffleMode: boolean;
   showQueue: boolean;
+  autoPlayEnabled: boolean;
   isCurrentSong: (songId: string) => boolean;
   setLikedSongs: React.Dispatch<React.SetStateAction<Song[]>>;
   setRecentlyPlayed: React.Dispatch<React.SetStateAction<Song[]>>;
@@ -41,6 +43,7 @@ interface PlayerContextType {
   toggleShuffle: () => void;
   setDuration: (duration: number) => void;
   setShowQueue: (show: boolean) => void;
+  setAutoPlayEnabled: (enabled: boolean) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -58,6 +61,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const [loopMode, setLoopMode] = useState<LoopMode>('none');
   const [shuffleMode, setShuffleMode] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
   const [lastProgressUpdateTime, setLastProgressUpdateTime] = useState(0);
 
   // Helper function to check if a song is currently playing
@@ -70,28 +74,24 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     if (!isPlaying) return;
     
     const timer = setInterval(() => {
-      // Only update if we have a current track and the last update wasn't too recent
       if (currentTrack) {
         const now = Date.now();
-        if (now - lastProgressUpdateTime > 900) {  // Update roughly every second
+        if (now - lastProgressUpdateTime > 900) {
           setLastProgressUpdateTime(now);
-          // Calculate progress increment based on playback rate
           const elapsedSeconds = 1 * playbackRate;
           const newProgressIncrement = (elapsedSeconds / duration) * 100;
           
           setProgress(prev => {
             const newProgress = prev + newProgressIncrement;
-            // Loop back to beginning or play next track when reaching the end
             if (newProgress >= 100) {
               if (loopMode === 'one') {
                 return 0;
               } else if (loopMode === 'all' && queue.length === 0) {
                 return 0;
-              } else if (queue.length > 0) {
-                // Next track will be triggered in the useEffect below
+              } else if (queue.length > 0 || autoPlayEnabled) {
                 return newProgress;
               }
-              return 100; // Stop at 100% if no more tracks and not looping
+              return 100;
             }
             return Math.min(newProgress, 100);
           });
@@ -100,54 +100,45 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [isPlaying, currentTrack, duration, playbackRate, loopMode, lastProgressUpdateTime, queue]);
+  }, [isPlaying, currentTrack, duration, playbackRate, loopMode, lastProgressUpdateTime, queue, autoPlayEnabled]);
 
   // Monitor progress to trigger next track when reaching the end
   useEffect(() => {
     if (progress >= 99.5 && currentTrack) {
       if (loopMode === 'one') {
-        // Reset progress for current track
         setProgress(0);
-      } else if (queue.length > 0 || loopMode === 'all') {
+      } else if (queue.length > 0 || (autoPlayEnabled && recentlyPlayed.length > 0)) {
         nextTrack();
       } else {
-        // Stop playing when reaching the end
         setIsPlaying(false);
       }
     }
-  }, [progress, currentTrack, loopMode]);
+  }, [progress, currentTrack, loopMode, queue.length, autoPlayEnabled, recentlyPlayed.length]);
 
   const playTrack = useCallback(async (song: Song) => {
-    // If the same song is currently playing, just toggle pause
     if (currentTrack?.id === song.id && isPlaying) {
       setIsPlaying(false);
       return;
     }
     
-    // If the same song is paused, resume it
     if (currentTrack?.id === song.id && !isPlaying) {
       setIsPlaying(true);
       return;
     }
 
-    // Play new song
     setCurrentTrack(song);
     setIsPlaying(true);
-    setProgress(0); // Reset progress for new track
-    setDuration(180); // Mock duration - in real app this would come from audio metadata
+    setProgress(0);
+    setDuration(180);
 
-    // Update recently played list locally
     setRecentlyPlayed(prev => {
       const newRecentlyPlayed = [song, ...prev.filter(s => s.id !== song.id)].slice(0, 20);
       return newRecentlyPlayed;
     });
 
-    // Save to Supabase if user is logged in
     try {
-      // Check if user is logged in
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // First ensure the song exists in the songs table
         const { data: songExists } = await supabase
           .from('songs')
           .select('id')
@@ -155,7 +146,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
           .maybeSingle();
           
         if (!songExists) {
-          // Add song to songs table
           await supabase.from('songs').insert({
             id: song.id,
             title: song.title,
@@ -164,7 +154,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
           });
         }
         
-        // Add to recently_played
         await supabase.from('recently_played').insert({
           user_id: user.id,
           song_id: song.id,
@@ -175,7 +164,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (error) {
       console.error('Error saving recently played song:', error);
-      // Continue without interrupting user experience
     }
   }, [currentTrack, isPlaying]);
 
@@ -211,44 +199,32 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     return likedSongs.some(song => song.id === songId);
   }, [likedSongs]);
 
-  // Add new functions for player navigation
   const nextTrack = () => {
-    // If queue is empty and loop mode is 'all', play the first song in recently played
-    if (queue.length === 0 && loopMode === 'all' && recentlyPlayed.length > 0) {
-      playTrack(recentlyPlayed[0]);
-      return;
+    if (queue.length > 0) {
+      const nextSong = queue[0];
+      setQueue(prev => prev.slice(1));
+      playTrack(nextSong);
+    } else if (autoPlayEnabled && recentlyPlayed.length > 1) {
+      // Play a random song from recently played
+      const randomIndex = Math.floor(Math.random() * (recentlyPlayed.length - 1)) + 1;
+      playTrack(recentlyPlayed[randomIndex]);
     }
-    
-    // If queue is empty, do nothing
-    if (queue.length === 0) return;
-    
-    // Play the next song in queue
-    const nextSong = queue[0];
-    setQueue(prev => prev.slice(1));
-    playTrack(nextSong);
   };
   
   const prevTrack = () => {
-    // If no recent tracks, do nothing
-    if (recentlyPlayed.length <= 1) return;
-    
-    // Play the previous song from recently played
-    const prevSong = recentlyPlayed[1]; // Current track is at index 0
-    playTrack(prevSong);
+    if (recentlyPlayed.length > 1) {
+      const prevSong = recentlyPlayed[1];
+      playTrack(prevSong);
+    }
   };
 
-  // Add alias for previousTrack
   const previousTrack = prevTrack;
   
-  // Add function to seek to a position in the current track
   const seekToPosition = (newProgress: number) => {
     setProgress(newProgress);
-    
-    // Also update the last progress update time to prevent immediate timer updates
     setLastProgressUpdateTime(Date.now());
   };
   
-  // Add function to toggle loop mode
   const toggleLoopMode = () => {
     setLoopMode(current => {
       if (current === 'none') return 'all';
@@ -257,24 +233,19 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     });
   };
 
-  // Add alias for toggleLoop
   const toggleLoop = toggleLoopMode;
 
-  // Add function to toggle shuffle mode
   const toggleShuffle = () => {
     setShuffleMode(prev => !prev);
   };
 
-  // Modified toggleLike function to sync with Supabase
   const toggleLike = async (song: Song): Promise<boolean> => {
     try {
       const isCurrentlyLiked = isLiked(song.id);
       
       if (isCurrentlyLiked) {
-        // Remove from liked songs locally
         setLikedSongs(prev => prev.filter(s => s.id !== song.id));
         
-        // Remove from Supabase if user is logged in
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           await supabase
@@ -288,10 +259,8 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
         
         return false;
       } else {
-        // First, ensure the song exists in the songs table
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          // Check if song exists
           const { data: songExists } = await supabase
             .from('songs')
             .select('id')
@@ -299,7 +268,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
             .maybeSingle();
             
           if (!songExists) {
-            // Add song to songs table
             await supabase.from('songs').insert({
               id: song.id,
               title: song.title,
@@ -308,7 +276,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
             });
           }
           
-          // Add to liked_songs
           await supabase.from('liked_songs').insert({
             user_id: user.id,
             song_id: song.id,
@@ -318,17 +285,15 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
           console.log('Added song to liked songs in Supabase');
         }
         
-        // Add to liked songs locally
         setLikedSongs(prev => [...prev, song]);
         return true;
       }
     } catch (error) {
       console.error('Error toggling song like:', error);
-      return isLiked(song.id); // Return current state if error
+      return isLiked(song.id);
     }
   };
 
-  // Make setLikedSongs available to the SupabaseInitializer
   const contextValue = {
     currentTrack,
     isPlaying,
@@ -342,6 +307,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     loopMode,
     shuffleMode,
     showQueue,
+    autoPlayEnabled,
     isCurrentSong,
     setLikedSongs,
     setRecentlyPlayed,
@@ -362,7 +328,8 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     toggleLoop,
     toggleShuffle,
     setDuration,
-    setShowQueue
+    setShowQueue,
+    setAutoPlayEnabled
   };
 
   return (

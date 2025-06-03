@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -193,7 +192,7 @@ const MusicPlayer = () => {
                 onClick={toggleLoop}
                 className={cn(
                   "w-8 h-8 text-zinc-400 hover:text-white transition-colors",
-                  loopMode !== 'off' && "text-green-500"
+                  loopMode !== 'none' && "text-green-500"
                 )}
               >
                 <Repeat className="w-4 h-4" />

@@ -9,25 +9,25 @@ interface ThemeToggleProps {
 }
 
 const ThemeToggle: React.FC<ThemeToggleProps> = ({ className }) => {
-  const { mode, toggleMode } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={toggleMode}
+      onClick={toggleTheme}
       className={cn(
         "relative overflow-hidden rounded-full transition-colors",
         "bg-gradient-to-br",
-        mode === 'dark' 
+        theme === 'dark' 
           ? "from-indigo-500/20 via-purple-500/20 to-pink-500/20"
           : "from-blue-300/20 via-yellow-100/20 to-orange-300/20",
         className
       )}
-      aria-label={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}
+      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
       <div className="transition-transform duration-500 ease-in-out">
-        {mode === 'dark' ? (
+        {theme === 'dark' ? (
           <Sun className="h-4 w-4 text-yellow-300 animate-pulse" />
         ) : (
           <Moon className="h-4 w-4 text-indigo-700" />
@@ -35,7 +35,7 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ className }) => {
       </div>
       
       {/* Sun rays animation */}
-      {mode === 'dark' && (
+      {theme === 'dark' && (
         <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity">
           {Array.from({ length: 8 }).map((_, i) => (
             <div
@@ -53,7 +53,7 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ className }) => {
       )}
       
       {/* Stars animation */}
-      {mode === 'light' && (
+      {theme === 'light' && (
         <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity">
           {Array.from({ length: 5 }).map((_, i) => (
             <div

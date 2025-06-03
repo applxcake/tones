@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
@@ -19,6 +18,8 @@ interface PlayerContextType {
   progress: number; 
   duration: number; 
   loopMode: LoopMode; 
+  shuffleMode: boolean;
+  showQueue: boolean;
   setLikedSongs: React.Dispatch<React.SetStateAction<Song[]>>;
   setRecentlyPlayed: React.Dispatch<React.SetStateAction<Song[]>>;
   playTrack: (song: Song) => void;
@@ -32,9 +33,13 @@ interface PlayerContextType {
   toggleLike: (song: Song) => Promise<boolean>;
   nextTrack: () => void;
   prevTrack: () => void;
+  previousTrack: () => void;
   seekToPosition: (position: number) => void;
   toggleLoopMode: () => void;
+  toggleLoop: () => void;
+  toggleShuffle: () => void;
   setDuration: (duration: number) => void;
+  setShowQueue: (show: boolean) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -50,6 +55,8 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [loopMode, setLoopMode] = useState<LoopMode>('none');
+  const [shuffleMode, setShuffleMode] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
   const [lastProgressUpdateTime, setLastProgressUpdateTime] = useState(0);
 
   // Set up a progress tracking timer
@@ -205,6 +212,9 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     const prevSong = recentlyPlayed[1]; // Current track is at index 0
     playTrack(prevSong);
   };
+
+  // Add alias for previousTrack
+  const previousTrack = prevTrack;
   
   // Add function to seek to a position in the current track
   const seekToPosition = (newProgress: number) => {
@@ -221,6 +231,14 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       if (current === 'all') return 'one';
       return 'none';
     });
+  };
+
+  // Add alias for toggleLoop
+  const toggleLoop = toggleLoopMode;
+
+  // Add function to toggle shuffle mode
+  const toggleShuffle = () => {
+    setShuffleMode(prev => !prev);
   };
 
   // Modified toggleLike function to sync with Supabase
@@ -298,6 +316,8 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     progress,
     duration,
     loopMode,
+    shuffleMode,
+    showQueue,
     setLikedSongs,
     setRecentlyPlayed,
     playTrack,
@@ -311,9 +331,13 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     toggleLike,
     nextTrack,
     prevTrack,
+    previousTrack,
     seekToPosition,
     toggleLoopMode,
-    setDuration
+    toggleLoop,
+    toggleShuffle,
+    setDuration,
+    setShowQueue
   };
 
   return (

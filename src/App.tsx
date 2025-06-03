@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -18,13 +17,12 @@ import UserProfile from '@/pages/UserProfile';
 import Favorites from '@/pages/Favorites';
 
 // Components
-import Layout from '@/components/Layout';
+import CleanLayout from '@/components/CleanLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Toaster } from '@/components/ui/toaster';
 import SupabaseInitializer from '@/components/SupabaseInitializer';
 import MiniPlayer from '@/components/MiniPlayer';
 import SongQueueDrawer from '@/components/SongQueueDrawer';
-import AnimatedBackground from '@/components/AnimatedBackground';
 
 // Context providers
 import { PlayerProvider } from '@/contexts/PlayerContext';
@@ -49,14 +47,13 @@ function App() {
           <PlayerProvider>
             <BrowserRouter>
               <SupabaseInitializer />
-              <AnimatedBackground density={8} speed="slow" className="opacity-20" />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/login" element={<Auth />} /> 
                 <Route path="/signup" element={<Auth defaultTab="signup" />} />
                 
-                <Route element={<Layout />}>
+                <Route element={<CleanLayout />}>
                   <Route path="/home" element={<Home />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/explore" element={<Explore />} />

@@ -15,6 +15,7 @@ import Settings from '@/pages/Settings';
 import Playlists from '@/pages/Playlists';
 import PlaylistDetails from '@/pages/PlaylistDetails';
 import UserProfile from '@/pages/UserProfile';
+import Favorites from '@/pages/Favorites';
 
 // Components
 import Layout from '@/components/Layout';

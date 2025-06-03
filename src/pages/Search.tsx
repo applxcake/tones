@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useDebounce } from '@/hooks/use-debounce-value';
+import { useDebounceValue } from '@/hooks/use-debounce-value';
 import { searchVideos } from '@/services/youtubeService';
 import { toast } from '@/hooks/use-toast';
 import SearchBar from '@/components/SearchBar';
@@ -21,7 +20,7 @@ const Search = () => {
   const [filters, setFilters] = useState<SearchFilters>({});
   const [hasSearched, setHasSearched] = useState(false);
   
-  const debouncedQuery = useDebounce(query, 500);
+  const debouncedQuery = useDebounceValue(query, 500);
 
   useEffect(() => {
     const urlQuery = searchParams.get('q');
@@ -106,8 +105,6 @@ const Search = () => {
             setQuery(searchQuery);
             handleSearch(searchQuery, true);
           }}
-          placeholder="Search for songs, artists, or albums..."
-          defaultValue={query}
         />
         
         <EnhancedSearchFilters 

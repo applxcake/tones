@@ -4,7 +4,6 @@ import { Play, Pause, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import FavoriteButton from '@/components/FavoriteButton';
 import SocialShareButton from '@/components/SocialShareButton';
-import SongOptionsMenu from '@/components/SongOptionsMenu';
 import { cn } from '@/lib/utils';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { YouTubeVideo } from '@/services/youtubeService';
@@ -25,15 +24,15 @@ const SongTile = ({
   isFavorited = false,
   onFavoriteChange 
 }: SongTileProps) => {
-  const { currentSong, isPlaying, playSong, pauseSong } = usePlayer();
+  const { currentTrack, isPlaying, playTrack, togglePlayPause } = usePlayer();
   const [imageLoaded, setImageLoaded] = useState(false);
-  const isCurrentSong = currentSong?.id === song.id;
+  const isCurrentSong = currentTrack?.id === song.id;
 
   const handlePlayPause = () => {
     if (isCurrentSong && isPlaying) {
-      pauseSong();
+      togglePlayPause();
     } else {
-      playSong(song);
+      playTrack(song);
     }
   };
 
@@ -95,11 +94,9 @@ const SongTile = ({
             />
           )}
           <SocialShareButton song={song} />
-          <SongOptionsMenu song={song}>
-            <Button variant="ghost" size="icon" className="h-6 w-6 bg-black/50 hover:bg-black/70">
-              <MoreVertical size={12} className="text-white" />
-            </Button>
-          </SongOptionsMenu>
+          <Button variant="ghost" size="icon" className="h-6 w-6 bg-black/50 hover:bg-black/70">
+            <MoreVertical size={12} className="text-white" />
+          </Button>
         </div>
 
         {/* Now Playing Indicator */}

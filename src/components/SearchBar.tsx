@@ -8,10 +8,12 @@ import { cn } from '@/lib/utils';
 interface SearchBarProps {
   onSearch: (query: string) => void;
   className?: string;
+  placeholder?: string;
+  defaultValue?: string;
 }
 
-const SearchBar = ({ onSearch, className }: SearchBarProps) => {
-  const [query, setQuery] = useState('');
+const SearchBar = ({ onSearch, className, placeholder = "Search for music or users...", defaultValue = "" }: SearchBarProps) => {
+  const [query, setQuery] = useState(defaultValue);
   const [isFocused, setIsFocused] = useState(false);
   const searchRef = useRef<HTMLFormElement>(null);
   
@@ -62,7 +64,7 @@ const SearchBar = ({ onSearch, className }: SearchBarProps) => {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
-          placeholder="Search for music or users..."
+          placeholder={placeholder}
           className="border-none bg-transparent focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 text-base h-full py-0 px-3"
         />
         

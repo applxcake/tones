@@ -1,4 +1,3 @@
-
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { YouTubeVideo } from './youtubeService';
@@ -115,7 +114,7 @@ export const getUserFavorites = async (userId?: string): Promise<YouTubeVideo[]>
       title: item.songs.title,
       thumbnailUrl: item.songs.thumbnail_url,
       channelTitle: item.songs.channel_title || '',
-      publishedAt: item.created_at,
+      publishedAt: item.liked_at,
     })) || [];
   } catch (error) {
     console.error('Error fetching favorites:', error);

@@ -57,8 +57,8 @@ const UserProfileCustomizer = ({ className }: UserProfileCustomizerProps) => {
     } else if (user) {
       setProfile(prev => ({
         ...prev,
-        displayName: user.username || '',
-        avatar: user.avatar || '',
+        displayName: user.email?.split('@')[0] || '',
+        avatar: user.user_metadata?.avatar_url || '',
       }));
     }
   }, [user]);

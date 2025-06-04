@@ -17,6 +17,7 @@ import PlaylistDetails from '@/pages/PlaylistDetails';
 import UserProfile from '@/pages/UserProfile';
 import Favorites from '@/pages/Favorites';
 import Downloads from '@/pages/Downloads';
+import Library from '@/pages/Library';
 
 // Components
 import CleanLayout from '@/components/CleanLayout';
@@ -61,6 +62,7 @@ function App() {
                   <Route path="/search" element={<Search />} />
                   <Route path="/explore" element={<Explore />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/library" element={<Library />} />
                   <Route path="/favorites" element={<Favorites />} />
                   <Route path="/downloads" element={<Downloads />} />
                   <Route path="/settings" element={<Settings />} />

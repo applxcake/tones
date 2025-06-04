@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
@@ -61,59 +60,40 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const [loopMode, setLoopMode] = useState<LoopMode>('none');
   const [shuffleMode, setShuffleMode] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
-  const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
-  const [lastProgressUpdateTime, setLastProgressUpdateTime] = useState(0);
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
 
   // Helper function to check if a song is currently playing
   const isCurrentSong = useCallback((songId: string): boolean => {
     return currentTrack?.id === songId;
   }, [currentTrack]);
 
-  // Set up a progress tracking timer
+  // Progress tracking with proper time handling
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying || !currentTrack) return;
     
-    const timer = setInterval(() => {
-      if (currentTrack) {
-        const now = Date.now();
-        if (now - lastProgressUpdateTime > 900) {
-          setLastProgressUpdateTime(now);
-          const elapsedSeconds = 1 * playbackRate;
-          const newProgressIncrement = (elapsedSeconds / duration) * 100;
-          
-          setProgress(prev => {
-            const newProgress = prev + newProgressIncrement;
-            if (newProgress >= 100) {
-              if (loopMode === 'one') {
-                return 0;
-              } else if (loopMode === 'all' && queue.length === 0) {
-                return 0;
-              } else if (queue.length > 0 || autoPlayEnabled) {
-                return newProgress;
-              }
-              return 100;
-            }
-            return Math.min(newProgress, 100);
-          });
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        const newProgress = prev + (100 / duration);
+        
+        // Auto-skip when song ends
+        if (newProgress >= 100) {
+          if (loopMode === 'one') {
+            return 0;
+          } else if (loopMode === 'all' || autoPlayEnabled) {
+            nextTrack();
+            return 0;
+          } else {
+            setIsPlaying(false);
+            return 100;
+          }
         }
-      }
+        
+        return Math.min(newProgress, 100);
+      });
     }, 1000);
     
-    return () => clearInterval(timer);
-  }, [isPlaying, currentTrack, duration, playbackRate, loopMode, lastProgressUpdateTime, queue, autoPlayEnabled]);
-
-  // Monitor progress to trigger next track when reaching the end
-  useEffect(() => {
-    if (progress >= 99.5 && currentTrack) {
-      if (loopMode === 'one') {
-        setProgress(0);
-      } else if (queue.length > 0 || (autoPlayEnabled && recentlyPlayed.length > 0)) {
-        nextTrack();
-      } else {
-        setIsPlaying(false);
-      }
-    }
-  }, [progress, currentTrack, loopMode, queue.length, autoPlayEnabled, recentlyPlayed.length]);
+    return () => clearInterval(interval);
+  }, [isPlaying, currentTrack, duration, loopMode, autoPlayEnabled]);
 
   const playTrack = useCallback(async (song: Song) => {
     if (currentTrack?.id === song.id && isPlaying) {
@@ -129,7 +109,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     setCurrentTrack(song);
     setIsPlaying(true);
     setProgress(0);
-    setDuration(180);
+    setDuration(180); // Default 3 minutes
 
     setRecentlyPlayed(prev => {
       const newRecentlyPlayed = [song, ...prev.filter(s => s.id !== song.id)].slice(0, 20);
@@ -159,8 +139,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
           song_id: song.id,
           played_at: new Date().toISOString()
         });
-        
-        console.log('Saved song to recently played in Supabase');
       }
     } catch (error) {
       console.error('Error saving recently played song:', error);
@@ -185,6 +163,10 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
 
   const clearQueue = () => {
     setQueue([]);
+    toast({
+      title: "Queue Cleared",
+      description: "All songs have been removed from the queue.",
+    });
   };
 
   const setVolumeValue = (volume: number) => {
@@ -205,9 +187,14 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       setQueue(prev => prev.slice(1));
       playTrack(nextSong);
     } else if (autoPlayEnabled && recentlyPlayed.length > 1) {
-      // Play a random song from recently played
-      const randomIndex = Math.floor(Math.random() * (recentlyPlayed.length - 1)) + 1;
-      playTrack(recentlyPlayed[randomIndex]);
+      // Play a random song from recently played (excluding current)
+      const availableSongs = recentlyPlayed.filter(song => song.id !== currentTrack?.id);
+      if (availableSongs.length > 0) {
+        const randomIndex = Math.floor(Math.random() * availableSongs.length);
+        playTrack(availableSongs[randomIndex]);
+      }
+    } else {
+      setIsPlaying(false);
     }
   };
   
@@ -222,13 +209,12 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   
   const seekToPosition = (newProgress: number) => {
     setProgress(newProgress);
-    setLastProgressUpdateTime(Date.now());
   };
   
   const toggleLoopMode = () => {
     setLoopMode(current => {
-      if (current === 'none') return 'all';
-      if (current === 'all') return 'one';
+      if (current === 'none') return 'one';
+      if (current === 'one') return 'all';
       return 'none';
     });
   };
@@ -253,9 +239,12 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
             .delete()
             .eq('user_id', user.id)
             .eq('song_id', song.id);
-            
-          console.log('Removed song from liked songs in Supabase');
         }
+        
+        toast({
+          title: "Removed from Liked Songs",
+          description: `${song.title} has been removed from your liked songs.`,
+        });
         
         return false;
       } else {
@@ -281,11 +270,15 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
             song_id: song.id,
             liked_at: new Date().toISOString()
           });
-          
-          console.log('Added song to liked songs in Supabase');
         }
         
         setLikedSongs(prev => [...prev, song]);
+        
+        toast({
+          title: "Added to Liked Songs",
+          description: `${song.title} has been added to your liked songs.`,
+        });
+        
         return true;
       }
     } catch (error) {

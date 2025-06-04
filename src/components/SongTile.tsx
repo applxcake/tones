@@ -1,14 +1,13 @@
 
 import { useState } from 'react';
-import { Play, Pause, MoreVertical } from 'lucide-react';
+import { Play, Pause, Plus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import FavoriteButton from '@/components/FavoriteButton';
-import SocialShareButton from '@/components/SocialShareButton';
-import DownloadButton from '@/components/DownloadButton';
 import { cn } from '@/lib/utils';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { motion } from 'framer-motion';
+import { downloadSong, isDownloaded } from '@/services/downloadService';
 
 interface SongTileProps {
   song: YouTubeVideo;
@@ -25,9 +24,11 @@ const SongTile = ({
   isFavorited = false,
   onFavoriteChange 
 }: SongTileProps) => {
-  const { currentTrack, isPlaying, playTrack, togglePlayPause, isCurrentSong } = usePlayer();
+  const { currentTrack, isPlaying, playTrack, togglePlayPause, isCurrentSong, addToQueue } = usePlayer();
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const isCurrentlyPlaying = isCurrentSong(song.id);
+  const songIsDownloaded = isDownloaded(song.id);
 
   const handlePlayPause = () => {
     if (isCurrentlyPlaying && isPlaying) {
@@ -35,6 +36,18 @@ const SongTile = ({
     } else {
       playTrack(song);
     }
+  };
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsDownloading(true);
+    await downloadSong(song);
+    setIsDownloading(false);
+  };
+
+  const handleAddToQueue = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    addToQueue(song);
   };
 
   return (
@@ -88,7 +101,16 @@ const SongTile = ({
 
         {/* Action Buttons Overlay */}
         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <DownloadButton song={song} size="sm" className="bg-black/50 hover:bg-black/70 text-white" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDownload}
+            disabled={isDownloading || songIsDownloaded}
+            className="h-6 w-6 bg-black/50 hover:bg-black/70 text-white"
+          >
+            <Download size={12} className={cn(songIsDownloaded && "text-green-500")} />
+          </Button>
+          
           {showFavoriteButton && (
             <FavoriteButton 
               song={song} 
@@ -97,15 +119,29 @@ const SongTile = ({
               onFavoriteChange={onFavoriteChange}
             />
           )}
-          <SocialShareButton song={song} />
-          <Button variant="ghost" size="icon" className="h-6 w-6 bg-black/50 hover:bg-black/70">
-            <MoreVertical size={12} className="text-white" />
+          
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleAddToQueue}
+            className="h-6 w-6 bg-black/50 hover:bg-black/70 text-white"
+          >
+            <Plus size={12} />
           </Button>
         </div>
 
+        {/* Downloaded Badge */}
+        {songIsDownloaded && (
+          <div className="absolute bottom-2 left-2">
+            <div className="bg-green-500/90 text-white px-2 py-1 rounded-full text-xs">
+              Downloaded
+            </div>
+          </div>
+        )}
+
         {/* Now Playing Indicator */}
         {isCurrentlyPlaying && (
-          <div className="absolute bottom-2 left-2">
+          <div className="absolute bottom-2 right-2">
             <motion.div 
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}

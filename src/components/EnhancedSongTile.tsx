@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, Heart, MoreHorizontal } from 'lucide-react';
+import { Play, Pause, Heart, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -22,9 +22,10 @@ const EnhancedSongTile = ({
   isFavorited = false,
   onFavoriteChange 
 }: EnhancedSongTileProps) => {
-  const { currentTrack, isPlaying, playTrack, togglePlayPause } = usePlayer();
+  const { currentTrack, isPlaying, playTrack, togglePlayPause, addToQueue, toggleLike, isLiked } = usePlayer();
   const [imageLoaded, setImageLoaded] = useState(false);
   const isCurrentSong = currentTrack?.id === song.id;
+  const songIsLiked = isLiked(song.id);
 
   const handlePlayPause = () => {
     if (isCurrentSong && isPlaying) {
@@ -32,6 +33,17 @@ const EnhancedSongTile = ({
     } else {
       playTrack(song);
     }
+  };
+
+  const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await toggleLike(song);
+    onFavoriteChange?.(!songIsLiked);
+  };
+
+  const handleAddToQueue = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    addToQueue(song);
   };
 
   return (
@@ -87,20 +99,18 @@ const EnhancedSongTile = ({
               size="icon"
               variant="ghost"
               className="w-6 h-6 bg-black/50 hover:bg-black/70 text-white"
-              onClick={(e) => {
-                e.stopPropagation();
-                onFavoriteChange?.(!isFavorited);
-              }}
+              onClick={handleLike}
             >
-              <Heart className={cn("w-3 h-3", isFavorited && "fill-current text-red-500")} />
+              <Heart className={cn("w-3 h-3", songIsLiked && "fill-current text-red-500")} />
             </Button>
           )}
           <Button
             size="icon"
             variant="ghost"
             className="w-6 h-6 bg-black/50 hover:bg-black/70 text-white"
+            onClick={handleAddToQueue}
           >
-            <MoreHorizontal className="w-3 h-3" />
+            <Plus className="w-3 h-3" />
           </Button>
         </div>
 

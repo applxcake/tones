@@ -4,7 +4,6 @@ import { usePlayer } from '@/contexts/PlayerContext';
 
 declare global {
   interface Window {
-    YT: any;
     onYouTubeIframeAPIReady: () => void;
   }
 }

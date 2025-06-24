@@ -28,7 +28,7 @@ const SupabaseInitializer = () => {
         
         if (error) {
           console.warn('Supabase query error:', error);
-          throw new Error(`Database query failed: ${error.message}`);
+          throw error; // Throw the original error instead of creating a new one
         }
         
         console.log('Supabase connected successfully');
@@ -53,16 +53,24 @@ const SupabaseInitializer = () => {
         let errorMessage = "Using mock data for preview. All features are functional with sample data.";
         let errorTitle = "Database Notice";
         
+        // Check for different error types more accurately
         if (error instanceof Error) {
           if (error.name === 'AbortError') {
             errorMessage = "Database connection timed out. Using offline mode with sample data.";
             errorTitle = "Connection Timeout";
-          } else if (error.message.includes('Failed to fetch')) {
+          } else if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
             errorMessage = "Unable to connect to database. Please check your internet connection. Using sample data for now.";
             errorTitle = "Connection Failed";
           } else if (error.message.includes('CORS')) {
             errorMessage = "Database access blocked by browser security. Using sample data for preview.";
             errorTitle = "Access Restricted";
+          }
+        } else if (typeof error === 'object' && error !== null) {
+          // Handle Supabase-specific errors
+          const supabaseError = error as any;
+          if (supabaseError.code || supabaseError.message) {
+            errorMessage = "Database service temporarily unavailable. Using sample data for preview.";
+            errorTitle = "Service Unavailable";
           }
         }
         

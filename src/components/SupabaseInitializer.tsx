@@ -13,20 +13,30 @@ const SupabaseInitializer = () => {
   useEffect(() => {
     const checkConnection = async () => {
       try {
+        // Add a timeout to the fetch request to avoid hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
         // Test Supabase connection by fetching from a table that we know exists
         const { data, error } = await supabase
           .from('songs')
           .select('id')
-          .limit(1);
+          .limit(1)
+          .abortSignal(controller.signal);
             
-        if (error) throw error;
+        clearTimeout(timeoutId);
+        
+        if (error) {
+          console.warn('Supabase query error:', error);
+          throw new Error(`Database query failed: ${error.message}`);
+        }
         
         console.log('Supabase connected successfully');
         setInitialized(true);
         toast({
           title: "Database Connected",
           description: "Successfully connected to Supabase database.",
-          variant: "success"
+          variant: "default"
         });
 
         // If user is logged in, sync their data
@@ -38,9 +48,27 @@ const SupabaseInitializer = () => {
         
         // Handle the connection error gracefully
         setInitialized(true);
+        
+        // Provide more specific error messaging based on error type
+        let errorMessage = "Using mock data for preview. All features are functional with sample data.";
+        let errorTitle = "Database Notice";
+        
+        if (error instanceof Error) {
+          if (error.name === 'AbortError') {
+            errorMessage = "Database connection timed out. Using offline mode with sample data.";
+            errorTitle = "Connection Timeout";
+          } else if (error.message.includes('Failed to fetch')) {
+            errorMessage = "Unable to connect to database. Please check your internet connection. Using sample data for now.";
+            errorTitle = "Connection Failed";
+          } else if (error.message.includes('CORS')) {
+            errorMessage = "Database access blocked by browser security. Using sample data for preview.";
+            errorTitle = "Access Restricted";
+          }
+        }
+        
         toast({
-          title: "Database Notice",
-          description: "Using mock data for preview. All features are functional with sample data.",
+          title: errorTitle,
+          description: errorMessage,
           variant: "default"
         });
       }
@@ -59,6 +87,10 @@ const SupabaseInitializer = () => {
   // Function to sync user data from Supabase
   const syncUserData = async (userId: string) => {
     try {
+      // Add timeout for user data sync as well
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
       // Load liked songs from Supabase
       const { data: likedSongsData, error: likedSongsError } = await supabase
         .from('liked_songs')
@@ -71,7 +103,8 @@ const SupabaseInitializer = () => {
             thumbnail_url
           )
         `)
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .abortSignal(controller.signal);
 
       if (!likedSongsError && likedSongsData && likedSongsData.length > 0) {
         // Transform the data to match our app's expected format with publishedAt property
@@ -103,7 +136,10 @@ const SupabaseInitializer = () => {
         `)
         .eq('user_id', userId)
         .order('played_at', { ascending: false })
-        .limit(20);
+        .limit(20)
+        .abortSignal(controller.signal);
+
+      clearTimeout(timeoutId);
 
       if (!recentlyPlayedError && recentlyPlayedData && recentlyPlayedData.length > 0) {
         // Transform the data to match our app's expected format
@@ -121,7 +157,10 @@ const SupabaseInitializer = () => {
       }
     } catch (error) {
       console.error('Error syncing user data:', error);
-      // Don't show toast for sync errors to avoid spam
+      // Don't show toast for sync errors to avoid spam, but log for debugging
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn('User data sync timed out');
+      }
     }
   };
 

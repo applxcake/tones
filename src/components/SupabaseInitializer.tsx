@@ -13,6 +13,14 @@ const SupabaseInitializer = () => {
   useEffect(() => {
     const checkConnection = async () => {
       try {
+        // Check if we have valid Supabase configuration
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        
+        if (!supabaseUrl || !supabaseKey) {
+          throw new Error('Supabase configuration not found');
+        }
+
         // Add a timeout to the fetch request to avoid hanging
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
@@ -59,11 +67,14 @@ const SupabaseInitializer = () => {
             errorMessage = "Database connection timed out. Using offline mode with sample data.";
             errorTitle = "Connection Timeout";
           } else if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-            errorMessage = "Unable to connect to database. Please check your internet connection. Using sample data for now.";
-            errorTitle = "Connection Failed";
+            errorMessage = "Unable to connect to database. To enable live data, please configure your Supabase credentials in the environment variables.";
+            errorTitle = "Database Configuration Needed";
           } else if (error.message.includes('CORS')) {
             errorMessage = "Database access blocked by browser security. Using sample data for preview.";
             errorTitle = "Access Restricted";
+          } else if (error.message.includes('configuration not found')) {
+            errorMessage = "Database not configured. Click 'Connect to Supabase' in the top right to set up your database connection.";
+            errorTitle = "Setup Required";
           }
         } else if (typeof error === 'object' && error !== null) {
           // Handle Supabase-specific errors

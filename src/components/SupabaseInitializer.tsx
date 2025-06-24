@@ -1,6 +1,5 @@
-
 import { useEffect, useState } from 'react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -27,6 +26,7 @@ const SupabaseInitializer = () => {
         toast({
           title: "Database Connected",
           description: "Successfully connected to Supabase database.",
+          variant: "success"
         });
 
         // If user is logged in, sync their data
@@ -35,12 +35,14 @@ const SupabaseInitializer = () => {
         }
       } catch (error) {
         console.error('Supabase connection error:', error);
+        
+        // Handle the connection error gracefully
+        setInitialized(true);
         toast({
           title: "Database Notice",
           description: "Using mock data for preview. All features are functional with sample data.",
           variant: "default"
         });
-        setInitialized(true);
       }
     };
 
@@ -119,6 +121,7 @@ const SupabaseInitializer = () => {
       }
     } catch (error) {
       console.error('Error syncing user data:', error);
+      // Don't show toast for sync errors to avoid spam
     }
   };
 

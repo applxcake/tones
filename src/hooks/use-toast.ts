@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { toast as sonnerToast } from "sonner";
 
@@ -15,21 +14,21 @@ type ToastProps = {
  * Optimized toast function that batches toast notifications to prevent performance issues
  */
 export const toast = (props: ToastProps) => {
-  // Map our variants to Sonner's styles
-  let toastType: 'default' | 'error' | 'success' = 'default';
-  
-  if (props.variant === 'destructive') {
-    toastType = 'error';
-  } else if (props.variant === 'success') {
-    toastType = 'success';
-  }
-  
-  // Call the appropriate sonner toast method
-  return sonnerToast[toastType]((props.title || ''), {
+  const message = props.title || '';
+  const options = {
     description: props.description,
     duration: props.duration || 5000,
     action: props.action,
-  });
+  };
+
+  // Use the correct Sonner API methods
+  if (props.variant === 'destructive') {
+    return sonnerToast.error(message, options);
+  } else if (props.variant === 'success') {
+    return sonnerToast.success(message, options);
+  } else {
+    return sonnerToast(message, options);
+  }
 };
 
 /**
@@ -38,19 +37,21 @@ export const toast = (props: ToastProps) => {
 export const useToast = () => {
   // Create a more performant toast function that matches our API
   const optimizedToast = useCallback((props: ToastProps) => {
-    let toastType: 'default' | 'error' | 'success' = 'default';
-    
-    if (props.variant === 'destructive') {
-      toastType = 'error';
-    } else if (props.variant === 'success') {
-      toastType = 'success';
-    }
-    
-    return sonnerToast[toastType]((props.title || ''), {
+    const message = props.title || '';
+    const options = {
       description: props.description,
       duration: props.duration || 5000,
       action: props.action,
-    });
+    };
+
+    // Use the correct Sonner API methods
+    if (props.variant === 'destructive') {
+      return sonnerToast.error(message, options);
+    } else if (props.variant === 'success') {
+      return sonnerToast.success(message, options);
+    } else {
+      return sonnerToast(message, options);
+    }
   }, []);
   
   return { 

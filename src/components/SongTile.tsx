@@ -1,182 +1,177 @@
 
 import { useState } from 'react';
-import { Play, Pause, Plus, Download } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Play, Heart, MoreVertical, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import FavoriteButton from '@/components/FavoriteButton';
+import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { YouTubeVideo } from '@/services/youtubeService';
-import { motion } from 'framer-motion';
-import { downloadSong, isDownloaded } from '@/services/downloadService';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import PlaylistSelector from './PlaylistSelector';
 
 interface SongTileProps {
   song: YouTubeVideo;
-  className?: string;
   showFavoriteButton?: boolean;
   isFavorited?: boolean;
   onFavoriteChange?: (isFavorited: boolean) => void;
+  size?: 'small' | 'medium' | 'large';
 }
 
 const SongTile = ({ 
   song, 
-  className, 
-  showFavoriteButton = true, 
+  showFavoriteButton = false, 
   isFavorited = false,
-  onFavoriteChange 
+  onFavoriteChange,
+  size = 'medium' 
 }: SongTileProps) => {
-  const { currentTrack, isPlaying, playTrack, togglePlayPause, isCurrentSong, addToQueue } = usePlayer();
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const isCurrentlyPlaying = isCurrentSong(song.id);
-  const songIsDownloaded = isDownloaded(song.id);
+  const { playTrack, addToQueue, isCurrentSong, isPlaying, toggleLike, isLiked } = usePlayer();
+  const [isHovered, setIsHovered] = useState(false);
+  const [showPlaylistSelector, setShowPlaylistSelector] = useState(false);
+  const isCurrentlyPlaying = isCurrentSong(song.id) && isPlaying;
+  const songIsLiked = showFavoriteButton ? isFavorited : isLiked(song.id);
 
-  const handlePlayPause = () => {
-    if (isCurrentlyPlaying && isPlaying) {
-      togglePlayPause();
-    } else {
-      playTrack(song);
-    }
+  const handlePlay = () => {
+    playTrack(song);
   };
 
-  const handleDownload = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsDownloading(true);
-    await downloadSong(song);
-    setIsDownloading(false);
+  const handleLike = async () => {
+    const newLikedState = await toggleLike(song);
+    onFavoriteChange?.(newLikedState);
   };
 
-  const handleAddToQueue = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    addToQueue(song);
+  const sizeClasses = {
+    small: 'aspect-square',
+    medium: 'aspect-square',
+    large: 'aspect-[4/3]'
   };
 
   return (
-    <motion.div
-      whileHover={{ y: -4, scale: 1.02 }}
-      transition={{ duration: 0.2 }}
-      className={cn(
-        "group relative bg-card rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300",
-        "border border-border/50 hover:border-primary/30",
-        isCurrentlyPlaying && "ring-2 ring-green-500 border-green-500/50 shadow-green-500/20",
-        className
-      )}
-    >
-      {/* Thumbnail */}
-      <div className="relative aspect-square bg-muted">
-        <img
-          src={song.thumbnailUrl}
-          alt={song.title}
-          className={cn(
-            "w-full h-full object-cover transition-all duration-300",
-            imageLoaded ? "opacity-100" : "opacity-0",
-            "group-hover:scale-105",
-            isCurrentlyPlaying && isPlaying && "animate-pulse"
-          )}
-          onLoad={() => setImageLoaded(true)}
-        />
-        
-        {!imageLoaded && (
-          <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted-foreground/20 animate-pulse" />
-        )}
-
-        {/* Play/Pause Overlay */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center">
-          <Button
-            size="icon"
-            variant="secondary"
-            className={cn(
-              "opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-75 group-hover:scale-100",
-              "bg-white/90 hover:bg-white text-black shadow-lg",
-              isCurrentlyPlaying && "opacity-100 scale-100 bg-green-500 hover:bg-green-600 text-white"
-            )}
-            onClick={handlePlayPause}
-          >
-            {isCurrentlyPlaying && isPlaying ? (
-              <Pause className="h-5 w-5" />
-            ) : (
-              <Play className="h-5 w-5 ml-0.5" />
-            )}
-          </Button>
-        </div>
-
-        {/* Action Buttons Overlay */}
-        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleDownload}
-            disabled={isDownloading || songIsDownloaded}
-            className="h-6 w-6 bg-black/50 hover:bg-black/70 text-white"
-          >
-            <Download size={12} className={cn(songIsDownloaded && "text-green-500")} />
-          </Button>
-          
-          {showFavoriteButton && (
-            <FavoriteButton 
-              song={song} 
-              size="sm" 
-              isFavorited={isFavorited}
-              onFavoriteChange={onFavoriteChange}
+    <>
+      <Card
+        className="group bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-200 cursor-pointer"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onClick={handlePlay}
+      >
+        <CardContent className="p-3">
+          <div className={cn("relative mb-3 rounded-lg overflow-hidden", sizeClasses[size])}>
+            <img
+              src={song.thumbnailUrl}
+              alt={song.title}
+              className="w-full h-full object-cover"
             />
-          )}
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleAddToQueue}
-            className="h-6 w-6 bg-black/50 hover:bg-black/70 text-white"
-          >
-            <Plus size={12} />
-          </Button>
-        </div>
+            
+            {/* Play button overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: isHovered || isCurrentlyPlaying ? 1 : 0 }}
+              className="absolute inset-0 bg-black/40 flex items-center justify-center"
+            >
+              <Button
+                size="icon"
+                className={cn(
+                  "rounded-full w-12 h-12 bg-purple-600 hover:bg-purple-700 text-white",
+                  isCurrentlyPlaying && "animate-pulse"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePlay();
+                }}
+              >
+                <Play className="w-5 h-5 ml-0.5" />
+              </Button>
+            </motion.div>
 
-        {/* Downloaded Badge */}
-        {songIsDownloaded && (
-          <div className="absolute bottom-2 left-2">
-            <div className="bg-green-500/90 text-white px-2 py-1 rounded-full text-xs">
-              Downloaded
+            {/* Action buttons */}
+            <div className="absolute top-2 right-2 flex gap-1">
+              {showFavoriteButton && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLike();
+                  }}
+                  className={cn(
+                    "w-8 h-8 bg-black/50 hover:bg-black/70",
+                    songIsLiked ? "text-red-500" : "text-white"
+                  )}
+                >
+                  <Heart className={cn("w-4 h-4", songIsLiked && "fill-current")} />
+                </Button>
+              )}
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-8 h-8 bg-black/50 hover:bg-black/70 text-white"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-gray-900 border-gray-700">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addToQueue(song);
+                    }}
+                    className="text-white hover:bg-gray-700"
+                  >
+                    Add to Queue
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPlaylistSelector(true);
+                    }}
+                    className="text-white hover:bg-gray-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add to Playlist
+                  </DropdownMenuItem>
+                  {!showFavoriteButton && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLike();
+                      }}
+                      className="text-white hover:bg-gray-700"
+                    >
+                      <Heart className={cn("w-4 h-4 mr-2", songIsLiked && "fill-current text-red-500")} />
+                      {songIsLiked ? 'Unlike' : 'Like'}
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
-        )}
 
-        {/* Now Playing Indicator */}
-        {isCurrentlyPlaying && (
-          <div className="absolute bottom-2 right-2">
-            <motion.div 
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="flex items-center gap-1 bg-green-500/90 text-white px-2 py-1 rounded-full text-xs"
-            >
-              <motion.div 
-                className="w-2 h-2 bg-current rounded-full"
-                animate={isPlaying ? { scale: [1, 1.5, 1] } : {}}
-                transition={{ repeat: Infinity, duration: 1.5 }}
-              />
-              {isPlaying ? 'Playing' : 'Paused'}
-            </motion.div>
+          <div className="space-y-1">
+            <h3 className="font-medium text-white text-sm line-clamp-2 leading-tight">
+              {song.title}
+            </h3>
+            <p className="text-xs text-gray-400 truncate">
+              {song.channelTitle}
+            </p>
           </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Song Info */}
-      <div className="p-3">
-        <h3 className={cn(
-          "font-medium text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors",
-          isCurrentlyPlaying && "text-green-500"
-        )}>
-          {song.title}
-        </h3>
-        <p className="text-xs text-muted-foreground line-clamp-1">
-          {song.channelTitle}
-        </p>
-      </div>
-
-      {/* Hover Glow Effect */}
-      <div className={cn(
-        "absolute inset-0 rounded-lg bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none",
-        isCurrentlyPlaying && "from-green-500/0 via-green-500/10 to-green-500/0 opacity-50"
-      )} />
-    </motion.div>
+      <PlaylistSelector
+        isOpen={showPlaylistSelector}
+        onClose={() => setShowPlaylistSelector(false)}
+        song={song}
+      />
+    </>
   );
 };
 

@@ -1,347 +1,198 @@
 
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, Save, Languages, Sun, Moon } from 'lucide-react';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Settings as SettingsIcon, User, Trash2, Shield, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useNavigate } from 'react-router-dom';
-import { getCurrentUser, updateUserProfile } from '@/services/userService';
-import { toast } from '@/components/ui/use-toast';
+import { Switch } from '@/components/ui/switch';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/components/ui/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const Settings = () => {
-  const navigate = useNavigate();
-  const { user: authUser } = useAuth();
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('theme') || 'dark';
-  });
-  const [language, setLanguage] = useState(() => {
-    return localStorage.getItem('language') || 'en';
-  });
-  
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    bio: '',
-    avatar: '',
-  });
-  
-  // Set theme on mount and when changed
-  useEffect(() => {
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+  const { user, signOut } = useAuth();
+  const [notifications, setNotifications] = useState(true);
+  const [autoPlay, setAutoPlay] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // Set language on mount and when changed
-  useEffect(() => {
-    document.documentElement.lang = language;
-    localStorage.setItem('language', language);
-  }, [language]);
-  
-  // Fetch current user data when component mounts
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (authUser) {
-        setLoading(true);
-        try {
-          const userData = await getCurrentUser(authUser.id);
-          setCurrentUser(userData);
-          
-          if (userData) {
-            setFormData({
-              username: userData.username || '',
-              email: userData.email || '',
-              bio: userData.bio || '',
-              avatar: userData.avatar || '',
-            });
-          }
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-          toast({
-            title: "Error loading profile",
-            description: "Could not load your profile data. Please try again.",
-            variant: "destructive"
-          });
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-    
-    fetchUserData();
-  }, [authUser]);
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTheme(e.target.value);
-  };
-
-  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setLanguage(e.target.value);
-  };
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (authUser) {
-      setLoading(true);
-      try {
-        const updatedUser = await updateUserProfile(formData, authUser.id);
-        if (updatedUser) {
-          setCurrentUser(updatedUser);
-          toast({
-            title: "Settings saved",
-            description: "Your profile has been updated successfully.",
-          });
-        }
-      } catch (error) {
-        console.error('Error updating profile:', error);
-        toast({
-          title: "Error saving settings",
-          description: "Could not update your profile. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
+  const handleDeleteAccount = async () => {
+    try {
+      // In a real app, you would call an API to delete the account
+      toast({
+        title: "Account Deletion",
+        description: "This feature is not implemented in the demo. In a real app, this would permanently delete your account.",
+        variant: "destructive"
+      });
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
-  const handlePreferencesSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Preferences saved",
-      description: "Your preferences have been updated successfully.",
-    });
-  };
-  
-  const translations = {
-    en: {
-      settings: "Settings",
-      back: "Back",
-      username: "Username",
-      email: "Email",
-      avatarUrl: "Avatar URL",
-      bio: "Bio",
-      bioPlaceholder: "Tell us about yourself",
-      saveChanges: "Save Changes",
-      preferences: "Preferences",
-      language: "Language",
-      theme: "Theme",
-      dark: "Dark (Default)",
-      light: "Light",
-      savePreferences: "Save Preferences",
-    },
-    es: {
-      settings: "Configuración",
-      back: "Atrás",
-      username: "Nombre de usuario",
-      email: "Correo electrónico",
-      avatarUrl: "URL de avatar",
-      bio: "Biografía",
-      bioPlaceholder: "Cuéntanos sobre ti",
-      saveChanges: "Guardar cambios",
-      preferences: "Preferencias",
-      language: "Idioma",
-      theme: "Tema",
-      dark: "Oscuro (Predeterminado)",
-      light: "Claro",
-      savePreferences: "Guardar Preferencias",
-    },
-    fr: {
-      settings: "Paramètres",
-      back: "Retour",
-      username: "Nom d'utilisateur",
-      email: "Email",
-      avatarUrl: "URL de l'avatar",
-      bio: "Biographie",
-      bioPlaceholder: "Parlez-nous de vous",
-      saveChanges: "Enregistrer les modifications",
-      preferences: "Préférences",
-      language: "Langue",
-      theme: "Thème",
-      dark: "Sombre (Par défaut)",
-      light: "Clair",
-      savePreferences: "Enregistrer les préférences",
-    },
-    de: {
-      settings: "Einstellungen",
-      back: "Zurück",
-      username: "Benutzername",
-      email: "E-Mail",
-      avatarUrl: "Avatar-URL",
-      bio: "Biografie",
-      bioPlaceholder: "Erzählen Sie uns von sich",
-      saveChanges: "Änderungen speichern",
-      preferences: "Einstellungen",
-      language: "Sprache",
-      theme: "Thema",
-      dark: "Dunkel (Standard)",
-      light: "Hell",
-      savePreferences: "Einstellungen speichern",
-    }
-  };
-  
-  // Get current translations based on language
-  const t = translations[language as keyof typeof translations] || translations.en;
-  
   return (
-    <div className="pt-6 pb-24">
-      <Button 
-        variant="ghost" 
-        className="flex items-center mb-6"
-        onClick={() => navigate(-1)}
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-8"
       >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        {t.back}
-      </Button>
-      
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">{t.settings}</h1>
-      </div>
-      
-      <div className="bg-card rounded-lg p-6 max-w-2xl mx-auto border">
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-6">
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="md:w-1/3 flex justify-center">
-                <div className="relative">
-                  <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                    {formData.avatar ? (
-                      <img 
-                        src={formData.avatar} 
-                        alt={formData.username} 
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <User className="w-16 h-16 text-muted-foreground" />
-                    )}
-                  </div>
-                </div>
+        <div className="flex items-center gap-3">
+          <SettingsIcon className="h-8 w-8 text-purple-400" />
+          <div>
+            <h1 className="text-3xl font-bold text-white">Settings</h1>
+            <p className="text-gray-400">Manage your account and preferences</p>
+          </div>
+        </div>
+
+        {/* Profile Settings */}
+        <Card className="bg-white/5 border-white/10">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-white">
+              <User className="h-5 w-5" />
+              Profile Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-white">Username</Label>
+                <Input
+                  id="username"
+                  defaultValue={user?.username || ''}
+                  className="bg-white/5 border-white/10 text-white"
+                  placeholder="Enter username"
+                />
               </div>
-              
-              <div className="md:w-2/3 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">{t.username}</Label>
-                  <Input 
-                    id="username"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">{t.email}</Label>
-                  <Input 
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="avatar">{t.avatarUrl}</Label>
-                  <Input 
-                    id="avatar"
-                    name="avatar"
-                    type="url"
-                    placeholder="https://example.com/avatar.jpg"
-                    value={formData.avatar}
-                    onChange={handleChange}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-white">Email</Label>
+                <Input
+                  id="email"
+                  defaultValue={user?.email || ''}
+                  className="bg-white/5 border-white/10 text-white"
+                  placeholder="Enter email"
+                  disabled
+                />
               </div>
             </div>
-            
             <div className="space-y-2">
-              <Label htmlFor="bio">{t.bio}</Label>
-              <Textarea 
-                id="bio"
-                name="bio"
-                placeholder={t.bioPlaceholder}
-                value={formData.bio}
-                onChange={handleChange}
-                rows={4}
+              <Label htmlFor="avatar" className="text-white">Avatar URL</Label>
+              <Input
+                id="avatar"
+                defaultValue={user?.avatarUrl || ''}
+                className="bg-white/5 border-white/10 text-white"
+                placeholder="Enter avatar URL"
+              />
+            </div>
+            <Button className="bg-purple-600 hover:bg-purple-700">
+              Save Changes
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* App Preferences */}
+        <Card className="bg-white/5 border-white/10">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-white">
+              <Bell className="h-5 w-5" />
+              Preferences
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-white">Notifications</Label>
+                <p className="text-sm text-gray-400">
+                  Receive notifications about new releases and updates
+                </p>
+              </div>
+              <Switch
+                checked={notifications}
+                onCheckedChange={setNotifications}
               />
             </div>
             
-            <div className="pt-4">
-              <Button type="submit" className="flex items-center gap-2" disabled={loading}>
-                <Save className="h-4 w-4" />
-                {t.saveChanges}
-              </Button>
-            </div>
-          </div>
-        </form>
-      </div>
-      
-      <div className="mt-8 bg-card rounded-lg p-6 max-w-2xl mx-auto border">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          {t.preferences}
-        </h2>
-        
-        <form onSubmit={handlePreferencesSave}>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="language" className="flex items-center gap-2">
-                <Languages className="h-4 w-4" />
-                {t.language}
-              </Label>
-              <select 
-                id="language"
-                name="language"
-                value={language}
-                onChange={handleLanguageChange}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <option value="en">English</option>
-                <option value="es">Español</option>
-                <option value="fr">Français</option>
-                <option value="de">Deutsch</option>
-              </select>
-            </div>
+            <Separator className="bg-white/10" />
             
-            <div className="space-y-2">
-              <Label htmlFor="theme" className="flex items-center gap-2">
-                {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                {t.theme}
-              </Label>
-              <select 
-                id="theme"
-                name="theme"
-                value={theme}
-                onChange={handleThemeChange}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <option value="dark">{t.dark}</option>
-                <option value="light">{t.light}</option>
-              </select>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-white">Auto-play</Label>
+                <p className="text-sm text-gray-400">
+                  Automatically play similar songs when queue ends
+                </p>
+              </div>
+              <Switch
+                checked={autoPlay}
+                onCheckedChange={setAutoPlay}
+              />
             </div>
-          </div>
-          
-          <div className="pt-4">
-            <Button type="submit" variant="outline" className="w-full">
-              {t.savePreferences}
-            </Button>
-          </div>
-        </form>
-      </div>
+          </CardContent>
+        </Card>
+
+        {/* Danger Zone */}
+        <Card className="bg-red-950/20 border-red-500/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-400">
+              <Shield className="h-5 w-5" />
+              Danger Zone
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <h3 className="font-medium text-white">Delete Account</h3>
+              <p className="text-sm text-gray-400">
+                Permanently delete your account and all associated data. This action cannot be undone.
+              </p>
+              
+              <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="mt-2">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Account
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-gray-900 border-gray-700">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-white">
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-gray-300">
+                      This will permanently delete your account and remove all your data including playlists, liked songs, and preferences. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="bg-gray-700 text-white hover:bg-gray-600">
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteAccount}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Delete Account
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 };

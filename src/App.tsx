@@ -16,8 +16,6 @@ import Playlists from '@/pages/Playlists';
 import PlaylistDetails from '@/pages/PlaylistDetails';
 import UserProfile from '@/pages/UserProfile';
 import Favorites from '@/pages/Favorites';
-import Downloads from '@/pages/Downloads';
-import Library from '@/pages/Library';
 
 // Components
 import CleanLayout from '@/components/CleanLayout';
@@ -33,7 +31,6 @@ import { PlayerProvider } from '@/contexts/PlayerContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 
-// Create a client outside of the component
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -62,11 +59,9 @@ function App() {
                   <Route path="/search" element={<Search />} />
                   <Route path="/explore" element={<Explore />} />
                   <Route path="/profile" element={<Profile />} />
-                  <Route path="/library" element={<Library />} />
-                  <Route path="/favorites" element={<Favorites />} />
-                  <Route path="/downloads" element={<Downloads />} />
-                  <Route path="/settings" element={<Settings />} />
                   <Route path="/playlists" element={<Playlists />} />
+                  <Route path="/favorites" element={<Favorites />} />
+                  <Route path="/settings" element={<Settings />} />
                   <Route path="/playlists/:id" element={<PlaylistDetails />} />
                   <Route path="/users/:id" element={<UserProfile />} />
                 </Route>

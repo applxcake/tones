@@ -22,7 +22,7 @@ const CleanLayout = () => {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#18122b] dark:bg-gradient-to-br dark:from-[#2d0b4e] dark:to-[#4b2067]">
+    <div className="min-h-screen flex bg-black">
       <Sidebar />
       <main className="flex-1 p-6 pb-24 overflow-auto">
         <div className="max-w-7xl mx-auto">

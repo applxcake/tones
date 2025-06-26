@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { usePlayer } from '@/contexts/PlayerContext';
 
@@ -22,8 +21,9 @@ const YTPlayer: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const loadingApiRef = useRef<boolean>(false);
   const hasApiLoadedRef = useRef<boolean>(false);
+  const isPlayerReadyRef = useRef<boolean>(false);
   
-  // Load YouTube API
+  // Load YouTube API only once
   useEffect(() => {
     if (!window.YT && !loadingApiRef.current) {
       loadingApiRef.current = true;
@@ -38,7 +38,7 @@ const YTPlayer: React.FC = () => {
       
       const firstScriptTag = document.getElementsByTagName('script')[0];
       firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-    } else if (window.YT && window.YT.Player) {
+    } else if (window.YT && window.YT.Player && !playerRef.current) {
       hasApiLoadedRef.current = true;
       initializePlayer();
     }
@@ -47,15 +47,17 @@ const YTPlayer: React.FC = () => {
       if (playerRef.current) {
         try {
           playerRef.current.destroy();
+          playerRef.current = null;
+          isPlayerReadyRef.current = false;
         } catch (error) {
           console.error('Error destroying YouTube player:', error);
         }
       }
     };
-  }, [currentTrack]);
+  }, []); // Empty dependency array - only run once
   
   const initializePlayer = () => {
-    if (!hasApiLoadedRef.current || !containerRef.current) return;
+    if (!hasApiLoadedRef.current || !containerRef.current || playerRef.current) return;
     
     try {
       playerRef.current = new window.YT.Player('youtube-player', {
@@ -81,9 +83,8 @@ const YTPlayer: React.FC = () => {
 
   const onPlayerReady = () => {
     console.log('YouTube player ready');
-    if (currentTrack) {
-      loadVideo(currentTrack.id);
-    }
+    isPlayerReadyRef.current = true;
+    // Don't load video here - let the currentTrack effect handle it
   };
 
   const onPlayerStateChange = (event: any) => {
@@ -95,16 +96,16 @@ const YTPlayer: React.FC = () => {
     }
   };
   
-  // Load video when track changes
+  // Load video when track changes - separate effect
   useEffect(() => {
-    if (playerRef.current && currentTrack && hasApiLoadedRef.current) {
+    if (playerRef.current && currentTrack && isPlayerReadyRef.current) {
       loadVideo(currentTrack.id);
     }
   }, [currentTrack]);
   
   // Play/pause based on isPlaying state
   useEffect(() => {
-    if (!playerRef.current || !hasApiLoadedRef.current) return;
+    if (!playerRef.current || !isPlayerReadyRef.current) return;
     
     if (isPlaying) {
       try {
@@ -123,14 +124,14 @@ const YTPlayer: React.FC = () => {
 
   // Update volume when changed
   useEffect(() => {
-    if (playerRef.current && typeof playerRef.current.setVolume === 'function') {
+    if (playerRef.current && typeof playerRef.current.setVolume === 'function' && isPlayerReadyRef.current) {
       playerRef.current.setVolume(volume * 100);
     }
   }, [volume]);
 
   // Update playback rate when changed
   useEffect(() => {
-    if (playerRef.current && typeof playerRef.current.setPlaybackRate === 'function') {
+    if (playerRef.current && typeof playerRef.current.setPlaybackRate === 'function' && isPlayerReadyRef.current) {
       playerRef.current.setPlaybackRate(playbackRate);
     }
   }, [playbackRate]);
@@ -146,7 +147,9 @@ const YTPlayer: React.FC = () => {
         
         if (!isPlaying) {
           setTimeout(() => {
-            playerRef.current?.pauseVideo();
+            if (playerRef.current) {
+              playerRef.current.pauseVideo();
+            }
           }, 100);
         }
       } catch (error) {

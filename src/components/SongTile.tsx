@@ -21,6 +21,7 @@ interface SongTileProps {
   isFavorited?: boolean;
   onFavoriteChange?: (isFavorited: boolean) => void;
   size?: 'small' | 'medium' | 'large';
+  className?: string;
 }
 
 const SongTile = ({ 
@@ -28,7 +29,8 @@ const SongTile = ({
   showFavoriteButton = false, 
   isFavorited = false,
   onFavoriteChange,
-  size = 'medium' 
+  size = 'medium',
+  className 
 }: SongTileProps) => {
   const { playTrack, addToQueue, isCurrentSong, isPlaying, toggleLike, isLiked } = usePlayer();
   const [isHovered, setIsHovered] = useState(false);
@@ -54,7 +56,10 @@ const SongTile = ({
   return (
     <>
       <Card
-        className="group bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-200 cursor-pointer"
+        className={cn(
+          "group bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-200 cursor-pointer",
+          className
+        )}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={handlePlay}

@@ -1,4 +1,3 @@
-
 import { toast } from '@/components/ui/use-toast';
 import { YouTubeVideo } from './youtubeService';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,6 +63,7 @@ export const getUserPlaylists = async (userId?: string): Promise<Playlist[]> => 
           id: playlist.id,
           name: playlist.name,
           description: playlist.description || '',
+          imageUrl: playlist.image_url || '',
           songs,
           createdAt: playlist.created_at,
           userId: playlist.user_id,
@@ -74,6 +74,7 @@ export const getUserPlaylists = async (userId?: string): Promise<Playlist[]> => 
           id: playlist.id,
           name: playlist.name,
           description: playlist.description || '',
+          imageUrl: playlist.image_url || '',
           songs: [],
           createdAt: playlist.created_at,
           userId: playlist.user_id,
@@ -94,7 +95,7 @@ export const getUserPlaylists = async (userId?: string): Promise<Playlist[]> => 
 };
 
 // Create a new playlist
-export const createPlaylist = async (name: string, description = '', userId?: string): Promise<Playlist | null> => {
+export const createPlaylist = async (name: string, description = '', userId?: string, imageUrl = ''): Promise<Playlist | null> => {
   if (!userId) {
     toast({
       title: "Error creating playlist",
@@ -110,6 +111,7 @@ export const createPlaylist = async (name: string, description = '', userId?: st
       name,
       description,
       user_id: userId,
+      image_url: imageUrl,
       created_at: new Date().toISOString()
     };
     
@@ -131,6 +133,7 @@ export const createPlaylist = async (name: string, description = '', userId?: st
       id: data[0].id,
       name,
       description,
+      imageUrl: data[0].image_url,
       songs: [],
       createdAt: data[0].created_at,
       userId,

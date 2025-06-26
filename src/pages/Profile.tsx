@@ -161,12 +161,8 @@ const Profile = () => {
                 <p className="text-xs text-gray-400">Playlists</p>
               </div>
               <div className="glass-card-hover p-3 w-24 text-center hover-scale animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                <p className="text-xl font-bold">{currentUserData?.followers?.length || 0}</p>
-                <p className="text-xs text-gray-400">Followers</p>
-              </div>
-              <div className="glass-card-hover p-3 w-24 text-center hover-scale animate-fade-in" style={{ animationDelay: '0.3s' }}>
-                <p className="text-xl font-bold">{currentUserData?.following?.length || 0}</p>
-                <p className="text-xs text-gray-400">Following</p>
+                <p className="text-xl font-bold">{likedSongs?.length || 0}</p>
+                <p className="text-xs text-gray-400">Liked Songs</p>
               </div>
             </div>
           </div>

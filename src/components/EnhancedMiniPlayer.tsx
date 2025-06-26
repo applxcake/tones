@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -133,7 +132,7 @@ const EnhancedMiniPlayer = () => {
               onClick={toggleShuffle}
               className={cn(
                 "w-8 h-8 text-gray-400 hover:text-white",
-                shuffleMode && "text-purple-400"
+                shuffleMode && "text-purple-400 bg-purple-400/10"
               )}
             >
               <Shuffle className="w-4 h-4" />
@@ -190,11 +189,14 @@ const EnhancedMiniPlayer = () => {
               variant="ghost"
               onClick={toggleLoop}
               className={cn(
-                "w-8 h-8 text-gray-400 hover:text-white",
-                loopMode !== 'none' && "text-purple-400"
+                "w-8 h-8 text-gray-400 hover:text-white relative",
+                loopMode !== 'none' && "text-purple-400 bg-purple-400/10"
               )}
             >
               <Repeat className="w-4 h-4" />
+              {loopMode === 'one' && (
+                <span className="absolute text-xs font-bold text-purple-400 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none">1</span>
+              )}
             </Button>
           </div>
 

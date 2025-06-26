@@ -1,11 +1,11 @@
-
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, Heart, Plus } from 'lucide-react';
+import { Play, Pause, Heart, Plus, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { YouTubeVideo } from '@/services/youtubeService';
+import PlaylistSelector from './PlaylistSelector';
 
 interface EnhancedSongTileProps {
   song: YouTubeVideo;
@@ -26,6 +26,7 @@ const EnhancedSongTile = ({
   const [imageLoaded, setImageLoaded] = useState(false);
   const isCurrentSong = currentTrack?.id === song.id;
   const songIsLiked = isLiked(song.id);
+  const [showPlaylistSelector, setShowPlaylistSelector] = useState(false);
 
   const handlePlayPause = () => {
     if (isCurrentSong && isPlaying) {
@@ -112,6 +113,18 @@ const EnhancedSongTile = ({
           >
             <Plus className="w-3 h-3" />
           </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="w-6 h-6 bg-black/50 hover:bg-black/70 text-white"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowPlaylistSelector(true);
+            }}
+            aria-label="More options"
+          >
+            <MoreVertical className="w-3 h-3" />
+          </Button>
         </div>
 
         {/* Now Playing Indicator */}
@@ -127,13 +140,18 @@ const EnhancedSongTile = ({
 
       {/* Song Info */}
       <div className="space-y-1">
-        <h3 className="font-medium text-white text-sm line-clamp-2 group-hover:text-zinc-100 transition-colors">
+        <h3 className="font-medium text-primary text-sm line-clamp-2 transition-colors">
           {song.title}
         </h3>
-        <p className="text-zinc-400 text-xs line-clamp-1 group-hover:text-zinc-300 transition-colors">
+        <p className="text-muted-foreground text-xs line-clamp-1 transition-colors">
           {song.channelTitle}
         </p>
       </div>
+      <PlaylistSelector
+        isOpen={showPlaylistSelector}
+        onClose={() => setShowPlaylistSelector(false)}
+        song={song}
+      />
     </motion.div>
   );
 };

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { getAllUsers, searchUsers } from '@/services/userService';
 import { getTrendingMusic } from '@/services/youtubeService';
@@ -101,64 +100,10 @@ const Explore = () => {
           )}
         </div>
       ) : (
-        <Tabs defaultValue="trending">
-          <TabsList className="w-full max-w-md mx-auto mb-8">
-            <TabsTrigger value="trending" className="flex-1">Trending Music</TabsTrigger>
-            <TabsTrigger value="users" className="flex-1">Users to Follow</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="trending">
-            {loading ? (
-              <div className="flex justify-center py-12">
-                <div className="flex gap-2">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div 
-                      key={i}
-                      className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
-                      style={{ animationDelay: `${i * 0.15}s` }}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : trendingMusic.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {trendingMusic.map((song) => (
-                  <SongTile key={song.id} song={song} />
-                ))}
-              </div>
-            ) : (
-              <div className="py-12 text-center glass-panel">
-                <p className="text-gray-400">No trending music available at the moment.</p>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="users">
-            {loading ? (
-              <div className="flex justify-center py-12">
-                <div className="flex gap-2">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div 
-                      key={i}
-                      className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
-                      style={{ animationDelay: `${i * 0.15}s` }}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : displayUsers.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {displayUsers.map((user) => (
-                  <UserCard key={user.id} user={user} />
-                ))}
-              </div>
-            ) : (
-              <div className="py-12 text-center glass-panel">
-                <p className="text-gray-400">No users available at the moment.</p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+        // Only show a minimal message or nothing if not searching
+        <div className="text-center text-gray-400 py-12">
+          Use the search bar above to find music or users.
+        </div>
       )}
     </div>
   );

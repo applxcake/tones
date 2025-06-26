@@ -25,6 +25,7 @@ const Playlists = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [playlistName, setPlaylistName] = useState('');
   const [playlistDescription, setPlaylistDescription] = useState('');
+  const [playlistImageUrl, setPlaylistImageUrl] = useState('');
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -50,13 +51,14 @@ const Playlists = () => {
 
   const handleCreatePlaylist = async () => {
     if (playlistName.trim() && user) {
-      const newPlaylist = await createPlaylist(playlistName.trim(), playlistDescription.trim(), user.id);
+      const newPlaylist = await createPlaylist(playlistName.trim(), playlistDescription.trim(), user.id, playlistImageUrl.trim());
       if (newPlaylist) {
         setPlaylists(prev => [...prev, newPlaylist]);
       }
       setDialogOpen(false);
       setPlaylistName('');
       setPlaylistDescription('');
+      setPlaylistImageUrl('');
     }
   };
 
@@ -111,57 +113,75 @@ const Playlists = () => {
         </div>
         
         {/* Playlists */}
-        {playlists.map((playlist, index) => (
-          <div 
-            key={playlist.id} 
-            className="glass-panel rounded-lg overflow-hidden hover-scale transform transition-all duration-300 hover:shadow-glow animate-fade-in" 
-            style={{ animationDelay: `${0.15 * (index + 1)}s` }}
-          >
+        {playlists.map((playlist, index) => {
+          // Normalize image_url to imageUrl for compatibility
+          const imageUrl = playlist.imageUrl || (playlist as any).image_url;
+          return (
             <div 
-              className="h-40 bg-gradient-to-br from-gray-700/80 to-gray-900/80 flex items-center justify-center cursor-pointer relative group"
-              onClick={() => viewPlaylist(playlist.id)}
+              key={playlist.id} 
+              className="glass-panel rounded-lg overflow-hidden hover-scale transform transition-all duration-300 hover:shadow-glow animate-fade-in" 
+              style={{ animationDelay: `${0.15 * (index + 1)}s` }}
             >
-              <ListMusic className="h-12 w-12 text-white/60 group-hover:text-white/90 transition-all duration-300" />
-              <div className="absolute inset-0 bg-neon-purple/0 group-hover:bg-neon-purple/20 transition-all duration-300"></div>
-              
-              {/* Play button overlay on hover */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <Button 
-                  size="icon"
-                  className="bg-neon-purple/80 hover:bg-neon-purple text-white rounded-full h-12 w-12 shadow-glow transform scale-90 hover:scale-100 transition-all duration-300"
-                >
-                  <Edit className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-            <div className="p-4 flex justify-between items-center">
-              <div className="group cursor-pointer" onClick={() => viewPlaylist(playlist.id)}>
-                <h3 className="font-medium group-hover:text-neon-purple transition-colors duration-300">{playlist.name}</h3>
-                <p className="text-sm text-gray-400">{playlist.songs.length} songs</p>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="hover-scale">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="animate-scale-in">
-                  <DropdownMenuItem onClick={() => viewPlaylist(playlist.id)} className="hover-scale">
-                    <Edit className="mr-2 h-4 w-4" />
-                    View
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-red-500 hover-scale"
-                    onClick={() => handleDeletePlaylist(playlist.id)}
+              <div 
+                className="h-40 bg-gradient-to-br from-gray-700/80 to-gray-900/80 flex items-center justify-center cursor-pointer relative group"
+                onClick={() => viewPlaylist(playlist.id)}
+              >
+                {imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt={playlist.name}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    style={{ zIndex: 1 }}
+                    onError={e => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <ListMusic className="h-12 w-12 text-white/60 group-hover:text-white/90 transition-all duration-300 z-10" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-20" />
+                <div className="absolute inset-0 bg-neon-purple/0 group-hover:bg-neon-purple/20 transition-all duration-300 z-30"></div>
+                
+                {/* Play button overlay on hover */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <Button 
+                    size="icon"
+                    className="bg-neon-purple/80 hover:bg-neon-purple text-white rounded-full h-12 w-12 shadow-glow transform scale-90 hover:scale-100 transition-all duration-300"
                   >
-                    <Trash className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <Edit className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+              <div className="p-4 flex justify-between items-center">
+                <div className="group cursor-pointer" onClick={() => viewPlaylist(playlist.id)}>
+                  <h3 className="font-medium group-hover:text-neon-purple transition-colors duration-300">{playlist.name}</h3>
+                  {playlist.description && (
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">{playlist.description}</p>
+                  )}
+                  <p className="text-sm text-gray-400">{playlist.songs.length} songs</p>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="hover-scale">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="animate-scale-in">
+                    <DropdownMenuItem onClick={() => viewPlaylist(playlist.id)} className="hover-scale">
+                      <Edit className="mr-2 h-4 w-4" />
+                      View
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="text-red-500 hover-scale"
+                      onClick={() => handleDeletePlaylist(playlist.id)}
+                    >
+                      <Trash className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Create Playlist Dialog */}
@@ -198,6 +218,19 @@ const Playlists = () => {
                 value={playlistDescription}
                 onChange={(e) => setPlaylistDescription(e.target.value)}
                 rows={3}
+                className="focus:ring-neon-purple focus:border-neon-purple transition-all duration-300"
+              />
+            </div>
+            
+            <div className="space-y-2 animate-fade-in" style={{animationDelay: '0.3s'}}>
+              <label htmlFor="imageUrl" className="text-sm font-medium">
+                Playlist Image URL (Optional)
+              </label>
+              <Input
+                id="imageUrl"
+                placeholder="https://..."
+                value={playlistImageUrl}
+                onChange={e => setPlaylistImageUrl(e.target.value)}
                 className="focus:ring-neon-purple focus:border-neon-purple transition-all duration-300"
               />
             </div>

@@ -1,8 +1,9 @@
-
 import { motion } from 'framer-motion';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import PlaylistSelector from './PlaylistSelector';
+import { YouTubeVideo } from '@/services/youtubeService';
 
 interface MinimalistTileProps {
   title: string;
@@ -12,6 +13,7 @@ interface MinimalistTileProps {
   onPlay?: () => void;
   className?: string;
   size?: 'small' | 'medium' | 'large';
+  song?: YouTubeVideo;
 }
 
 const MinimalistTile = ({ 
@@ -21,9 +23,11 @@ const MinimalistTile = ({
   isPlaying, 
   onPlay, 
   className,
-  size = 'medium' 
+  size = 'medium',
+  song
 }: MinimalistTileProps) => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [showPlaylistSelector, setShowPlaylistSelector] = useState(false);
 
   const sizeClasses = {
     small: 'w-32 h-32',
@@ -56,6 +60,21 @@ const MinimalistTile = ({
         
         {!imageLoaded && (
           <div className="absolute inset-0 bg-zinc-800 animate-pulse" />
+        )}
+
+        {/* Three-dot menu for Add to Playlist */}
+        {song && (
+          <button
+            className="absolute top-2 right-2 z-10 w-8 h-8 flex items-center justify-center bg-black/50 hover:bg-black/70 rounded-full text-white"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowPlaylistSelector(true);
+            }}
+            aria-label="More options"
+            type="button"
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
         )}
 
         {/* Play Button Overlay */}
@@ -108,6 +127,15 @@ const MinimalistTile = ({
           </p>
         )}
       </div>
+
+      {/* PlaylistSelector Dialog */}
+      {song && (
+        <PlaylistSelector
+          isOpen={showPlaylistSelector}
+          onClose={() => setShowPlaylistSelector(false)}
+          song={song}
+        />
+      )}
     </motion.div>
   );
 };

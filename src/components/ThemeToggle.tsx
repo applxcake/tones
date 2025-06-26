@@ -1,4 +1,3 @@
-
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
@@ -20,7 +19,7 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ className }) => {
         "relative overflow-hidden rounded-full transition-colors",
         "bg-gradient-to-br",
         theme === 'dark' 
-          ? "from-indigo-500/20 via-purple-500/20 to-pink-500/20"
+          ? "from-emerald-900 via-green-800 to-emerald-950"
           : "from-blue-300/20 via-yellow-100/20 to-orange-300/20",
         className
       )}

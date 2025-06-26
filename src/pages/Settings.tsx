@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const Settings = () => {
   const { user, signOut } = useAuth();
@@ -41,49 +42,49 @@ const Settings = () => {
         <div className="flex items-center gap-3">
           <SettingsIcon className="h-8 w-8 text-purple-400" />
           <div>
-            <h1 className="text-3xl font-bold text-white">Settings</h1>
-            <p className="text-gray-400">Manage your account and preferences</p>
+            <h1 className="text-3xl font-bold text-primary">Settings</h1>
+            <p className="text-muted-foreground">Manage your account and preferences</p>
           </div>
         </div>
 
         {/* Profile Settings */}
         <Card className="bg-white/5 border-white/10">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
+            <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              Profile Settings
+              <span className="text-primary">Profile Settings</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-white">Username</Label>
+                <Label htmlFor="username">Username</Label>
                 <Input
                   id="username"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-white/5 border-white/10"
                   placeholder="Enter username"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-white">Email</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   defaultValue={user?.email || ''}
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-white/5 border-white/10"
                   placeholder="Enter email"
                   disabled
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="avatar" className="text-white">Avatar URL</Label>
+              <Label htmlFor="avatar">Avatar URL</Label>
               <Input
                 id="avatar"
                 value={avatarUrl}
                 onChange={e => setAvatarUrl(e.target.value)}
-                className="bg-white/5 border-white/10 text-white"
+                className="bg-white/5 border-white/10"
                 placeholder="Enter avatar URL"
               />
             </div>
@@ -110,16 +111,26 @@ const Settings = () => {
         {/* App Preferences */}
         <Card className="bg-white/5 border-white/10">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
+            <CardTitle className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
-              Preferences
+              <span className="text-primary">Preferences</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label className="text-white">Notifications</Label>
-                <p className="text-sm text-gray-400">
+                <Label>Theme</Label>
+                <p className="text-sm text-muted-foreground">
+                  Switch between light and dark mode
+                </p>
+              </div>
+              <ThemeToggle />
+            </div>
+            <Separator className="bg-white/10" />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Notifications</Label>
+                <p className="text-sm text-muted-foreground">
                   Receive notifications about new releases and updates
                 </p>
               </div>
@@ -133,8 +144,8 @@ const Settings = () => {
             
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label className="text-white">Auto-play</Label>
-                <p className="text-sm text-gray-400">
+                <Label>Auto-play</Label>
+                <p className="text-sm text-muted-foreground">
                   Automatically play similar songs when queue ends
                 </p>
               </div>

@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useRef, useCallback, useImperativeHandle, forwardRef, useState } from 'react';
 import { usePlayer } from '@/contexts/PlayerContext';
 
-declare global {
-  interface Window {
-    onYouTubeIframeAPIReady: () => void;
-    YT: any;
-  }
+function isAndroid() {
+  return /Android/i.test(navigator.userAgent);
+}
+function isMobile() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
 const YTPlayer = forwardRef((props, ref) => {
@@ -25,6 +25,8 @@ const YTPlayer = forwardRef((props, ref) => {
   const isPlayerReadyRef = useRef<boolean>(false);
   const scriptLoadedRef = useRef<boolean>(false);
   const playWhenReady = useRef(false);
+  const [showPlayOverlay, setShowPlayOverlay] = useState(false);
+  const userInteractedRef = useRef(false);
   
   const onPlayerReady = useCallback(() => {
     isPlayerReadyRef.current = true;
@@ -76,9 +78,12 @@ const YTPlayer = forwardRef((props, ref) => {
       // Clear the container before initializing
       if (containerRef.current) {
         containerRef.current.innerHTML = '';
+        if (!containerRef.current.id) {
+          containerRef.current.id = 'yt-player-container';
+        }
       }
       
-      playerRef.current = new window.YT.Player(containerRef.current, {
+      playerRef.current = new window.YT.Player(containerRef.current.id, {
         height: '1',
         width: '1',
         playerVars: {
@@ -188,12 +193,44 @@ const YTPlayer = forwardRef((props, ref) => {
     }
   }), []);
 
+  // On mobile/Android, require user interaction to play
+  useEffect(() => {
+    if ((isAndroid() || isMobile()) && isPlaying && currentTrack) {
+      if (!userInteractedRef.current) {
+        setShowPlayOverlay(true);
+      }
+    } else {
+      setShowPlayOverlay(false);
+    }
+  }, [isPlaying, currentTrack]);
+
+  const handlePlayOverlayClick = () => {
+    userInteractedRef.current = true;
+    setShowPlayOverlay(false);
+    if (playerRef.current && typeof playerRef.current.playVideo === 'function') {
+      playerRef.current.playVideo();
+    }
+  };
+
   return (
-    <div 
-      className="hidden" 
-      ref={containerRef}
-      style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
-    />
+    <>
+      <div 
+        className="hidden" 
+        ref={containerRef}
+        style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
+      />
+      {showPlayOverlay && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+          onClick={handlePlayOverlayClick}
+          style={{ cursor: 'pointer' }}
+        >
+          <button className="bg-white rounded-full p-6 shadow-lg text-2xl font-bold">
+            ▶️ Tap to Play
+          </button>
+        </div>
+      )}
+    </>
   );
 });
 

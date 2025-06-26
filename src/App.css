@@ -668,12 +668,22 @@
 }
 
 @keyframes gradient {
-  0% {
-    background-position: 0% center;
+  0%, 100% {
+    background-position: 0% 50%;
   }
-  100% {
-    background-position: 300% center;
+  25% {
+    background-position: 50% 100%;
   }
+  50% {
+    background-position: 100% 50%;
+  }
+  75% {
+    background-position: 50% 0%;
+  }
+}
+
+.animate-gradient {
+  animation: gradient 6s ease-in-out infinite;
 }
 
 /* 3D Card Hover Effect */
@@ -822,4 +832,12 @@
 
 .animate-spinner {
   animation: spinner 2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+body {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+}
+
+.dark body {
+  background: linear-gradient(135deg, #2d0b4e 0%, #4b2067 100%);
 }

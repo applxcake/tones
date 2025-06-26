@@ -69,6 +69,35 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     return currentTrack?.id === songId;
   }, [currentTrack]);
 
+  const nextTrack = () => {
+    if (queue.length > 0) {
+      const nextSong = queue[0];
+      setQueue(prev => prev.slice(1));
+      playTrack(nextSong);
+    } else if (autoPlayEnabled && recentlyPlayed.length > 1) {
+      // Play a random song from recently played (excluding current)
+      const availableSongs = recentlyPlayed.filter(song => song.id !== currentTrack?.id);
+      if (availableSongs.length > 0) {
+        const randomIndex = Math.floor(Math.random() * availableSongs.length);
+        playTrack(availableSongs[randomIndex]);
+      }
+    } else {
+      setIsPlaying(false);
+    }
+  };
+
+  const seekToPosition = (newProgress: number) => {
+    setProgress(newProgress);
+    // Also seek the YouTube player
+    if (typeof window !== 'undefined' && (window as any)._ytPlayerRef?.current) {
+      const ytPlayerRef = (window as any)._ytPlayerRef.current;
+      if (ytPlayerRef && ytPlayerRef.seekTo && duration) {
+        const seconds = (newProgress / 100) * duration;
+        ytPlayerRef.seekTo(seconds);
+      }
+    }
+  };
+
   // Progress tracking with proper time handling
   useEffect(() => {
     if (!isPlaying || !currentTrack) return;
@@ -80,6 +109,8 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
         // Auto-skip when song ends
         if (newProgress >= 100) {
           if (loopMode === 'one') {
+            seekToPosition(0);
+            setIsPlaying(true);
             return 0;
           } else if (loopMode === 'all' || autoPlayEnabled) {
             nextTrack();
@@ -95,7 +126,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [isPlaying, currentTrack, duration, loopMode, autoPlayEnabled]);
+  }, [isPlaying, currentTrack, duration, loopMode, autoPlayEnabled, seekToPosition, nextTrack]);
 
   const playTrack = useCallback((song: Song) => {
     setCurrentTrack(song);
@@ -177,23 +208,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     return likedSongs.some(song => song.id === songId);
   }, [likedSongs]);
 
-  const nextTrack = () => {
-    if (queue.length > 0) {
-      const nextSong = queue[0];
-      setQueue(prev => prev.slice(1));
-      playTrack(nextSong);
-    } else if (autoPlayEnabled && recentlyPlayed.length > 1) {
-      // Play a random song from recently played (excluding current)
-      const availableSongs = recentlyPlayed.filter(song => song.id !== currentTrack?.id);
-      if (availableSongs.length > 0) {
-        const randomIndex = Math.floor(Math.random() * availableSongs.length);
-        playTrack(availableSongs[randomIndex]);
-      }
-    } else {
-      setIsPlaying(false);
-    }
-  };
-  
   const prevTrack = () => {
     if (recentlyPlayed.length > 1) {
       const prevSong = recentlyPlayed[1];
@@ -202,18 +216,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const previousTrack = prevTrack;
-  
-  const seekToPosition = (newProgress: number) => {
-    setProgress(newProgress);
-    // Also seek the YouTube player
-    if (typeof window !== 'undefined' && (window as any)._ytPlayerRef?.current) {
-      const ytPlayerRef = (window as any)._ytPlayerRef.current;
-      if (ytPlayerRef && ytPlayerRef.seekTo && duration) {
-        const seconds = (newProgress / 100) * duration;
-        ytPlayerRef.seekTo(seconds);
-      }
-    }
-  };
   
   const toggleLoopMode = () => {
     setLoopMode(current => {

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
@@ -238,6 +237,7 @@ const Home = () => {
                 subtitle={song.channelTitle}
                 imageUrl={song.thumbnailUrl}
                 size="small"
+                song={song}
               />
             </motion.div>
           ))}

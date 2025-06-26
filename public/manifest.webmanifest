@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Tones",
   "short_name": "Tones",
   "description": "Your Music Experience",
@@ -6,6 +7,10 @@
   "background_color": "#18122b",
   "display": "standalone",
   "start_url": "/",
+  "orientation": "any",
+  "launch_handler": {
+    "client_mode": "auto"
+  },
   "icons": [
     {
       "src": "/favicon.ico",
@@ -21,6 +26,14 @@
       "src": "/music-note.svg",
       "sizes": "512x512",
       "type": "image/svg+xml"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/placeholder.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "label": "App Home Screen"
     }
   ]
 } 

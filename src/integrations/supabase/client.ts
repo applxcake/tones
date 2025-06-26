@@ -2,26 +2,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Use environment variables with fallback values for development
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://rlungwerloclwtawifxq.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsdW5nd2VybG9jbHd0YXdpZnhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ4ODA1NjksImV4cCI6MjA2MDQ1NjU2OX0.rqZrbE338P2S5IjsSeckfPcOaf0E_ixIwsU97N5gkFs";
-
-// Validate that we have the required configuration
-if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  console.warn('Supabase configuration missing. Some features may not work properly.');
-}
+const SUPABASE_URL = "https://yesygkeuiiexjnlylvwo.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllc3lna2V1aWlleGpubHlsdndvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5MzM1NDUsImV4cCI6MjA2NjUwOTU0NX0.ZY8-2xAqjzCdjWuBKGHZzYNl4X3ajwWGyfCBEjr295o";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'supabase-js-web',
-    },
-  },
-});
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);

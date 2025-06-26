@@ -27,6 +27,7 @@ const Auth = ({ defaultTab = 'login' }: AuthProps) => {
 
   useEffect(() => {
     if (isAuthenticated) {
+      console.log('User is authenticated, navigating to home');
       navigate('/home');
     }
   }, [isAuthenticated, navigate]);
@@ -38,6 +39,8 @@ const Auth = ({ defaultTab = 'login' }: AuthProps) => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Attempting to sign in with:', email);
+    
     if (!email || !password) {
       toast({
         title: "Error",
@@ -47,15 +50,20 @@ const Auth = ({ defaultTab = 'login' }: AuthProps) => {
       return;
     }
 
-    const { error } = await signIn(email, password);
+    const { error, data } = await signIn(email, password);
     
-    if (!error) {
+    console.log('Sign in result:', { error, data });
+    
+    if (!error && data?.user) {
+      console.log('Sign in successful, navigating to home');
       navigate('/home');
     }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Attempting to sign up with:', email);
+    
     if (!email || !password) {
       toast({
         title: "Error",
@@ -69,9 +77,19 @@ const Auth = ({ defaultTab = 'login' }: AuthProps) => {
     
     const { error, data } = await signUp(email, password, usernameToUse);
     
+    console.log('Sign up result:', { error, data });
+    
     if (!error) {
       if (data.session) {
+        console.log('Sign up successful with session, navigating to home');
         navigate('/home');
+      } else {
+        console.log('Sign up successful, but no session - user might need to verify email');
+        toast({
+          title: "Success",
+          description: "Account created! You can now sign in.",
+        });
+        setActiveTab('login');
       }
     }
   };

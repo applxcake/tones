@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +7,7 @@ type User = {
   id: string;
   email: string;
   username?: string;
-  avatarUrl?: string;  // Added avatarUrl property
+  avatarUrl?: string;
 };
 
 interface AuthContextType {
@@ -40,14 +41,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session && session.user) {
-          setUser({
+          const userData = {
             id: session.user.id,
             email: session.user.email || '',
-            username: session.user.user_metadata?.username,
+            username: session.user.user_metadata?.username || session.user.email?.split('@')[0],
             avatarUrl: session.user.user_metadata?.avatar_url,
-          });
-          
-          console.log('Auth session restored successfully');
+          };
+          setUser(userData);
+          console.log('Auth session restored successfully', userData);
         } else {
           console.log('No active auth session found');
           setUser(null);
@@ -68,30 +69,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log(`Auth state changed: ${event}`);
         
         if (session && session.user) {
-          setUser({
+          const userData = {
             id: session.user.id,
             email: session.user.email || '',
-            username: session.user.user_metadata?.username,
+            username: session.user.user_metadata?.username || session.user.email?.split('@')[0],
             avatarUrl: session.user.user_metadata?.avatar_url,
-          });
+          };
+          setUser(userData);
           
-          // Create/update profile in profiles table
+          // Try to create/update profile, but don't fail if it doesn't work
           try {
-            // Use a different approach to bypass TypeScript's type checking for RPC parameters
-            const params = {
-              user_id: session.user.id,
-              user_username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
-              user_created_at: new Date().toISOString()
-            };
-            
-            // Call the RPC function with type assertion at the function call level
-            const { error } = await (supabase.rpc as any)('upsert_profile', params);
+            const { error } = await supabase
+              .from('profiles')
+              .upsert({
+                id: session.user.id,
+                username: userData.username,
+                created_at: new Date().toISOString()
+              }, {
+                onConflict: 'id'
+              });
             
             if (error) {
-              console.error('Error updating user profile:', error);
+              console.warn('Could not update profile (this is okay if profiles table does not exist):', error.message);
             }
           } catch (error) {
-            console.error('Error updating profile on auth change:', error);
+            console.warn('Profile update failed (this is okay):', error);
           }
         } else {
           setUser(null);
@@ -108,72 +110,101 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
-    const result = await supabase.auth.signInWithPassword({ email, password });
-    setIsLoading(false);
     
-    if (result.error) {
+    try {
+      const result = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (result.error) {
+        toast({
+          title: "Sign in failed",
+          description: result.error.message,
+          variant: "destructive"
+        });
+      } else if (result.data?.user) {
+        toast({
+          title: "Signed in successfully",
+          description: `Welcome back!`,
+        });
+      }
+      
+      setIsLoading(false);
+      return result;
+    } catch (error) {
+      setIsLoading(false);
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
       toast({
         title: "Sign in failed",
-        description: result.error.message,
+        description: errorMessage,
         variant: "destructive"
       });
-    } else if (result.data?.user) {
-      toast({
-        title: "Signed in successfully",
-        description: `Welcome back, ${result.data.user.email?.split('@')[0]}!`,
-      });
+      return { error: error instanceof Error ? error : new Error(errorMessage), data: null };
     }
-    
-    return result;
   };
 
   const signUp = async (email: string, password: string, username?: string) => {
     setIsLoading(true);
-    const result = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          username: username || email.split('@')[0], // Use first part of email as default username
-        }
-      }
-    });
     
-    if (result.error) {
+    try {
+      const result = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username: username || email.split('@')[0],
+          }
+        }
+      });
+      
+      if (result.error) {
+        toast({
+          title: "Sign up failed",
+          description: result.error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Account created successfully",
+          description: "Welcome to Tones!",
+        });
+      }
+      
+      setIsLoading(false);
+      return result;
+    } catch (error) {
+      setIsLoading(false);
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
       toast({
         title: "Sign up failed",
-        description: result.error.message,
+        description: errorMessage,
         variant: "destructive"
       });
-    } else {
-      toast({
-        title: "Account created successfully",
-        description: "Please check your email to verify your account.",
-      });
+      return { error: error instanceof Error ? error : new Error(errorMessage), data: null };
     }
-    
-    setIsLoading(false);
-    return result;
   };
 
   const signOut = async () => {
     setIsLoading(true);
-    const { error } = await supabase.auth.signOut();
     
-    if (error) {
-      toast({
-        title: "Sign out failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Signed out successfully",
-        description: "You have been signed out.",
-      });
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        toast({
+          title: "Sign out failed",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Signed out successfully",
+          description: "You have been signed out.",
+        });
+      }
+    } catch (error) {
+      console.error('Sign out error:', error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (

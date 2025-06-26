@@ -1,5 +1,5 @@
 {
-  "id": "/",
+  "id": "/tones123-pwa",
   "name": "Tones",
   "short_name": "Tones",
   "description": "Your Music Experience",
@@ -7,7 +7,7 @@
   "background_color": "#18122b",
   "display": "standalone",
   "start_url": "/",
-  "orientation": "any",
+  "orientation": "portrait",
   "launch_handler": {
     "client_mode": "auto"
   },
@@ -26,13 +26,19 @@
       "src": "/music-note.svg",
       "sizes": "512x512",
       "type": "image/svg+xml"
+    },
+    {
+      "src": "/music-note.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
   ],
   "screenshots": [
     {
-      "src": "/placeholder.svg",
+      "src": "/music-note.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "label": "App Home Screen"
     }
   ]

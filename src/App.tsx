@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -30,6 +29,7 @@ import YTPlayer from '@/components/YTPlayer';
 import { PlayerProvider } from '@/contexts/PlayerContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { usePlayer } from '@/contexts/PlayerContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,38 +40,46 @@ const queryClient = new QueryClient({
   },
 });
 
+function AppContent() {
+  const { currentTrack } = usePlayer();
+
+  return (
+    <BrowserRouter>
+      <SupabaseInitializer />
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/login" element={<Auth />} /> 
+        <Route path="/signup" element={<Auth defaultTab="signup" />} />
+        
+        <Route element={<CleanLayout />}>
+          <Route path="/home" element={<Home />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/playlists" element={<Playlists />} />
+          <Route path="/favorites" element={<Favorites />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/playlists/:id" element={<PlaylistDetails />} />
+          <Route path="/users/:id" element={<UserProfile />} />
+        </Route>
+        
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <MiniPlayer />
+      <SongQueueDrawer />
+      {currentTrack && <YTPlayer />}
+    </BrowserRouter>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
           <PlayerProvider>
-            <BrowserRouter>
-              <SupabaseInitializer />
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/login" element={<Auth />} /> 
-                <Route path="/signup" element={<Auth defaultTab="signup" />} />
-                
-                <Route element={<CleanLayout />}>
-                  <Route path="/home" element={<Home />} />
-                  <Route path="/search" element={<Search />} />
-                  <Route path="/explore" element={<Explore />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/playlists" element={<Playlists />} />
-                  <Route path="/favorites" element={<Favorites />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/playlists/:id" element={<PlaylistDetails />} />
-                  <Route path="/users/:id" element={<UserProfile />} />
-                </Route>
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              <MiniPlayer />
-              <SongQueueDrawer />
-              <YTPlayer />
-            </BrowserRouter>
+            <AppContent />
             <Toaster />
           </PlayerProvider>
         </AuthProvider>

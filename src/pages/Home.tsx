@@ -10,12 +10,14 @@ import SearchBar from '@/components/SearchBar';
 import { searchYouTubeVideos, getTrendingMusic } from '@/services/youtubeService';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Home = () => {
   const [trendingSongs, setTrendingSongs] = useState([]);
   const [newReleases, setNewReleases] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -131,6 +133,13 @@ const Home = () => {
       },
     ];
   };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
   
   if (loading) {
     return (
@@ -174,7 +183,7 @@ const Home = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          Good evening
+          {getGreeting()}{user?.username && `, ${user.username}`}
         </motion.h1>
         <motion.p 
           className="text-zinc-400 text-lg"

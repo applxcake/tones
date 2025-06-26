@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 type User = {
@@ -32,43 +32,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check active sessions and set the user
+    let mounted = true;
+
     const initializeAuth = async () => {
-      setIsLoading(true);
-      
       try {
-        // Restore session on load
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (session && session.user) {
-          const userData = {
-            id: session.user.id,
-            email: session.user.email || '',
-            username: session.user.user_metadata?.username || session.user.email?.split('@')[0],
-            avatarUrl: session.user.user_metadata?.avatar_url,
-          };
-          setUser(userData);
-          console.log('Auth session restored successfully', userData);
-        } else {
-          console.log('No active auth session found');
-          setUser(null);
+        if (mounted) {
+          if (session?.user) {
+            const userData = {
+              id: session.user.id,
+              email: session.user.email || '',
+              username: session.user.user_metadata?.username || session.user.email?.split('@')[0],
+              avatarUrl: session.user.user_metadata?.avatar_url,
+            };
+            setUser(userData);
+            console.log('Auth session restored:', userData);
+          } else {
+            setUser(null);
+            console.log('No active session found');
+          }
+          setIsLoading(false);
         }
       } catch (error) {
-        console.error('Error restoring auth session:', error);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setUser(null);
+          setIsLoading(false);
+        }
       }
     };
 
     initializeAuth();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log(`Auth state changed: ${event}`);
+        console.log('Auth state changed:', event);
         
-        if (session && session.user) {
+        if (!mounted) return;
+
+        if (session?.user) {
           const userData = {
             id: session.user.id,
             email: session.user.email || '',
@@ -77,26 +80,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           };
           setUser(userData);
           
-          // Try to create/update profile, but don't fail if it doesn't work
-          try {
-            const { error } = await supabase
-              .from('profiles')
-              .upsert({
-                id: session.user.id,
-                username: userData.username,
-                created_at: new Date().toISOString()
-              }, {
-                onConflict: 'id'
-              });
-            
-            if (error) {
-              console.warn('Could not update profile (this is okay if profiles table does not exist):', error.message);
-            }
-          } catch (error) {
-            console.warn('Profile update failed (this is okay):', error);
+          if (event === 'SIGNED_IN') {
+            toast({
+              title: "Welcome back!",
+              description: "You have been signed in successfully.",
+            });
           }
         } else {
           setUser(null);
+          if (event === 'SIGNED_OUT') {
+            toast({
+              title: "Signed out",
+              description: "You have been signed out successfully.",
+            });
+          }
         }
         
         setIsLoading(false);
@@ -104,88 +101,89 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    setIsLoading(true);
-    
     try {
-      const result = await supabase.auth.signInWithPassword({ email, password });
-      
-      if (result.error) {
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
         toast({
           title: "Sign in failed",
-          description: result.error.message,
+          description: error.message,
           variant: "destructive"
         });
-      } else if (result.data?.user) {
-        toast({
-          title: "Signed in successfully",
-          description: `Welcome back!`,
-        });
+        return { error, data: null };
       }
-      
-      setIsLoading(false);
-      return result;
+
+      return { error: null, data };
     } catch (error) {
-      setIsLoading(false);
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+      const err = error instanceof Error ? error : new Error('Sign in failed');
       toast({
         title: "Sign in failed",
-        description: errorMessage,
+        description: err.message,
         variant: "destructive"
       });
-      return { error: error instanceof Error ? error : new Error(errorMessage), data: null };
+      return { error: err, data: null };
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, username?: string) => {
-    setIsLoading(true);
-    
     try {
-      const result = await supabase.auth.signUp({
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             username: username || email.split('@')[0],
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/home`
         }
       });
-      
-      if (result.error) {
+
+      if (error) {
         toast({
           title: "Sign up failed",
-          description: result.error.message,
+          description: error.message,
           variant: "destructive"
         });
-      } else {
+        return { error, data: null };
+      }
+
+      if (data.user && !data.session) {
         toast({
-          title: "Account created successfully",
-          description: "Welcome to Tones!",
+          title: "Check your email",
+          description: "We sent you a confirmation link to complete your registration.",
         });
       }
-      
-      setIsLoading(false);
-      return result;
+
+      return { error: null, data };
     } catch (error) {
-      setIsLoading(false);
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+      const err = error instanceof Error ? error : new Error('Sign up failed');
       toast({
         title: "Sign up failed",
-        description: errorMessage,
+        description: err.message,
         variant: "destructive"
       });
-      return { error: error instanceof Error ? error : new Error(errorMessage), data: null };
+      return { error: err, data: null };
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signOut = async () => {
-    setIsLoading(true);
-    
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -193,11 +191,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           title: "Sign out failed",
           description: error.message,
           variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Signed out successfully",
-          description: "You have been signed out.",
         });
       }
     } catch (error) {
@@ -211,7 +204,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user && !isLoading,
         isLoading,
         signIn,
         signUp,

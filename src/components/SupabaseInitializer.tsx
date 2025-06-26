@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,7 +26,7 @@ const SupabaseInitializer = () => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-        // Test Supabase connection by fetching from a table that we know exists
+        // Test Supabase connection by making a simple query
         const { data, error } = await supabase
           .from('songs')
           .select('id')
@@ -36,7 +37,7 @@ const SupabaseInitializer = () => {
         
         if (error) {
           console.warn('Supabase query error:', error);
-          throw error; // Throw the original error instead of creating a new one
+          throw error;
         }
         
         console.log('Supabase connected successfully');
@@ -58,8 +59,8 @@ const SupabaseInitializer = () => {
         setInitialized(true);
         
         // Provide more specific error messaging based on error type
-        let errorMessage = "Using mock data for preview. All features are functional with sample data.";
-        let errorTitle = "Database Notice";
+        let errorMessage = "Database tables are being set up. Please refresh the page in a moment.";
+        let errorTitle = "Database Setup";
         
         // Check for different error types more accurately
         if (error instanceof Error) {
@@ -67,8 +68,8 @@ const SupabaseInitializer = () => {
             errorMessage = "Database connection timed out. Using offline mode with sample data.";
             errorTitle = "Connection Timeout";
           } else if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-            errorMessage = "Unable to connect to database. To enable live data, please configure your Supabase credentials in the environment variables.";
-            errorTitle = "Database Configuration Needed";
+            errorMessage = "Unable to connect to database. Please check your connection and try refreshing.";
+            errorTitle = "Connection Error";
           } else if (error.message.includes('CORS')) {
             errorMessage = "Database access blocked by browser security. Using sample data for preview.";
             errorTitle = "Access Restricted";
@@ -80,8 +81,8 @@ const SupabaseInitializer = () => {
           // Handle Supabase-specific errors
           const supabaseError = error as any;
           if (supabaseError.code || supabaseError.message) {
-            errorMessage = "Database service temporarily unavailable. Using sample data for preview.";
-            errorTitle = "Service Unavailable";
+            errorMessage = "Database tables are being set up. Please refresh the page in a moment.";
+            errorTitle = "Database Setup";
           }
         }
         
@@ -127,7 +128,7 @@ const SupabaseInitializer = () => {
 
       if (!likedSongsError && likedSongsData && likedSongsData.length > 0) {
         // Transform the data to match our app's expected format with publishedAt property
-        const formattedLikedSongs = likedSongsData.map(item => ({
+        const formattedLikedSongs = likedSongsData.map((item: any) => ({
           id: item.songs.id,
           title: item.songs.title,
           channelTitle: item.songs.channel_title || '',
@@ -162,7 +163,7 @@ const SupabaseInitializer = () => {
 
       if (!recentlyPlayedError && recentlyPlayedData && recentlyPlayedData.length > 0) {
         // Transform the data to match our app's expected format
-        const formattedRecentlyPlayed = recentlyPlayedData.map(item => ({
+        const formattedRecentlyPlayed = recentlyPlayedData.map((item: any) => ({
           id: item.songs.id,
           title: item.songs.title,
           channelTitle: item.songs.channel_title || '',

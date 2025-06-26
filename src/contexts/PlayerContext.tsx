@@ -119,6 +119,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // Check if song exists in database
         const { data: songExists } = await supabase
           .from('songs')
           .select('id')

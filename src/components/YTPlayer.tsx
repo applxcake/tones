@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { usePlayer } from '@/contexts/PlayerContext';
 
 declare global {
@@ -23,44 +23,11 @@ const YTPlayer: React.FC = () => {
   const hasApiLoadedRef = useRef<boolean>(false);
   const isPlayerReadyRef = useRef<boolean>(false);
   
-  // Load YouTube API only once
-  useEffect(() => {
-    if (!window.YT && !loadingApiRef.current) {
-      loadingApiRef.current = true;
-      
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      
-      window.onYouTubeIframeAPIReady = () => {
-        hasApiLoadedRef.current = true;
-        initializePlayer();
-      };
-      
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-    } else if (window.YT && window.YT.Player && !playerRef.current) {
-      hasApiLoadedRef.current = true;
-      initializePlayer();
-    }
-    
-    return () => {
-      if (playerRef.current) {
-        try {
-          playerRef.current.destroy();
-          playerRef.current = null;
-          isPlayerReadyRef.current = false;
-        } catch (error) {
-          console.error('Error destroying YouTube player:', error);
-        }
-      }
-    };
-  }, []); // Empty dependency array - only run once
-  
-  const initializePlayer = () => {
+  const initializePlayer = useCallback(() => {
     if (!hasApiLoadedRef.current || !containerRef.current || playerRef.current) return;
     
     try {
-      playerRef.current = new window.YT.Player('youtube-player', {
+      playerRef.current = new window.YT.Player(containerRef.current, {
         height: '1',
         width: '1',
         playerVars: {
@@ -79,7 +46,40 @@ const YTPlayer: React.FC = () => {
     } catch (error) {
       console.error('Error initializing YouTube player:', error);
     }
-  };
+  }, []);
+  
+  // Load YouTube API only once
+  useEffect(() => {
+    if (!window.YT && !loadingApiRef.current) {
+      loadingApiRef.current = true;
+      
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      
+      window.onYouTubeIframeAPIReady = () => {
+        hasApiLoadedRef.current = true;
+        initializePlayer();
+      };
+      
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+    } else if (window.YT && window.YT.Player && !playerRef.current && containerRef.current) {
+      hasApiLoadedRef.current = true;
+      initializePlayer();
+    }
+    
+    return () => {
+      if (playerRef.current) {
+        try {
+          playerRef.current.destroy();
+          playerRef.current = null;
+          isPlayerReadyRef.current = false;
+        } catch (error) {
+          console.error('Error destroying YouTube player:', error);
+        }
+      }
+    };
+  }, [initializePlayer]);
 
   const onPlayerReady = () => {
     console.log('YouTube player ready');
@@ -158,7 +158,7 @@ const YTPlayer: React.FC = () => {
     }
   };
 
-  return <div id="youtube-player" className="hidden" ref={containerRef} />;
+  return <div className="hidden" ref={containerRef} />;
 };
 
 export default YTPlayer;

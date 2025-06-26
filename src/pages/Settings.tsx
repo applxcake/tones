@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Settings as SettingsIcon, User, Trash2, Shield, Bell } from 'lucide-react';
@@ -21,30 +20,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 const Settings = () => {
   const { user, signOut } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [autoPlay, setAutoPlay] = useState(true);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  const handleDeleteAccount = async () => {
-    try {
-      // In a real app, you would call an API to delete the account
-      toast({
-        title: "Account Deletion",
-        description: "This feature is not implemented in the demo. In a real app, this would permanently delete your account.",
-        variant: "destructive"
-      });
-      setDeleteDialogOpen(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete account. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
+  const navigate = useNavigate();
+  const [username, setUsername] = useState(user?.username || '');
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -75,7 +60,8 @@ const Settings = () => {
                 <Label htmlFor="username" className="text-white">Username</Label>
                 <Input
                   id="username"
-                  defaultValue={user?.username || ''}
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
                   className="bg-white/5 border-white/10 text-white"
                   placeholder="Enter username"
                 />
@@ -95,12 +81,27 @@ const Settings = () => {
               <Label htmlFor="avatar" className="text-white">Avatar URL</Label>
               <Input
                 id="avatar"
-                defaultValue={user?.avatarUrl || ''}
+                value={avatarUrl}
+                onChange={e => setAvatarUrl(e.target.value)}
                 className="bg-white/5 border-white/10 text-white"
                 placeholder="Enter avatar URL"
               />
             </div>
-            <Button className="bg-purple-600 hover:bg-purple-700">
+            <Button
+              className="bg-purple-600 hover:bg-purple-700"
+              onClick={async () => {
+                if (!user) return;
+                const { error } = await supabase
+                  .from('profiles')
+                  .update({ username, avatar_url: avatarUrl })
+                  .eq('id', user.id);
+                if (error) {
+                  toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                } else {
+                  toast({ title: 'Profile Updated', description: 'Your profile has been updated.' });
+                }
+              }}
+            >
               Save Changes
             </Button>
           </CardContent>
@@ -141,54 +142,6 @@ const Settings = () => {
                 checked={autoPlay}
                 onCheckedChange={setAutoPlay}
               />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Danger Zone */}
-        <Card className="bg-red-950/20 border-red-500/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-400">
-              <Shield className="h-5 w-5" />
-              Danger Zone
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <h3 className="font-medium text-white">Delete Account</h3>
-              <p className="text-sm text-gray-400">
-                Permanently delete your account and all associated data. This action cannot be undone.
-              </p>
-              
-              <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="mt-2">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Account
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="bg-gray-900 border-gray-700">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="text-white">
-                      Are you absolutely sure?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="text-gray-300">
-                      This will permanently delete your account and remove all your data including playlists, liked songs, and preferences. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="bg-gray-700 text-white hover:bg-gray-600">
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDeleteAccount}
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      Delete Account
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
             </div>
           </CardContent>
         </Card>

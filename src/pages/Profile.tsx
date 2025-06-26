@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { User, Settings, Clock, Heart, LogOut, ListMusic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,9 +7,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import SongTile from '@/components/SongTile';
 import { getCurrentUser } from '@/services/userService';
-import { executeQuery } from '@/integrations/tidb/client';
 import { getUserPlaylists } from '@/services/playlistService';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { supabase } from '@/integrations/supabase/client';
 
 const Profile = () => {
   const { recentlyPlayed, likedSongs } = usePlayer();
@@ -27,33 +26,30 @@ const Profile = () => {
       if (user) {
         try {
           setLoading(true);
-          
-          // Get user profile from TiDB database
-          const userData = await executeQuery(
-            'SELECT * FROM users WHERE id = ?',
-            [user.id]
-          );
-          
-          if (!userData || userData.length === 0) {
-            // Fall back to local data
+          // Fetch user profile from Supabase
+          const { data: userData, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          if (!userData || error) {
+            // Fall back to local data if not found
             const localUserData = await getCurrentUser(user.id);
             setCurrentUserData(localUserData);
           } else {
-            // Use database data
             setCurrentUserData({
-              ...userData[0],
+              ...userData,
               email: user.email,
-              username: userData[0].username || user.username || user.email?.split('@')[0],
-              bio: userData[0].bio || ''
+              username: userData.username,
+              bio: userData.bio,
+              avatar: userData.avatar_url
             });
           }
-          
           // Fetch the user's playlists
           const playlists = await getUserPlaylists(user.id);
           setUserPlaylists(playlists);
         } catch (error) {
           console.error('Error fetching user data:', error);
-          // Try to get user data from the service as fallback
           try {
             const fallbackUserData = await getCurrentUser(user.id);
             setCurrentUserData(fallbackUserData);

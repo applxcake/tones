@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,11 +39,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (mounted) {
           if (session?.user) {
+            // Fetch profile from Supabase profiles table
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('username, avatar_url')
+              .eq('id', session.user.id)
+              .single();
+
             const userData = {
               id: session.user.id,
               email: session.user.email || '',
-              username: session.user.user_metadata?.username || session.user.email?.split('@')[0],
-              avatarUrl: session.user.user_metadata?.avatar_url,
+              username: profileData?.username || session.user.user_metadata?.username || session.user.email?.split('@')[0],
+              avatarUrl: profileData?.avatar_url || session.user.user_metadata?.avatar_url,
             };
             setUser(userData);
             console.log('Auth session restored:', userData);
@@ -66,37 +72,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event);
-        
-        if (!mounted) return;
+      (event, session) => {
+        (async () => {
+          console.log('Auth state changed:', event);
+          if (!mounted) return;
+          try {
+            if (session?.user) {
+              // Fetch profile from Supabase profiles table
+              const { data: profileData, error: profileError } = await supabase
+                .from('profiles')
+                .select('username, avatar_url')
+                .eq('id', session.user.id)
+                .single();
 
-        if (session?.user) {
-          const userData = {
-            id: session.user.id,
-            email: session.user.email || '',
-            username: session.user.user_metadata?.username || session.user.email?.split('@')[0],
-            avatarUrl: session.user.user_metadata?.avatar_url,
-          };
-          setUser(userData);
-          
-          if (event === 'SIGNED_IN') {
-            toast({
-              title: "Welcome back!",
-              description: "You have been signed in successfully.",
-            });
+              const userData = {
+                id: session.user.id,
+                email: session.user.email || '',
+                username: profileData?.username || session.user.user_metadata?.username || session.user.email?.split('@')[0],
+                avatarUrl: profileData?.avatar_url || session.user.user_metadata?.avatar_url,
+              };
+              setUser(userData);
+            } else {
+              setUser(null);
+            }
+          } catch (error) {
+            console.error('Error in onAuthStateChange:', error);
+            setUser(null);
+          } finally {
+            setIsLoading(false);
           }
-        } else {
-          setUser(null);
-          if (event === 'SIGNED_OUT') {
-            toast({
-              title: "Signed out",
-              description: "You have been signed out successfully.",
-            });
-          }
-        }
-        
-        setIsLoading(false);
+        })();
       }
     );
 

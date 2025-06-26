@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,6 +61,8 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const [shuffleMode, setShuffleMode] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
+  const playWhenReady = useRef(false);
+  const isYTPlayerReady = useRef(false);
 
   // Helper function to check if a song is currently playing
   const isCurrentSong = useCallback((songId: string): boolean => {
@@ -95,56 +97,49 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     return () => clearInterval(interval);
   }, [isPlaying, currentTrack, duration, loopMode, autoPlayEnabled]);
 
-  const playTrack = useCallback(async (song: Song) => {
-    if (currentTrack?.id === song.id && isPlaying) {
-      setIsPlaying(false);
-      return;
-    }
-    
-    if (currentTrack?.id === song.id && !isPlaying) {
-      setIsPlaying(true);
-      return;
-    }
-
+  const playTrack = useCallback((song: Song) => {
     setCurrentTrack(song);
     setIsPlaying(true);
     setProgress(0);
     setDuration(180); // Default 3 minutes
-
     setRecentlyPlayed(prev => {
       const newRecentlyPlayed = [song, ...prev.filter(s => s.id !== song.id)].slice(0, 20);
       return newRecentlyPlayed;
     });
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // Check if song exists in database
-        const { data: songExists } = await supabase
-          .from('songs')
-          .select('id')
-          .eq('id', song.id)
-          .maybeSingle();
-          
-        if (!songExists) {
-          await supabase.from('songs').insert({
-            id: song.id,
-            title: song.title,
-            channel_title: song.channelTitle,
-            thumbnail_url: song.thumbnailUrl,
+    // Save to supabase
+    const saveToSupabase = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: songExists } = await supabase
+            .from('songs')
+            .select('id')
+            .eq('id', song.id)
+            .maybeSingle();
+          if (!songExists) {
+            await supabase.from('songs').insert({
+              id: song.id,
+              title: song.title,
+              channel_title: song.channelTitle,
+              thumbnail_url: song.thumbnailUrl,
+            });
+          }
+          await supabase.from('recently_played').insert({
+            user_id: user.id,
+            song_id: song.id,
+            played_at: new Date().toISOString()
           });
         }
-        
-        await supabase.from('recently_played').insert({
-          user_id: user.id,
-          song_id: song.id,
-          played_at: new Date().toISOString()
-        });
+      } catch (error) {
+        console.error('Error saving recently played song:', error);
       }
-    } catch (error) {
-      console.error('Error saving recently played song:', error);
+    };
+    saveToSupabase();
+    // If player is not ready, set flag to play when ready
+    if (!isYTPlayerReady.current) {
+      playWhenReady.current = true;
     }
-  }, [currentTrack, isPlaying]);
+  }, []);
 
   const togglePlayPause = () => {
     setIsPlaying(!isPlaying);
@@ -210,6 +205,14 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   
   const seekToPosition = (newProgress: number) => {
     setProgress(newProgress);
+    // Also seek the YouTube player
+    if (typeof window !== 'undefined' && (window as any)._ytPlayerRef?.current) {
+      const ytPlayerRef = (window as any)._ytPlayerRef.current;
+      if (ytPlayerRef && ytPlayerRef.seekTo && duration) {
+        const seconds = (newProgress / 100) * duration;
+        ytPlayerRef.seekTo(seconds);
+      }
+    }
   };
   
   const toggleLoopMode = () => {

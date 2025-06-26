@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { usePlayer } from '@/contexts/PlayerContext';
 
 declare global {
@@ -8,7 +8,7 @@ declare global {
   }
 }
 
-const YTPlayer: React.FC = () => {
+const YTPlayer = forwardRef((props, ref) => {
   const { 
     currentTrack, 
     isPlaying, 
@@ -24,15 +24,28 @@ const YTPlayer: React.FC = () => {
   const hasApiLoadedRef = useRef<boolean>(false);
   const isPlayerReadyRef = useRef<boolean>(false);
   const scriptLoadedRef = useRef<boolean>(false);
+  const playWhenReady = useRef(false);
   
   const onPlayerReady = useCallback(() => {
-    console.log('YouTube player ready');
     isPlayerReadyRef.current = true;
-  }, []);
+    // If we should play when ready, do so now
+    if (playWhenReady.current && currentTrack) {
+      if (playerRef.current && typeof playerRef.current.loadVideoById === 'function') {
+        playerRef.current.loadVideoById({
+          videoId: currentTrack.id,
+          startSeconds: 0,
+          suggestedQuality: 'small'
+        });
+        if (typeof playerRef.current.playVideo === 'function') {
+          playerRef.current.playVideo();
+        }
+      }
+      playWhenReady.current = false;
+    }
+  }, [currentTrack]);
 
   const onPlayerStateChange = useCallback((event: any) => {
     const playerState = event.data;
-    
     if (playerState === window.YT?.PlayerState?.PLAYING) {
       const duration = playerRef.current?.getDuration() || 0;
       setDuration(duration);
@@ -47,19 +60,14 @@ const YTPlayer: React.FC = () => {
           startSeconds: 0,
           suggestedQuality: 'small'
         });
-        
-        if (!isPlaying) {
-          setTimeout(() => {
-            if (playerRef.current) {
-              playerRef.current.pauseVideo();
-            }
-          }, 100);
+        if (typeof playerRef.current.playVideo === 'function') {
+          playerRef.current.playVideo();
         }
       } catch (error) {
         console.error('Error loading video:', error);
       }
     }
-  }, [isPlaying]);
+  }, []);
   
   const initializePlayer = useCallback(() => {
     if (!hasApiLoadedRef.current || !containerRef.current || playerRef.current) return;
@@ -137,32 +145,26 @@ const YTPlayer: React.FC = () => {
     };
   }, [initializePlayer]);
 
-  // Load video when track changes - separate effect
+  // Load video when currentTrack changes and player is ready
   useEffect(() => {
     if (playerRef.current && currentTrack && isPlayerReadyRef.current) {
-      loadVideo(currentTrack.id);
-    }
-  }, [currentTrack, loadVideo]);
-  
-  // Play/pause based on isPlaying state
-  useEffect(() => {
-    if (!playerRef.current || !isPlayerReadyRef.current) return;
-    
-    if (isPlaying) {
-      try {
-        playerRef.current.playVideo();
-      } catch (error) {
-        console.error('Error playing video:', error);
-      }
-    } else {
-      try {
+      if (isPlaying) {
+        loadVideo(currentTrack.id);
+      } else {
+        // Just load, don't play
+        playerRef.current.loadVideoById({
+          videoId: currentTrack.id,
+          startSeconds: 0,
+          suggestedQuality: 'small'
+        });
         playerRef.current.pauseVideo();
-      } catch (error) {
-        console.error('Error pausing video:', error);
       }
+    } else if (currentTrack && !isPlayerReadyRef.current) {
+      // If not ready, set flag to play when ready
+      playWhenReady.current = isPlaying;
     }
-  }, [isPlaying]);
-
+  }, [currentTrack, isPlaying, loadVideo]);
+  
   // Update volume when changed
   useEffect(() => {
     if (playerRef.current && typeof playerRef.current.setVolume === 'function' && isPlayerReadyRef.current) {
@@ -177,6 +179,15 @@ const YTPlayer: React.FC = () => {
     }
   }, [playbackRate]);
 
+  // Expose seekTo method
+  useImperativeHandle(ref, () => ({
+    seekTo: (seconds: number) => {
+      if (playerRef.current && typeof playerRef.current.seekTo === 'function' && isPlayerReadyRef.current) {
+        playerRef.current.seekTo(seconds, true);
+      }
+    }
+  }), []);
+
   return (
     <div 
       className="hidden" 
@@ -184,6 +195,6 @@ const YTPlayer: React.FC = () => {
       style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
     />
   );
-};
+});
 
 export default YTPlayer;

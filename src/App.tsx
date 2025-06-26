@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -42,6 +42,12 @@ const queryClient = new QueryClient({
 
 function AppContent() {
   const { currentTrack } = usePlayer();
+  const ytPlayerRef = useRef<any>(null);
+
+  // Provide the ref to PlayerContext via window for now (simple global, can be improved)
+  if (typeof window !== 'undefined') {
+    (window as any)._ytPlayerRef = ytPlayerRef;
+  }
 
   return (
     <BrowserRouter>
@@ -68,7 +74,7 @@ function AppContent() {
       </Routes>
       <MiniPlayer />
       <SongQueueDrawer />
-      {currentTrack && <YTPlayer />}
+      {currentTrack && <YTPlayer ref={ytPlayerRef} />}
     </BrowserRouter>
   );
 }

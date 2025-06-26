@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { YouTubeVideo } from '@/services/youtubeService';
@@ -61,8 +60,8 @@ const MagneticDragQueue: React.FC<MagneticDragQueueProps> = ({ song, className }
     if (isNearQueue) {
       addToQueue(song);
       toast({
-        title: "Added to Queue",
-        description: `${song.title} was magnetically pulled into your queue!`,
+        title: "Queued!",
+        duration: 1500
       });
     }
     

@@ -291,8 +291,8 @@ export const followUser = async (userId: string, currentUserId?: string) => {
     if (insertError) throw insertError;
       
     toast({
-      title: "Following",
-      description: `You are now following ${userToFollow.username}.`,
+      title: "Followed!",
+      duration: 1500
     });
     
     return true;
@@ -331,8 +331,8 @@ export const unfollowUser = async (userId: string, currentUserId?: string) => {
     if (error) throw error;
       
     toast({
-      title: "Unfollowed",
-      description: userToUnfollow ? `You are no longer following ${userToUnfollow.username}.` : `You are no longer following this user.`,
+      title: "Unfollowed!",
+      duration: 1500
     });
     
     return true;

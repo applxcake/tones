@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { initializeTables } from '@/integrations/tidb/client';
@@ -15,11 +14,6 @@ const TiDBInitializer = () => {
         setInitialized(true);
       } catch (error) {
         console.log('Using mock TiDB data in browser environment');
-        toast({
-          title: "Database Notice",
-          description: "Using mock data for preview. All features are functional with sample data.",
-          variant: "default"
-        });
         setInitialized(true);
       }
     };

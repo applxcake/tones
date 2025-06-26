@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,12 +87,12 @@ const EnhancedSearchFilters = ({ onFiltersChange, className }: EnhancedSearchFil
                   <Music size={14} />
                   Genre
                 </label>
-                <Select value={filters.genre || ''} onValueChange={(value) => updateFilter('genre', value)}>
+                <Select value={filters.genre || 'any'} onValueChange={(value) => updateFilter('genre', value === 'any' ? undefined : value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Any genre" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any genre</SelectItem>
+                    <SelectItem value="any">Any genre</SelectItem>
                     {genres.map(genre => (
                       <SelectItem key={genre} value={genre.toLowerCase()}>
                         {genre}
@@ -109,12 +108,12 @@ const EnhancedSearchFilters = ({ onFiltersChange, className }: EnhancedSearchFil
                   <Clock size={14} />
                   Duration
                 </label>
-                <Select value={filters.duration || ''} onValueChange={(value) => updateFilter('duration', value)}>
+                <Select value={filters.duration || 'any'} onValueChange={(value) => updateFilter('duration', value === 'any' ? undefined : value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Any length" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any length</SelectItem>
+                    <SelectItem value="any">Any length</SelectItem>
                     <SelectItem value="short">Short (&lt; 4 minutes)</SelectItem>
                     <SelectItem value="medium">Medium (4-20 minutes)</SelectItem>
                     <SelectItem value="long">Long (&gt; 20 minutes)</SelectItem>
@@ -128,12 +127,12 @@ const EnhancedSearchFilters = ({ onFiltersChange, className }: EnhancedSearchFil
                   <Calendar size={14} />
                   Upload Date
                 </label>
-                <Select value={filters.uploadDate || ''} onValueChange={(value) => updateFilter('uploadDate', value)}>
+                <Select value={filters.uploadDate || 'any'} onValueChange={(value) => updateFilter('uploadDate', value === 'any' ? undefined : value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Any time" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any time</SelectItem>
+                    <SelectItem value="any">Any time</SelectItem>
                     <SelectItem value="today">Today</SelectItem>
                     <SelectItem value="week">This week</SelectItem>
                     <SelectItem value="month">This month</SelectItem>

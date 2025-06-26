@@ -33,8 +33,8 @@ export const addToFavorites = async (song: YouTubeVideo, userId?: string): Promi
 
     if (existing) {
       toast({
-        title: "Already Favorited",
-        description: "This song is already in your favorites.",
+        title: "Already Liked!",
+        duration: 1500
       });
       return true;
     }
@@ -52,8 +52,8 @@ export const addToFavorites = async (song: YouTubeVideo, userId?: string): Promi
     if (error) throw error;
 
     toast({
-      title: "Added to Favorites",
-      description: `${song.title} has been added to your favorites.`,
+      title: "Liked!",
+      duration: 1500,
       variant: "success"
     });
 

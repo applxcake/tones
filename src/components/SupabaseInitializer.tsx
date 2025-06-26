@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,11 +26,6 @@ const SupabaseInitializer = () => {
         
         console.log('Supabase connected successfully');
         setInitialized(true);
-        toast({
-          title: "Connected",
-          description: "Successfully connected to database.",
-          variant: "default"
-        });
 
         // If user is logged in, sync their data
         if (user) {
@@ -42,12 +36,6 @@ const SupabaseInitializer = () => {
         
         // Handle the connection error gracefully
         setInitialized(true);
-        
-        toast({
-          title: "Connected",
-          description: "App is ready to use.",
-          variant: "default"
-        });
       }
     };
 

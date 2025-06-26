@@ -8,7 +8,7 @@ export interface YouTubeVideo {
 }
 
 // API key for YouTube Data API - will be updated from environment variable if available
-const DEFAULT_API_KEY = 'AIzaSyBAxmc3Rn7Id-bifTpe7iqsz5p8k1Otzdw';
+const DEFAULT_API_KEY = 'AIzaSyDNDvJQH39KgFcUkUMMQCSVDQWNm-hGYco';
 const MAX_RESULTS = 10;
 const MAX_RETRIES = 2;
 const RETRY_DELAY = 1000; // 1 second

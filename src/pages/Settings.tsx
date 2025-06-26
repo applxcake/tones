@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import ThemeToggle from '@/components/ThemeToggle';
 
 const Settings = () => {
   const { user, signOut } = useAuth();
@@ -117,16 +116,6 @@ const Settings = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Theme</Label>
-                <p className="text-sm text-muted-foreground">
-                  Switch between light and dark mode
-                </p>
-              </div>
-              <ThemeToggle />
-            </div>
-            <Separator className="bg-white/10" />
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Notifications</Label>

@@ -41,7 +41,7 @@ const YTPlayer = forwardRef((props, ref) => {
   // Initialize background audio service
   useEffect(() => {
     const initializeBackgroundAudio = async () => {
-      if (isMobile() && !backgroundAudioInitialized.current) {
+      if (!backgroundAudioInitialized.current) {
         try {
           const success = await backgroundAudioService.initialize();
           if (success) {

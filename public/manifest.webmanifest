@@ -41,5 +41,17 @@
       "type": "image/png",
       "label": "App Home Screen"
     }
-  ]
+  ],
+  "permissions": [
+    "background-sync",
+    "notifications",
+    "wake-lock"
+  ],
+  "background": {
+    "service_worker": "/sw.js",
+    "type": "module"
+  },
+  "categories": ["music", "entertainment"],
+  "lang": "en",
+  "scope": "/"
 } 

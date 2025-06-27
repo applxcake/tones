@@ -841,3 +841,178 @@ body {
 .dark body {
   background: linear-gradient(135deg, #2d0b4e 0%, #4b2067 100%);
 }
+
+/* --- Mobile UI Improvements --- */
+@media (max-width: 600px) {
+  .song-card {
+    margin: 16px 8px;
+    padding: 16px 8px;
+    border-radius: 16px;
+    font-size: 1.1rem;
+  }
+  .song-card .song-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .song-card .song-artist {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+  .player-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(30, 30, 40, 0.95);
+    padding: 16px 8px 24px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 100;
+    border-radius: 16px 16px 0 0;
+    min-height: 64px;
+  }
+  .player-bar .player-controls button {
+    width: 48px;
+    height: 48px;
+    font-size: 1.5rem;
+    margin: 0 8px;
+    border-radius: 50%;
+    background: #2d0b4e;
+    color: #fff;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .player-bar .player-controls button:active {
+    background: #4e1a8a;
+  }
+  .player-bar .player-progress {
+    flex: 1;
+    margin: 0 12px;
+    height: 8px;
+    border-radius: 4px;
+    background: #444;
+    position: relative;
+  }
+  .player-bar .player-progress .progress {
+    height: 8px;
+    border-radius: 4px;
+    background: #a259ec;
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+  .player-bar .player-song {
+    flex: 1;
+    min-width: 0;
+    margin-right: 8px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .player-bar .player-time {
+    font-size: 0.95rem;
+    color: #ccc;
+    margin-left: 8px;
+    min-width: 40px;
+    text-align: right;
+  }
+  .player-bar .player-volume {
+    margin-left: 8px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .player-bar .player-volume input[type='range'] {
+    width: 60px;
+    margin-left: 4px;
+  }
+  .liked-songs-header {
+    font-size: 2rem;
+    margin: 24px 0 8px 0;
+    padding-left: 8px;
+  }
+  .liked-songs-clear {
+    font-size: 1.1rem;
+    padding: 8px 16px;
+    border-radius: 8px;
+    margin: 8px 0;
+  }
+  .liked-songs-refresh {
+    font-size: 1.1rem;
+    padding: 8px 16px;
+    border-radius: 8px;
+    margin: 8px 0 8px 8px;
+  }
+}
+
+/* Ensure tap targets are at least 44x44px */
+.song-card, .player-bar .player-controls button, .player-bar .player-volume {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Subtle shadow for player bar */
+.player-bar {
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.15);
+}
+
+/* Universal Toast/Notification Styles */
+.toast, .sonner-toast, .toast-popup, .notification-toast, .notification, .like-toast, .queue-toast, .snackbar, .alert, .popup-message, .shadcn-toast {
+  background: rgba(30, 30, 40, 0.98) !important;
+  color: #fff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.25) !important;
+  padding: 20px 24px 20px 20px !important;
+  margin: 16px 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  min-width: 260px;
+  max-width: 95vw;
+  font-size: 1.08rem;
+  z-index: 9999;
+}
+.toast .toast-action, .sonner-toast .toast-action, .toast-popup .toast-action, .notification-toast .toast-action, .notification .toast-action, .like-toast .toast-action, .queue-toast .toast-action, .snackbar .toast-action, .alert .toast-action, .popup-message .toast-action, .shadcn-toast .toast-action {
+  margin-left: 16px;
+}
+.toast .toast-action button, .sonner-toast .toast-action button, .toast-popup .toast-action button, .notification-toast .toast-action button, .notification .toast-action button, .like-toast .toast-action button, .queue-toast .toast-action button, .snackbar .toast-action button, .alert .toast-action button, .popup-message .toast-action button, .shadcn-toast .toast-action button {
+  background: #a259ec;
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 1rem;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: background 0.2s;
+}
+.toast .toast-action button:active, .sonner-toast .toast-action button:active, .toast-popup .toast-action button:active, .notification-toast .toast-action button:active, .notification .toast-action button:active, .like-toast .toast-action button:active, .queue-toast .toast-action button:active, .snackbar .toast-action button:active, .alert .toast-action button:active, .popup-message .toast-action button:active, .shadcn-toast .toast-action button:active {
+  background: #7c3aed;
+}
+.toast .toast-title, .sonner-toast .toast-title, .toast-popup .toast-title, .notification-toast .toast-title, .notification .toast-title, .like-toast .toast-title, .queue-toast .toast-title, .snackbar .toast-title, .alert .toast-title, .popup-message .toast-title, .shadcn-toast .toast-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 1.1rem;
+}
+.toast .toast-description, .sonner-toast .toast-description, .toast-popup .toast-description, .notification-toast .toast-description, .notification .toast-description, .like-toast .toast-description, .queue-toast .toast-description, .snackbar .toast-description, .alert .toast-description, .popup-message .toast-description, .shadcn-toast .toast-description {
+  color: #e0e0e0;
+  font-size: 1rem;
+}
+@media (max-width: 600px) {
+  .toast, .sonner-toast, .toast-popup, .notification-toast, .notification, .like-toast, .queue-toast, .snackbar, .alert, .popup-message, .shadcn-toast {
+    min-width: 0;
+    max-width: 98vw;
+    padding: 16px 10px 16px 14px !important;
+    font-size: 1rem;
+    margin: 12px 4px !important;
+  }
+  .toast .toast-action button, .sonner-toast .toast-action button, .toast-popup .toast-action button, .notification-toast .toast-action button, .notification .toast-action button, .like-toast .toast-action button, .queue-toast .toast-action button, .snackbar .toast-action button, .alert .toast-action button, .popup-message .toast-action button, .shadcn-toast .toast-action button {
+    padding: 8px 12px;
+    font-size: 0.98rem;
+  }
+}

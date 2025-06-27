@@ -35,6 +35,9 @@ const YTPlayer = forwardRef((props, ref) => {
   const backgroundAudioInitialized = useRef(false);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
   
+  // Track last loaded videoId to avoid reloading on play/pause
+  const lastLoadedVideoId = useRef<string | null>(null);
+
   // Initialize background audio service
   useEffect(() => {
     const initializeBackgroundAudio = async () => {
@@ -134,7 +137,22 @@ const YTPlayer = forwardRef((props, ref) => {
         if (typeof playerRef.current.setVolume === 'function') {
           playerRef.current.setVolume(100);
         }
-        console.log('[YTPlayer] Forced unmute and volume 100');
+        // Log mute state
+        if (typeof playerRef.current.isMuted === 'function') {
+          const muted = playerRef.current.isMuted();
+          console.log('[YTPlayer] Mute state after play:', muted);
+          if (muted) {
+            setTimeout(() => {
+              try {
+                playerRef.current.unMute();
+                playerRef.current.setVolume(100);
+                console.log('[YTPlayer] Retried unmute/volume after 500ms');
+              } catch (e) {
+                console.warn('[YTPlayer] Retry unmute/volume failed:', e);
+              }
+            }, 500);
+          }
+        }
       } catch (e) {
         console.warn('[YTPlayer] Could not force unmute/volume:', e);
       }
@@ -204,8 +222,8 @@ const YTPlayer = forwardRef((props, ref) => {
       }
       
       playerRef.current = new window.YT.Player(containerRef.current.id, {
-        height: '1',
-        width: '1',
+        height: '40',
+        width: '40',
         playerVars: {
           autoplay: 0,
           controls: 0,
@@ -213,8 +231,8 @@ const YTPlayer = forwardRef((props, ref) => {
           fs: 0,
           rel: 0,
           modestbranding: 1,
-          // Enable background playback
           origin: window.location.origin,
+          playsinline: 1,
         },
         events: {
           onReady: onPlayerReady,
@@ -272,30 +290,42 @@ const YTPlayer = forwardRef((props, ref) => {
     };
   }, [initializePlayer]);
 
-  // Load video when currentTrack changes and player is ready
+  // Load video only when currentTrack changes
   useEffect(() => {
     if (playerRef.current && currentTrack && isPlayerReadyRef.current) {
-      if (isPlaying) {
-        loadVideo(currentTrack.id);
-        
-        // Enable background audio when playing
-        if (isMobile() && backgroundAudioInitialized.current) {
-          backgroundAudioService.enableBackgroundAudio();
+      if (lastLoadedVideoId.current !== currentTrack.id) {
+        // New track selected, load it
+        try {
+          playerRef.current.loadVideoById({
+            videoId: currentTrack.id,
+            startSeconds: 0,
+            suggestedQuality: 'small'
+          });
+          lastLoadedVideoId.current = currentTrack.id;
+          if (isPlaying) {
+            playerRef.current.playVideo();
+            forceUnmuteAndVolume();
+          } else {
+            playerRef.current.pauseVideo();
+          }
+        } catch (e) {
+          setPlaybackError('Failed to load video.');
+          console.error('[YTPlayer] Error loading video:', e);
         }
       } else {
-        // Just load, don't play
-        playerRef.current.loadVideoById({
-          videoId: currentTrack.id,
-          startSeconds: 0,
-          suggestedQuality: 'small'
-        });
-        playerRef.current.pauseVideo();
+        // Same track, just play/pause
+        if (isPlaying) {
+          playerRef.current.playVideo();
+          forceUnmuteAndVolume();
+        } else {
+          playerRef.current.pauseVideo();
+        }
       }
     } else if (currentTrack && !isPlayerReadyRef.current) {
       // If not ready, set flag to play when ready
       playWhenReady.current = isPlaying;
     }
-  }, [currentTrack, isPlaying, loadVideo]);
+  }, [currentTrack, isPlaying, forceUnmuteAndVolume]);
   
   // Update volume when changed
   useEffect(() => {
@@ -375,7 +405,7 @@ const YTPlayer = forwardRef((props, ref) => {
     <>
       <div
         ref={containerRef}
-        style={{ width: 1, height: 1, opacity: 0.01, pointerEvents: 'none', position: 'fixed', left: 0, top: 0, zIndex: 0 }}
+        style={{ width: 40, height: 40, opacity: 0.2, pointerEvents: 'none', position: 'fixed', right: 8, bottom: 8, zIndex: 10 }}
       />
       {showPlayOverlay && (
         <div

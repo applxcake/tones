@@ -33,6 +33,7 @@ const YTPlayer = forwardRef((props, ref) => {
   const [showPlayOverlay, setShowPlayOverlay] = useState(false);
   const userInteractedRef = useRef(false);
   const backgroundAudioInitialized = useRef(false);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
   
   // Initialize background audio service
   useEffect(() => {
@@ -124,11 +125,29 @@ const YTPlayer = forwardRef((props, ref) => {
     }
   }, [currentTrack]);
 
+  const forceUnmuteAndVolume = useCallback(() => {
+    if (playerRef.current) {
+      try {
+        if (typeof playerRef.current.unMute === 'function') {
+          playerRef.current.unMute();
+        }
+        if (typeof playerRef.current.setVolume === 'function') {
+          playerRef.current.setVolume(100);
+        }
+        console.log('[YTPlayer] Forced unmute and volume 100');
+      } catch (e) {
+        console.warn('[YTPlayer] Could not force unmute/volume:', e);
+      }
+    }
+  }, []);
+
   const onPlayerStateChange = useCallback((event: any) => {
     const playerState = event.data;
+    console.log('[YTPlayer] Player state changed:', playerState);
     if (playerState === window.YT?.PlayerState?.PLAYING) {
       const duration = playerRef.current?.getDuration() || 0;
       setDuration(duration);
+      forceUnmuteAndVolume();
       
       // Update media session for background playback
       if (currentTrack && backgroundAudioInitialized.current) {
@@ -153,7 +172,7 @@ const YTPlayer = forwardRef((props, ref) => {
     } else if (playerState === window.YT?.PlayerState?.ENDED) {
       backgroundAudioService.setPlaybackState('none');
     }
-  }, [currentTrack, setDuration, playbackRate]);
+  }, [currentTrack, setDuration, playbackRate, forceUnmuteAndVolume]);
 
   const loadVideo = useCallback((videoId: string) => {
     if (playerRef.current && typeof playerRef.current.loadVideoById === 'function') {
@@ -336,22 +355,27 @@ const YTPlayer = forwardRef((props, ref) => {
   const handlePlayOverlayClick = () => {
     userInteractedRef.current = true;
     setShowPlayOverlay(false);
+    setPlaybackError(null);
     if (playerRef.current && typeof playerRef.current.playVideo === 'function') {
-      playerRef.current.playVideo();
-      
-      // Enable background audio after user interaction
-      if (isMobile() && backgroundAudioInitialized.current) {
-        backgroundAudioService.enableBackgroundAudio();
+      try {
+        playerRef.current.playVideo();
+        forceUnmuteAndVolume();
+        console.log('[YTPlayer] playVideo() called from overlay');
+      } catch (e) {
+        setPlaybackError('Playback failed. Please try again.');
+        console.error('[YTPlayer] Playback error:', e);
       }
+    } else {
+      setPlaybackError('Player not ready. Please try again.');
+      console.error('[YTPlayer] Player not ready on overlay click');
     }
   };
 
   return (
     <>
-      <div 
-        className="hidden" 
+      <div
         ref={containerRef}
-        style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
+        style={{ width: 1, height: 1, opacity: 0.01, pointerEvents: 'none', position: 'fixed', left: 0, top: 0, zIndex: 0 }}
       />
       {showPlayOverlay && (
         <div
@@ -362,6 +386,11 @@ const YTPlayer = forwardRef((props, ref) => {
           <button className="bg-white rounded-full p-6 shadow-lg text-2xl font-bold">
             ▶️ Tap to Play
           </button>
+        </div>
+      )}
+      {playbackError && (
+        <div className="fixed bottom-0 left-0 right-0 bg-red-600 text-white text-center py-2 z-50">
+          {playbackError}
         </div>
       )}
     </>

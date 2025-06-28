@@ -1,98 +1,121 @@
-
-import { useState } from 'react';
+import React from 'react';
+import { Share2, Twitter, Facebook, MessageCircle, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { toast } from '@/hooks/use-toast';
-import { Share2, Copy, Twitter, Facebook, Instagram, Link } from 'lucide-react';
-import { YouTubeVideo } from '@/services/youtubeService';
-import { motion } from 'framer-motion';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { toast } from '@/components/ui/use-toast';
 
 interface SocialShareButtonProps {
-  song: YouTubeVideo;
+  url: string;
+  title: string;
+  description?: string;
   className?: string;
 }
 
-const SocialShareButton = ({ song, className }: SocialShareButtonProps) => {
-  const [open, setOpen] = useState(false);
+const SocialShareButton: React.FC<SocialShareButtonProps> = ({
+  url,
+  title,
+  description = 'Check out this awesome playlist!',
+  className
+}) => {
+  const handleShare = async (platform: string) => {
+    const encodedUrl = encodeURIComponent(url);
+    const encodedTitle = encodeURIComponent(title);
+    const encodedDescription = encodeURIComponent(description);
 
-  const shareUrl = `${window.location.origin}/song/${song.id}`;
-  const shareText = `Check out this song: ${song.title} by ${song.channelTitle}`;
+    let shareUrl = '';
 
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      toast({
-        title: "Link Copied",
-        description: "Song link copied to clipboard!",
-        variant: "success"
-      });
-      setOpen(false);
-    } catch (error) {
-      toast({
-        title: "Copy Failed",
-        description: "Could not copy link to clipboard.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const shareToSocial = (platform: 'twitter' | 'facebook' | 'instagram') => {
-    let url = '';
-    
     switch (platform) {
       case 'twitter':
-        url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+        shareUrl = `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}&via=tonesapp`;
         break;
       case 'facebook':
-        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
         break;
-      case 'instagram':
-        // Instagram doesn't have direct sharing, so we copy to clipboard
-        copyToClipboard();
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`;
+        break;
+      case 'copy':
+        try {
+          await navigator.clipboard.writeText(url);
+          toast({
+            title: "Link Copied!",
+            description: "Playlist link has been copied to your clipboard.",
+          });
+          return;
+        } catch (error) {
+          console.error('Error copying to clipboard:', error);
+          toast({
+            title: "Error copying link",
+            description: "Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+      default:
         return;
     }
-    
-    if (url) {
-      window.open(url, '_blank', 'width=550,height=420');
-      setOpen(false);
+
+    // Open share URL in new window
+    window.open(shareUrl, '_blank', 'width=600,height=400');
+  };
+
+  // Check if native sharing is available
+  const isNativeSharingSupported = () => {
+    return navigator.share && navigator.canShare;
+  };
+
+  const handleNativeShare = async () => {
+    if (isNativeSharingSupported()) {
+      try {
+        await navigator.share({
+          title,
+          text: description,
+          url,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
     }
   };
 
-  const shareOptions = [
-    { icon: Copy, label: 'Copy Link', action: copyToClipboard, color: 'text-gray-600' },
-    { icon: Twitter, label: 'Twitter', action: () => shareToSocial('twitter'), color: 'text-blue-400' },
-    { icon: Facebook, label: 'Facebook', action: () => shareToSocial('facebook'), color: 'text-blue-600' },
-    { icon: Instagram, label: 'Instagram', action: () => shareToSocial('instagram'), color: 'text-pink-500' },
-  ];
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className={className}>
-          <Share2 size={16} />
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className={className}>
+          <Share2 className="h-4 w-4 mr-2" />
+          Share
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-56" align="end">
-        <div className="space-y-2">
-          <h4 className="font-medium text-sm">Share this song</h4>
-          <div className="grid gap-2">
-            {shareOptions.map(({ icon: Icon, label, action, color }, index) => (
-              <motion.button
-                key={label}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                onClick={action}
-                className={`flex items-center gap-3 w-full p-2 rounded-md hover:bg-muted transition-colors ${color}`}
-              >
-                <Icon size={16} />
-                <span className="text-sm">{label}</span>
-              </motion.button>
-            ))}
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="animate-scale-in">
+        {isNativeSharingSupported() && (
+          <DropdownMenuItem onClick={handleNativeShare}>
+            <Share2 className="mr-2 h-4 w-4" />
+            Share...
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onClick={() => handleShare('twitter')}>
+          <Twitter className="mr-2 h-4 w-4" />
+          Twitter
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleShare('facebook')}>
+          <Facebook className="mr-2 h-4 w-4" />
+          Facebook
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
+          <MessageCircle className="mr-2 h-4 w-4" />
+          WhatsApp
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleShare('copy')}>
+          <Copy className="mr-2 h-4 w-4" />
+          Copy Link
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 

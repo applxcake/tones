@@ -12,6 +12,8 @@ export interface Playlist {
   songs: YouTubeVideo[];
   createdAt: string;
   userId: string;
+  isPublic: boolean;
+  shareToken: string | null;
 }
 
 // Generate a unique ID (using uuid)
@@ -67,6 +69,8 @@ export const getUserPlaylists = async (userId?: string): Promise<Playlist[]> => 
           songs,
           createdAt: playlist.created_at,
           userId: playlist.user_id,
+          isPublic: playlist.is_public || false,
+          shareToken: playlist.share_token || null,
         };
       } catch (error) {
         console.error(`Error fetching songs for playlist ${playlist.id}:`, error);
@@ -78,6 +82,8 @@ export const getUserPlaylists = async (userId?: string): Promise<Playlist[]> => 
           songs: [],
           createdAt: playlist.created_at,
           userId: playlist.user_id,
+          isPublic: false,
+          shareToken: null,
         };
       }
     }));
@@ -137,6 +143,8 @@ export const createPlaylist = async (name: string, description = '', userId?: st
       songs: [],
       createdAt: data[0].created_at,
       userId,
+      isPublic: false,
+      shareToken: null,
     };
   } catch (error) {
     console.error('Error creating playlist:', error);
@@ -314,7 +322,7 @@ export const deletePlaylist = async (playlistId: string): Promise<boolean> => {
   }
 };
 
-// Get a playlist by ID
+// Get a playlist by ID (including shared playlists)
 export const getPlaylistById = async (playlistId: string): Promise<Playlist | null> => {
   try {
     // Get the playlist
@@ -353,6 +361,8 @@ export const getPlaylistById = async (playlistId: string): Promise<Playlist | nu
       songs,
       createdAt: playlist.created_at,
       userId: playlist.user_id,
+      isPublic: playlist.is_public || false,
+      shareToken: playlist.share_token || null,
     };
   } catch (error) {
     console.error('Error fetching playlist:', error);
@@ -362,5 +372,118 @@ export const getPlaylistById = async (playlistId: string): Promise<Playlist | nu
       variant: "destructive"
     });
     return null;
+  }
+};
+
+// Get a shared playlist by share token
+export const getSharedPlaylist = async (shareToken: string): Promise<Playlist | null> => {
+  try {
+    // Get the playlist by share token
+    const { data: playlist, error: playlistError } = await supabase
+      .from('playlists')
+      .select('*')
+      .eq('share_token', shareToken)
+      .eq('is_public', true)
+      .single();
+    
+    if (playlistError) throw playlistError;
+    
+    // Get playlist songs
+    const { data: playlistSongsData, error: songsError } = await supabase
+      .from('playlist_songs')
+      .select(`
+        *,
+        songs:song_id (*)
+      `)
+      .eq('playlist_id', playlist.id);
+    
+    if (songsError) throw songsError;
+    
+    // Transform the songs into the expected format
+    const songs = playlistSongsData.map(item => ({
+      id: item.songs.id,
+      title: item.songs.title,
+      thumbnailUrl: item.songs.thumbnail_url,
+      channelTitle: item.songs.channel_title || '',
+      publishedAt: item.added_at || new Date().toISOString(),
+    }));
+    
+    return {
+      id: playlist.id,
+      name: playlist.name,
+      description: playlist.description || '',
+      songs,
+      createdAt: playlist.created_at,
+      userId: playlist.user_id,
+      isPublic: playlist.is_public,
+      shareToken: playlist.share_token,
+    };
+  } catch (error) {
+    console.error('Error fetching shared playlist:', error);
+    return null;
+  }
+};
+
+// Toggle playlist sharing
+export const togglePlaylistSharing = async (playlistId: string, isPublic: boolean): Promise<boolean> => {
+  try {
+    const shareToken = isPublic ? generateId() : null;
+    
+    const { error } = await supabase
+      .from('playlists')
+      .update({ 
+        is_public: isPublic,
+        share_token: shareToken,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', playlistId);
+    
+    if (error) throw error;
+    
+    toast({
+      title: isPublic ? "Playlist Shared" : "Playlist Unshared",
+      description: isPublic 
+        ? "Your playlist is now public and can be shared!" 
+        : "Your playlist is now private.",
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error toggling playlist sharing:', error);
+    toast({
+      title: "Error updating playlist",
+      description: "Please try again later.",
+      variant: "destructive"
+    });
+    return false;
+  }
+};
+
+// Get share URL for a playlist
+export const getPlaylistShareUrl = (shareToken: string): string => {
+  const baseUrl = window.location.origin;
+  return `${baseUrl}/shared/${shareToken}`;
+};
+
+// Copy playlist share URL to clipboard
+export const copyPlaylistShareUrl = async (shareToken: string): Promise<boolean> => {
+  try {
+    const shareUrl = getPlaylistShareUrl(shareToken);
+    await navigator.clipboard.writeText(shareUrl);
+    
+    toast({
+      title: "Link Copied!",
+      description: "Playlist link has been copied to your clipboard.",
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error copying to clipboard:', error);
+    toast({
+      title: "Error copying link",
+      description: "Please try again.",
+      variant: "destructive"
+    });
+    return false;
   }
 };

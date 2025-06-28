@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, MoreVertical, ArrowLeft, Trash, ListPlus, Shuffle, SortAsc, SortDesc } from 'lucide-react';
+import { Play, MoreVertical, ArrowLeft, Trash, ListPlus, Shuffle, SortAsc, SortDesc, Share2, Copy, Globe, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getPlaylistById, removeSongFromPlaylist, deletePlaylist } from '@/services/playlistService';
+import { getPlaylistById, removeSongFromPlaylist, deletePlaylist, togglePlaylistSharing, copyPlaylistShareUrl, getPlaylistShareUrl } from '@/services/playlistService';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { cn } from '@/lib/utils';
 import {
@@ -23,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import SocialShareButton from '@/components/SocialShareButton';
 
 type SortOption = 'default' | 'title-asc' | 'title-desc' | 'artist-asc' | 'artist-desc' | 'date-added';
 
@@ -35,6 +36,7 @@ const PlaylistDetails = () => {
   const [loading, setLoading] = useState(true);
   const [sortOption, setSortOption] = useState<SortOption>('default');
   const [sortedSongs, setSortedSongs] = useState<any[]>([]);
+  const [isSharing, setIsSharing] = useState(false);
   
   useEffect(() => {
     const loadPlaylist = async () => {
@@ -44,6 +46,7 @@ const PlaylistDetails = () => {
           const playlistData = await getPlaylistById(id);
           setPlaylist(playlistData);
           setSortedSongs(playlistData?.songs || []);
+          setIsSharing(playlistData?.isPublic || false);
         } catch (error) {
           console.error('Error fetching playlist:', error);
         } finally {
@@ -151,6 +154,24 @@ const PlaylistDetails = () => {
     setSortOption(option);
   };
 
+  const handleToggleSharing = async () => {
+    if (playlist) {
+      const success = await togglePlaylistSharing(playlist.id, !isSharing);
+      if (success) {
+        setIsSharing(!isSharing);
+        // Refresh playlist data to get updated share token
+        const updatedPlaylist = await getPlaylistById(playlist.id);
+        setPlaylist(updatedPlaylist);
+      }
+    }
+  };
+
+  const handleCopyShareLink = async () => {
+    if (playlist?.shareToken) {
+      await copyPlaylistShareUrl(playlist.shareToken);
+    }
+  };
+
   const getSortIcon = () => {
     switch (sortOption) {
       case 'title-asc':
@@ -178,7 +199,15 @@ const PlaylistDetails = () => {
       <div className="mb-8">
         <div className="flex justify-between items-start">
           <div className="animate-fade-in">
-            <h1 className="text-3xl font-bold">{playlist.name}</h1>
+            <div className="flex items-center gap-2 mb-2">
+              <h1 className="text-3xl font-bold">{playlist.name}</h1>
+              {isSharing && (
+                <div className="flex items-center gap-1 text-neon-purple">
+                  <Share2 className="h-4 w-4" />
+                  <span className="text-sm">Shared</span>
+                </div>
+              )}
+            </div>
             {playlist.description && (
               <p className="mt-2 text-gray-400">{playlist.description}</p>
             )}
@@ -211,6 +240,34 @@ const PlaylistDetails = () => {
               <Shuffle className="h-4 w-4" />
               Shuffle
             </Button>
+
+            <Button 
+              onClick={handleToggleSharing}
+              variant={isSharing ? "default" : "outline"}
+              className="flex items-center gap-2 hover-scale"
+            >
+              {isSharing ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+              {isSharing ? 'Public' : 'Private'}
+            </Button>
+
+            {isSharing && playlist?.shareToken && (
+              <Button 
+                onClick={handleCopyShareLink}
+                variant="outline"
+                className="flex items-center gap-2 hover-scale"
+              >
+                <Copy className="h-4 w-4" />
+                Copy Link
+              </Button>
+            )}
+
+            {isSharing && playlist?.shareToken && (
+              <SocialShareButton
+                url={getPlaylistShareUrl(playlist.shareToken)}
+                title={playlist.name}
+                description={`Check out this awesome playlist: ${playlist.name}`}
+              />
+            )}
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

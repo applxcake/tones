@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ListMusic, Plus, MoreVertical, Trash, Edit, Play, Shuffle } from 'lucide-react';
+import { ListMusic, Plus, MoreVertical, Trash, Edit, Play, Shuffle, Share2, Copy, Globe, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,8 +16,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { getUserPlaylists, createPlaylist, deletePlaylist, Playlist } from '@/services/playlistService';
+import { getUserPlaylists, createPlaylist, deletePlaylist, Playlist, togglePlaylistSharing, copyPlaylistShareUrl } from '@/services/playlistService';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -68,6 +69,21 @@ const Playlists = () => {
     const success = await deletePlaylist(id);
     if (success) {
       setPlaylists(prev => prev.filter(playlist => playlist.id !== id));
+    }
+  };
+
+  const handleToggleSharing = async (playlist: Playlist) => {
+    const success = await togglePlaylistSharing(playlist.id, !playlist.isPublic);
+    if (success) {
+      // Refresh playlists to get updated sharing status
+      const updatedPlaylists = await getUserPlaylists(user?.id);
+      setPlaylists(updatedPlaylists || []);
+    }
+  };
+
+  const handleCopyShareLink = async (playlist: Playlist) => {
+    if (playlist.shareToken) {
+      await copyPlaylistShareUrl(playlist.shareToken);
     }
   };
 
@@ -176,7 +192,14 @@ const Playlists = () => {
               </div>
               <div className="p-4 flex justify-between items-center">
                 <div className="group cursor-pointer" onClick={() => viewPlaylist(playlist.id)}>
-                  <h3 className="font-medium group-hover:text-neon-purple transition-colors duration-300">{playlist.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium group-hover:text-neon-purple transition-colors duration-300">{playlist.name}</h3>
+                    {playlist.isPublic && (
+                      <div className="flex items-center gap-1 text-neon-purple">
+                        <Share2 className="h-3 w-3" />
+                      </div>
+                    )}
+                  </div>
                   {playlist.description && (
                     <p className="text-xs text-gray-400 mt-1 line-clamp-2">{playlist.description}</p>
                   )}
@@ -193,6 +216,33 @@ const Playlists = () => {
                       <Edit className="mr-2 h-4 w-4" />
                       View
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => handleToggleSharing(playlist)}
+                      className="hover-scale"
+                    >
+                      {playlist.isPublic ? (
+                        <>
+                          <Lock className="mr-2 h-4 w-4" />
+                          Make Private
+                        </>
+                      ) : (
+                        <>
+                          <Globe className="mr-2 h-4 w-4" />
+                          Make Public
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    {playlist.isPublic && playlist.shareToken && (
+                      <DropdownMenuItem 
+                        onClick={() => handleCopyShareLink(playlist)}
+                        className="hover-scale"
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copy Link
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       className="text-red-500 hover-scale"
                       onClick={() => handleDeletePlaylist(playlist.id)}

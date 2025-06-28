@@ -1,4 +1,3 @@
-
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -27,7 +26,10 @@ CREATE TABLE IF NOT EXISTS public.playlists (
   description TEXT,
   image_url TEXT,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+  is_public BOOLEAN DEFAULT false,
+  share_token TEXT UNIQUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
 );
 
 -- Create playlist_songs table (join table for playlists and songs)
@@ -130,3 +132,13 @@ BEGIN
   DO UPDATE SET username = EXCLUDED.username;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Migration: Add sharing columns to existing playlists table
+ALTER TABLE public.playlists 
+ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS share_token TEXT UNIQUE,
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT now();
+
+-- Create index for share tokens
+CREATE INDEX IF NOT EXISTS idx_playlists_share_token ON public.playlists(share_token);
+CREATE INDEX IF NOT EXISTS idx_playlists_is_public ON public.playlists(is_public);

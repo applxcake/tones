@@ -13,6 +13,7 @@ import Explore from '@/pages/Explore';
 import { Settings } from '@/pages/Settings';
 import Playlists from '@/pages/Playlists';
 import PlaylistDetails from '@/pages/PlaylistDetails';
+import SharedPlaylist from '@/pages/SharedPlaylist';
 import UserProfile from '@/pages/UserProfile';
 import Favorites from '@/pages/Favorites';
 
@@ -67,6 +68,7 @@ function AppContent() {
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/playlists/:id" element={<PlaylistDetails />} />
+          <Route path="/shared/:shareToken" element={<SharedPlaylist />} />
           <Route path="/users/:id" element={<UserProfile />} />
         </Route>
         

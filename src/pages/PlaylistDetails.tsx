@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, MoreVertical, ArrowLeft, Trash, ListPlus } from 'lucide-react';
+import { Play, MoreVertical, ArrowLeft, Trash, ListPlus, Shuffle, SortAsc, SortDesc } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getPlaylistById, removeSongFromPlaylist, deletePlaylist } from '@/services/playlistService';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -11,6 +10,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
@@ -23,13 +24,17 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+type SortOption = 'default' | 'title-asc' | 'title-desc' | 'artist-asc' | 'artist-desc' | 'date-added';
+
 const PlaylistDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { playTrack, addToQueue, isPlaying, currentTrack, togglePlayPause } = usePlayer();
+  const { playTrack, addToQueue, isPlaying, currentTrack, togglePlayPause, playPlaylist } = usePlayer();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [playlist, setPlaylist] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [sortOption, setSortOption] = useState<SortOption>('default');
+  const [sortedSongs, setSortedSongs] = useState<any[]>([]);
   
   useEffect(() => {
     const loadPlaylist = async () => {
@@ -38,6 +43,7 @@ const PlaylistDetails = () => {
         try {
           const playlistData = await getPlaylistById(id);
           setPlaylist(playlistData);
+          setSortedSongs(playlistData?.songs || []);
         } catch (error) {
           console.error('Error fetching playlist:', error);
         } finally {
@@ -48,6 +54,36 @@ const PlaylistDetails = () => {
     
     loadPlaylist();
   }, [id]);
+
+  // Sort songs based on selected option
+  useEffect(() => {
+    if (!playlist?.songs) return;
+
+    let sorted = [...playlist.songs];
+    
+    switch (sortOption) {
+      case 'title-asc':
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'title-desc':
+        sorted.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      case 'artist-asc':
+        sorted.sort((a, b) => a.channelTitle.localeCompare(b.channelTitle));
+        break;
+      case 'artist-desc':
+        sorted.sort((a, b) => b.channelTitle.localeCompare(a.channelTitle));
+        break;
+      case 'date-added':
+        sorted.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+        break;
+      default:
+        // Keep original order (by position in playlist)
+        sorted = [...playlist.songs];
+    }
+    
+    setSortedSongs(sorted);
+  }, [playlist, sortOption]);
 
   useEffect(() => {
     if (!loading && !playlist) {
@@ -100,14 +136,31 @@ const PlaylistDetails = () => {
   };
 
   const handlePlayAll = () => {
-    if (playlist.songs.length > 0) {
-      // Play the first song
-      playTrack(playlist.songs[0]);
-      
-      // Add the rest to queue
-      playlist.songs.slice(1).forEach((song: any) => {
-        addToQueue(song);
-      });
+    if (sortedSongs.length > 0) {
+      playPlaylist(sortedSongs, false);
+    }
+  };
+
+  const handleShufflePlay = () => {
+    if (sortedSongs.length > 0) {
+      playPlaylist(sortedSongs, true);
+    }
+  };
+
+  const handleSortChange = (option: SortOption) => {
+    setSortOption(option);
+  };
+
+  const getSortIcon = () => {
+    switch (sortOption) {
+      case 'title-asc':
+      case 'artist-asc':
+        return <SortAsc className="h-4 w-4" />;
+      case 'title-desc':
+      case 'artist-desc':
+        return <SortDesc className="h-4 w-4" />;
+      default:
+        return <SortAsc className="h-4 w-4" />;
     }
   };
 
@@ -130,19 +183,82 @@ const PlaylistDetails = () => {
               <p className="mt-2 text-gray-400">{playlist.description}</p>
             )}
             <p className="mt-2 text-sm text-gray-500">
-              {playlist.songs.length} {playlist.songs.length === 1 ? 'song' : 'songs'}
+              {sortedSongs.length} {sortedSongs.length === 1 ? 'song' : 'songs'}
+              {sortOption !== 'default' && (
+                <span className="ml-2 text-neon-purple">
+                  • Sorted by {sortOption.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </span>
+              )}
             </p>
           </div>
 
           <div className="flex space-x-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <Button 
               onClick={handlePlayAll}
-              disabled={playlist.songs.length === 0}
+              disabled={sortedSongs.length === 0}
               className="flex items-center gap-2 hover-scale"
             >
               <Play className="h-4 w-4" />
               Play All
             </Button>
+
+            <Button 
+              onClick={handleShufflePlay}
+              disabled={sortedSongs.length === 0}
+              variant="outline"
+              className="flex items-center gap-2 hover-scale"
+            >
+              <Shuffle className="h-4 w-4" />
+              Shuffle
+            </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="hover-scale">
+                  {getSortIcon()}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="animate-scale-in">
+                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => handleSortChange('default')}
+                  className={sortOption === 'default' ? 'bg-neon-purple/20' : ''}
+                >
+                  Default Order
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleSortChange('title-asc')}
+                  className={sortOption === 'title-asc' ? 'bg-neon-purple/20' : ''}
+                >
+                  Title (A-Z)
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleSortChange('title-desc')}
+                  className={sortOption === 'title-desc' ? 'bg-neon-purple/20' : ''}
+                >
+                  Title (Z-A)
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleSortChange('artist-asc')}
+                  className={sortOption === 'artist-asc' ? 'bg-neon-purple/20' : ''}
+                >
+                  Artist (A-Z)
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleSortChange('artist-desc')}
+                  className={sortOption === 'artist-desc' ? 'bg-neon-purple/20' : ''}
+                >
+                  Artist (Z-A)
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleSortChange('date-added')}
+                  className={sortOption === 'date-added' ? 'bg-neon-purple/20' : ''}
+                >
+                  Date Added
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -164,9 +280,9 @@ const PlaylistDetails = () => {
         </div>
       </div>
 
-      {playlist.songs.length > 0 ? (
+      {sortedSongs.length > 0 ? (
         <div className="space-y-2">
-          {playlist.songs.map((song: any, index: number) => (
+          {sortedSongs.map((song: any, index: number) => (
             <div 
               key={song.id} 
               className={cn(
@@ -176,6 +292,9 @@ const PlaylistDetails = () => {
               style={{ animationDelay: `${0.1 * (index % 10)}s` }}
             >
               <div className="flex items-center flex-1 min-w-0">
+                <span className="text-sm text-gray-400 mr-3 w-6 text-center">
+                  {index + 1}
+                </span>
                 <img 
                   src={song.thumbnailUrl} 
                   alt={song.title}

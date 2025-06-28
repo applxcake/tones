@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -11,7 +10,8 @@ import {
   Heart,
   List,
   VolumeX,
-  Maximize2
+  Maximize2,
+  Shuffle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -33,7 +33,9 @@ const MusicPlayer = () => {
     duration,
     seekToPosition,
     isLiked,
-    toggleLike
+    toggleLike,
+    shuffleMode,
+    toggleShuffle
   } = usePlayer();
   
   const [currentTime, setCurrentTime] = useState(0);
@@ -210,6 +212,20 @@ const MusicPlayer = () => {
               <Button
                 size="icon"
                 variant="ghost"
+                onClick={toggleShuffle}
+                className={cn(
+                  "w-8 h-8 text-zinc-400 hover:text-white transition-colors",
+                  shuffleMode && "text-green-500"
+                )}
+              >
+                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                  <Shuffle className="w-4 h-4" />
+                </motion.div>
+              </Button>
+
+              <Button
+                size="icon"
+                variant="ghost"
                 onClick={previousTrack}
                 className="w-8 h-8 text-zinc-400 hover:text-white transition-colors"
               >
@@ -297,6 +313,18 @@ const MusicPlayer = () => {
 
             {isSquareMode && (
               <div className="flex items-center gap-4 mt-2">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={toggleShuffle}
+                  className={cn(
+                    "w-8 h-8 text-zinc-400 hover:text-white transition-colors",
+                    shuffleMode && "text-green-500"
+                  )}
+                >
+                  <Shuffle className="w-4 h-4" />
+                </Button>
+
                 <Button
                   size="icon"
                   variant="ghost"

@@ -43,6 +43,7 @@ interface PlayerContextType {
   setDuration: (duration: number) => void;
   setShowQueue: (show: boolean) => void;
   setAutoPlayEnabled: (enabled: boolean) => void;
+  playPlaylist: (songs: Song[], shuffle: boolean) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -71,15 +72,36 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
 
   const nextTrack = () => {
     if (queue.length > 0) {
-      const nextSong = queue[0];
-      setQueue(prev => prev.slice(1));
+      let nextSong;
+      
+      if (shuffleMode) {
+        // Shuffle the queue and pick a random song
+        const shuffledQueue = [...queue].sort(() => Math.random() - 0.5);
+        nextSong = shuffledQueue[0];
+        setQueue(prev => prev.filter(song => song.id !== nextSong.id));
+      } else {
+        // Normal queue behavior
+        nextSong = queue[0];
+        setQueue(prev => prev.slice(1));
+      }
+      
       playTrack(nextSong);
     } else if (autoPlayEnabled && recentlyPlayed.length > 1) {
       // Play a random song from recently played (excluding current)
       const availableSongs = recentlyPlayed.filter(song => song.id !== currentTrack?.id);
       if (availableSongs.length > 0) {
-        const randomIndex = Math.floor(Math.random() * availableSongs.length);
-        playTrack(availableSongs[randomIndex]);
+        let nextSong;
+        
+        if (shuffleMode) {
+          // Pick a random song from recently played
+          const randomIndex = Math.floor(Math.random() * availableSongs.length);
+          nextSong = availableSongs[randomIndex];
+        } else {
+          // Play the most recently played song (excluding current)
+          nextSong = availableSongs[0];
+        }
+        
+        playTrack(nextSong);
       }
     } else {
       setIsPlaying(false);
@@ -228,7 +250,32 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const toggleLoop = toggleLoopMode;
 
   const toggleShuffle = () => {
-    setShuffleMode(prev => !prev);
+    setShuffleMode(!shuffleMode);
+  };
+
+  // Play a playlist with optional shuffle
+  const playPlaylist = (songs: Song[], shuffle: boolean = false) => {
+    if (songs.length === 0) return;
+    
+    let songsToPlay = [...songs];
+    
+    if (shuffle) {
+      // Shuffle the songs
+      songsToPlay = songsToPlay.sort(() => Math.random() - 0.5);
+    }
+    
+    // Play the first song
+    playTrack(songsToPlay[0]);
+    
+    // Add the rest to queue
+    songsToPlay.slice(1).forEach((song: Song) => {
+      addToQueue(song);
+    });
+    
+    toast({
+      title: shuffle ? "Shuffle Play" : "Play All",
+      description: `Playing ${songs.length} songs${shuffle ? ' in shuffle mode' : ''}.`,
+    });
   };
 
   const toggleLike = async (song: Song): Promise<boolean> => {
@@ -328,7 +375,8 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     toggleShuffle,
     setDuration,
     setShowQueue,
-    setAutoPlayEnabled
+    setAutoPlayEnabled,
+    playPlaylist
   };
 
   return (

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ListMusic, Plus, MoreVertical, Trash, Edit } from 'lucide-react';
+import { ListMusic, Plus, MoreVertical, Trash, Edit, Play, Shuffle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,6 +20,7 @@ import {
 import { getUserPlaylists, createPlaylist, deletePlaylist, Playlist } from '@/services/playlistService';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePlayer } from '@/contexts/PlayerContext';
 
 const Playlists = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -30,6 +31,7 @@ const Playlists = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { playPlaylist } = usePlayer();
   
   useEffect(() => {
     const fetchPlaylists = async () => {
@@ -142,12 +144,34 @@ const Playlists = () => {
                 
                 {/* Play button overlay on hover */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <Button 
-                    size="icon"
-                    className="bg-neon-purple/80 hover:bg-neon-purple text-white rounded-full h-12 w-12 shadow-glow transform scale-90 hover:scale-100 transition-all duration-300"
-                  >
-                    <Edit className="h-5 w-5" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (playlist.songs.length > 0) {
+                          playPlaylist(playlist.songs, false);
+                        }
+                      }}
+                      disabled={playlist.songs.length === 0}
+                      className="bg-neon-purple/80 hover:bg-neon-purple text-white rounded-full h-10 w-10 shadow-glow transform scale-90 hover:scale-100 transition-all duration-300"
+                    >
+                      <Play className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (playlist.songs.length > 0) {
+                          playPlaylist(playlist.songs, true);
+                        }
+                      }}
+                      disabled={playlist.songs.length === 0}
+                      className="bg-neon-purple/80 hover:bg-neon-purple text-white rounded-full h-10 w-10 shadow-glow transform scale-90 hover:scale-100 transition-all duration-300"
+                    >
+                      <Shuffle className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
               <div className="p-4 flex justify-between items-center">

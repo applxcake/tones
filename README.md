@@ -71,3 +71,135 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+# Tones - Music Player
+
+A modern, responsive music player built with React, TypeScript, and Tailwind CSS. Features background audio playback, YouTube integration, and a beautiful UI.
+
+## Features
+
+- 🎵 **YouTube Music Integration** - Stream music directly from YouTube
+- 🎧 **Background Audio Playback** - Continue listening when the app is in the background
+- 📱 **Progressive Web App (PWA)** - Install as a native app on mobile devices
+- 🌙 **Dark/Light Theme** - Beautiful themes with smooth transitions
+- 🎨 **Modern UI** - Responsive design with animations and visual effects
+- 🔍 **Search & Discovery** - Find new music with advanced search
+- 📋 **Playlists** - Create and manage your music playlists
+- ⭐ **Favorites** - Save your favorite tracks for quick access
+
+## Background Audio Support
+
+The app includes comprehensive background audio support for mobile devices:
+
+### Features
+- **Service Worker** - Keeps audio playing when the app is in the background
+- **Wake Lock** - Prevents device sleep during playback
+- **Media Session API** - Lock screen controls and notifications
+- **Audio Focus** - Proper audio session management on mobile
+
+### How to Test Background Audio
+
+1. **Open the app** in a mobile browser or desktop
+2. **Navigate to Settings** page
+3. **Enable Background Playback** using the toggle switch
+4. **Start playing music** from any track
+5. **Minimize the app** or switch to another tab/app
+6. **Verify audio continues** playing in the background
+7. **Check lock screen controls** (on supported devices)
+
+### Testing on Different Devices
+
+#### Mobile (iOS/Android)
+- Add the app to home screen for best results
+- Background audio works best when installed as PWA
+- Lock screen controls available on supported devices
+
+#### Desktop
+- Background audio works when switching tabs
+- Media session controls available in browser
+
+#### Browser Support
+- **Chrome/Edge**: Full support
+- **Firefox**: Limited support
+- **Safari**: Limited support (iOS restrictions)
+
+### Troubleshooting
+
+If background audio isn't working:
+
+1. **Check browser support** - Use Chrome/Edge for best compatibility
+2. **Enable permissions** - Allow notifications and audio permissions
+3. **User interaction required** - Click/tap the page before testing
+4. **Mobile restrictions** - Some mobile browsers have limitations
+5. **Check Settings page** - Use the test features button to diagnose issues
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ 
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd tones
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the development server:
+```bash
+npm run dev
+```
+
+4. Open your browser and navigate to `http://localhost:5173`
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+The built files will be in the `dist` directory.
+
+## Technology Stack
+
+- **Frontend**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS, Framer Motion
+- **Audio**: YouTube IFrame API, Web Audio API
+- **PWA**: Service Workers, Web App Manifest
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
+
+## Project Structure
+
+```
+src/
+├── components/          # React components
+│   ├── ui/             # UI components (shadcn/ui)
+│   └── ...             # Feature components
+├── contexts/           # React contexts
+├── hooks/              # Custom hooks
+├── pages/              # Page components
+├── services/           # API services
+├── types/              # TypeScript types
+└── integrations/       # Third-party integrations
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.

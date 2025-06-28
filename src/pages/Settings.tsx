@@ -1,153 +1,64 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, User, Trash2, Shield, Bell } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/components/ui/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { BackgroundAudioStatus } from '@/components/BackgroundAudioStatus';
+import ThemeToggle from '@/components/ThemeToggle';
+import AutoPlayToggle from '@/components/AutoPlayToggle';
+import AudioQualityControl from '@/components/AudioQualityControl';
 
-const Settings = () => {
-  const { user, signOut } = useAuth();
-  const [notifications, setNotifications] = useState(true);
-  const [autoPlay, setAutoPlay] = useState(true);
-  const navigate = useNavigate();
-  const [username, setUsername] = useState(user?.username || '');
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
+export const Settings: React.FC = () => {
+  const handleAutoPlayToggle = (enabled: boolean) => {
+    console.log('Auto-play toggled:', enabled);
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-8"
-      >
-        <div className="flex items-center gap-3">
-          <SettingsIcon className="h-8 w-8 text-purple-400" />
-          <div>
-            <h1 className="text-3xl font-bold text-primary">Settings</h1>
-            <p className="text-muted-foreground">Manage your account and preferences</p>
-          </div>
-        </div>
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Settings</h1>
+      </div>
 
-        {/* Profile Settings */}
-        <Card className="bg-white/5 border-white/10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Background Audio Settings */}
+        <BackgroundAudioStatus />
+
+        {/* Theme Settings */}
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              <span className="text-primary">Profile Settings</span>
-            </CardTitle>
+            <CardTitle>Appearance</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  className="bg-white/5 border-white/10"
-                  placeholder="Enter username"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  defaultValue={user?.email || ''}
-                  className="bg-white/5 border-white/10"
-                  placeholder="Enter email"
-                  disabled
-                />
-              </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Dark Mode</span>
+              <ThemeToggle />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="avatar">Avatar URL</Label>
-              <Input
-                id="avatar"
-                value={avatarUrl}
-                onChange={e => setAvatarUrl(e.target.value)}
-                className="bg-white/5 border-white/10"
-                placeholder="Enter avatar URL"
-              />
-            </div>
-            <Button
-              className="bg-purple-600 hover:bg-purple-700"
-              onClick={async () => {
-                if (!user) return;
-                const { error } = await supabase
-                  .from('profiles')
-                  .update({ username, avatar_url: avatarUrl })
-                  .eq('id', user.id);
-                if (error) {
-                  toast({ title: 'Error', description: error.message, variant: 'destructive' });
-                } else {
-                  toast({ title: 'Profile Updated', description: 'Your profile has been updated.' });
-                }
-              }}
-            >
-              Save Changes
-            </Button>
           </CardContent>
         </Card>
 
-        {/* App Preferences */}
-        <Card className="bg-white/5 border-white/10">
+        {/* Playback Settings */}
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              <span className="text-primary">Preferences</span>
-            </CardTitle>
+            <CardTitle>Playback</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receive notifications about new releases and updates
-                </p>
-              </div>
-              <Switch
-                checked={notifications}
-                onCheckedChange={setNotifications}
-              />
+              <span className="text-sm font-medium">Auto-play</span>
+              <AutoPlayToggle onToggle={handleAutoPlayToggle} />
             </div>
-            
-            <Separator className="bg-white/10" />
-            
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Auto-play</Label>
-                <p className="text-sm text-muted-foreground">
-                  Automatically play similar songs when queue ends
-                </p>
-              </div>
-              <Switch
-                checked={autoPlay}
-                onCheckedChange={setAutoPlay}
-              />
-            </div>
+            <AudioQualityControl />
           </CardContent>
         </Card>
-      </motion.div>
+
+        {/* About */}
+        <Card>
+          <CardHeader>
+            <CardTitle>About</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
+            <p>Tones Music Player v1.0.0</p>
+            <p>A modern music player with background playback support.</p>
+            <p>Built with React, TypeScript, and Tailwind CSS.</p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
-
-export default Settings;

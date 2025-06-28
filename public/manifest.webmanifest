@@ -45,7 +45,9 @@
   "permissions": [
     "background-sync",
     "notifications",
-    "wake-lock"
+    "wake-lock",
+    "audio-capture",
+    "background-fetch"
   ],
   "background": {
     "service_worker": "/sw.js",
@@ -53,5 +55,10 @@
   },
   "categories": ["music", "entertainment"],
   "lang": "en",
-  "scope": "/"
+  "scope": "/",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 } 

@@ -42,6 +42,9 @@ class BackgroundAudioService {
       // Initialize media session
       this.initializeMediaSession();
 
+      // Enable background audio explicitly
+      await this.enableBackgroundAudio();
+
       this.isInitialized = true;
       console.log('Background audio service initialized successfully');
       return true;
@@ -239,20 +242,98 @@ class BackgroundAudioService {
 
   // Enable background audio
   async enableBackgroundAudio(): Promise<void> {
-    // Request wake lock
-    await this.requestWakeLock();
+    try {
+      // Request wake lock
+      await this.requestWakeLock();
 
-    // Register background sync
-    if (this.serviceWorker && 'sync' in this.serviceWorker) {
-      try {
-        await (this.serviceWorker as any).sync.register('background-audio');
-      } catch (error) {
-        console.warn('Background sync registration failed:', error);
+      // Register background sync
+      if (this.serviceWorker && 'sync' in this.serviceWorker) {
+        try {
+          await (this.serviceWorker as any).sync.register('background-audio');
+          console.log('Background sync registered for audio playback');
+        } catch (error) {
+          console.warn('Background sync registration failed:', error);
+        }
       }
-    }
 
-    // Set up visibility change handler
-    document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+      // Set up visibility change handler
+      document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+
+      // Set up page visibility API for cross-tab support
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          console.log('Page hidden - ensuring background audio continues');
+          this.ensureBackgroundPlayback();
+        } else {
+          console.log('Page visible - audio should continue normally');
+        }
+      });
+
+      // Request audio focus and set audio session properties
+      if ('mediaSession' in navigator) {
+        // Set audio session to allow background playback
+        navigator.mediaSession.setActionHandler('play', () => {
+          this.handleMediaSessionAction('play');
+        });
+        
+        navigator.mediaSession.setActionHandler('pause', () => {
+          this.handleMediaSessionAction('pause');
+        });
+
+        // Enable background audio session
+        try {
+          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+          }
+          console.log('Audio context resumed for background playback');
+        } catch (error) {
+          console.warn('Audio context setup failed:', error);
+        }
+      }
+
+      // Register for background sync events
+      if (this.serviceWorker?.active) {
+        this.serviceWorker.active.postMessage({
+          type: 'REGISTER_BACKGROUND_SYNC'
+        });
+      }
+
+      // For mobile devices, request audio focus
+      if (this.isMobile()) {
+        await this.requestAudioFocus();
+      }
+
+      console.log('Background audio enabled successfully');
+    } catch (error) {
+      console.error('Failed to enable background audio:', error);
+    }
+  }
+
+  // Request audio focus for mobile devices
+  private async requestAudioFocus(): Promise<void> {
+    try {
+      // Create a silent audio element to request audio focus
+      const audioElement = document.createElement('audio');
+      audioElement.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT';
+      audioElement.loop = true;
+      audioElement.volume = 0;
+      audioElement.preload = 'auto';
+      
+      // Add to DOM and play to request audio focus
+      document.body.appendChild(audioElement);
+      await audioElement.play();
+      
+      // Remove after a short delay
+      setTimeout(() => {
+        audioElement.pause();
+        document.body.removeChild(audioElement);
+      }, 100);
+      
+      console.log('Audio focus requested for mobile device');
+    } catch (error) {
+      console.warn('Failed to request audio focus:', error);
+    }
   }
 
   // Handle visibility change
@@ -277,6 +358,27 @@ class BackgroundAudioService {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'playing';
     }
+
+    // Ensure audio context is active
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          console.log('Audio context resumed for background playback');
+        });
+      }
+    } catch (error) {
+      console.warn('Audio context resume failed:', error);
+    }
+
+    // Notify service worker about background state
+    if (this.serviceWorker?.active) {
+      this.serviceWorker.active.postMessage({
+        type: 'BACKGROUND_PLAYBACK_ENABLED'
+      });
+    }
+
+    console.log('Background playback ensured');
   }
 
   // Handle return to foreground
@@ -303,15 +405,35 @@ class BackgroundAudioService {
 
   // Cleanup
   async cleanup(): Promise<void> {
-    await this.releaseWakeLock();
-    
-    if (this.serviceWorker) {
-      await this.serviceWorker.unregister();
-    }
+    try {
+      // Release wake lock
+      await this.releaseWakeLock();
+      
+      // Remove event listeners
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+      
+      // Unregister service worker
+      if (this.serviceWorker) {
+        try {
+          await this.serviceWorker.unregister();
+          console.log('Service worker unregistered');
+        } catch (error) {
+          console.warn('Failed to unregister service worker:', error);
+        }
+        this.serviceWorker = null;
+      }
 
-    document.removeEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
-    
-    this.isInitialized = false;
+      // Clear media session
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = null;
+        navigator.mediaSession.playbackState = 'none';
+      }
+      
+      this.isInitialized = false;
+      console.log('Background audio service cleaned up');
+    } catch (error) {
+      console.error('Error during cleanup:', error);
+    }
   }
 
   // Utility methods

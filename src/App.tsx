@@ -10,7 +10,7 @@ import Profile from '@/pages/Profile';
 import Auth from '@/pages/Auth';
 import NotFound from '@/pages/NotFound';
 import Explore from '@/pages/Explore';
-import Settings from '@/pages/Settings';
+import { Settings } from '@/pages/Settings';
 import Playlists from '@/pages/Playlists';
 import PlaylistDetails from '@/pages/PlaylistDetails';
 import UserProfile from '@/pages/UserProfile';

@@ -34,28 +34,91 @@ const YTPlayer = forwardRef((props, ref) => {
   const userInteractedRef = useRef(false);
   const backgroundAudioInitialized = useRef(false);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
   
   // Track last loaded videoId to avoid reloading on play/pause
   const lastLoadedVideoId = useRef<string | null>(null);
+  
+  // Track if user has interacted with the page (required for autoplay)
+  const userHasInteracted = useRef(false);
 
   // Initialize background audio service
   useEffect(() => {
     const initializeBackgroundAudio = async () => {
       if (!backgroundAudioInitialized.current) {
         try {
+          console.log('[YTPlayer] Initializing background audio service...');
           const success = await backgroundAudioService.initialize();
           if (success) {
             backgroundAudioInitialized.current = true;
-            console.log('Background audio service initialized');
+            console.log('[YTPlayer] Background audio service initialized successfully');
+            
+            // Update media session if we have a current track
+            if (currentTrack && isPlaying) {
+              backgroundAudioService.updateMediaSession({
+                title: currentTrack.title,
+                artist: currentTrack.channelTitle,
+                artwork: currentTrack.thumbnailUrl
+              });
+            }
+          } else {
+            console.warn('[YTPlayer] Background audio service initialization failed');
           }
         } catch (error) {
-          console.warn('Failed to initialize background audio:', error);
+          console.error('[YTPlayer] Failed to initialize background audio:', error);
         }
       }
     };
 
+    // Initialize on component mount
     initializeBackgroundAudio();
-  }, []);
+
+    // Also initialize when user interacts with the page (required for some browsers)
+    const handleUserInteraction = () => {
+      if (!backgroundAudioInitialized.current) {
+        initializeBackgroundAudio();
+      }
+    };
+
+    document.addEventListener('click', handleUserInteraction, { once: true });
+    document.addEventListener('touchstart', handleUserInteraction, { once: true });
+    document.addEventListener('keydown', handleUserInteraction, { once: true });
+
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+    };
+  }, [currentTrack, isPlaying]);
+
+  // Handle visibility changes to ensure background playback
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // Page is hidden, ensure audio continues
+        console.log('[YTPlayer] Page hidden - ensuring background playback');
+        if (isPlaying && playerRef.current && isPlayerReadyRef.current) {
+          // Force play to ensure audio continues
+          try {
+            if (typeof playerRef.current.playVideo === 'function') {
+              playerRef.current.playVideo();
+            }
+          } catch (e) {
+            console.warn('[YTPlayer] Background play failed:', e);
+          }
+        }
+      } else {
+        // Page is visible again
+        console.log('[YTPlayer] Page visible - audio should continue normally');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isPlaying]);
 
   // Handle media session actions from lock screen/notifications
   useEffect(() => {
@@ -112,6 +175,23 @@ const YTPlayer = forwardRef((props, ref) => {
 
   const onPlayerReady = useCallback(() => {
     isPlayerReadyRef.current = true;
+    console.log('[YTPlayer] Player ready');
+    
+    // Ensure player starts unmuted and with proper volume
+    if (playerRef.current) {
+      try {
+        if (typeof playerRef.current.unMute === 'function') {
+          playerRef.current.unMute();
+        }
+        if (typeof playerRef.current.setVolume === 'function') {
+          playerRef.current.setVolume(100);
+        }
+        console.log('[YTPlayer] Player initialized with unmuted state');
+      } catch (e) {
+        console.warn('[YTPlayer] Could not set initial player state:', e);
+      }
+    }
+    
     // If we should play when ready, do so now
     if (playWhenReady.current && currentTrack) {
       if (playerRef.current && typeof playerRef.current.loadVideoById === 'function') {
@@ -131,26 +211,51 @@ const YTPlayer = forwardRef((props, ref) => {
   const forceUnmuteAndVolume = useCallback(() => {
     if (playerRef.current) {
       try {
+        console.log('[YTPlayer] Attempting to unmute and set volume...');
+        
+        // First attempt
         if (typeof playerRef.current.unMute === 'function') {
           playerRef.current.unMute();
         }
         if (typeof playerRef.current.setVolume === 'function') {
           playerRef.current.setVolume(100);
         }
-        // Log mute state
+        
+        // Check mute state and retry if needed
         if (typeof playerRef.current.isMuted === 'function') {
           const muted = playerRef.current.isMuted();
-          console.log('[YTPlayer] Mute state after play:', muted);
+          setIsAudioMuted(muted);
+          console.log('[YTPlayer] Initial mute state:', muted);
+          
           if (muted) {
-            setTimeout(() => {
-              try {
-                playerRef.current.unMute();
-                playerRef.current.setVolume(100);
-                console.log('[YTPlayer] Retried unmute/volume after 500ms');
-              } catch (e) {
-                console.warn('[YTPlayer] Retry unmute/volume failed:', e);
-              }
-            }, 500);
+            // Show overlay if audio is muted
+            setShowPlayOverlay(true);
+            
+            // Multiple retry attempts with different intervals
+            const retryTimes = [100, 500, 1000, 2000];
+            retryTimes.forEach((delay, index) => {
+              setTimeout(() => {
+                try {
+                  if (playerRef.current) {
+                    playerRef.current.unMute();
+                    playerRef.current.setVolume(100);
+                    const stillMuted = playerRef.current.isMuted();
+                    setIsAudioMuted(stillMuted);
+                    console.log(`[YTPlayer] Retry ${index + 1} (${delay}ms) - Muted: ${stillMuted}`);
+                    
+                    if (!stillMuted) {
+                      console.log('[YTPlayer] Successfully unmuted!');
+                      setShowPlayOverlay(false);
+                    }
+                  }
+                } catch (e) {
+                  console.warn(`[YTPlayer] Retry ${index + 1} failed:`, e);
+                }
+              }, delay);
+            });
+          } else {
+            console.log('[YTPlayer] Player is not muted');
+            setShowPlayOverlay(false);
           }
         }
       } catch (e) {
@@ -184,6 +289,19 @@ const YTPlayer = forwardRef((props, ref) => {
           playbackRate: playbackRate,
           position: 0
         });
+      }
+
+      // Ensure background playback is enabled
+      if (document.visibilityState === 'hidden') {
+        console.log('[YTPlayer] Playing in background - ensuring audio continues');
+        // Force play to ensure audio continues in background
+        try {
+          if (typeof playerRef.current.playVideo === 'function') {
+            playerRef.current.playVideo();
+          }
+        } catch (e) {
+          console.warn('[YTPlayer] Background play failed:', e);
+        }
       }
     } else if (playerState === window.YT?.PlayerState?.PAUSED) {
       backgroundAudioService.setPlaybackState('paused');
@@ -232,13 +350,25 @@ const YTPlayer = forwardRef((props, ref) => {
           rel: 0,
           modestbranding: 1,
           origin: window.location.origin,
+          // Enable background playback
           playsinline: 1,
-        },
+          // Better mobile support
+          iv_load_policy: 3,
+          cc_load_policy: 0,
+          // Audio-only mode for better background playback
+          host: 'https://www.youtube-nocookie.com',
+        } as any,
         events: {
           onReady: onPlayerReady,
           onStateChange: onPlayerStateChange,
+          onError: (event) => {
+            console.error('[YTPlayer] Player error:', event.data);
+            setPlaybackError('Playback error occurred. Please try again.');
+          }
         }
       });
+      
+      console.log('[YTPlayer] Player initialized');
     } catch (error) {
       console.error('Error initializing YouTube player:', error);
     }
@@ -386,8 +516,18 @@ const YTPlayer = forwardRef((props, ref) => {
     userInteractedRef.current = true;
     setShowPlayOverlay(false);
     setPlaybackError(null);
+    
     if (playerRef.current && typeof playerRef.current.playVideo === 'function') {
       try {
+        // Force unmute first
+        if (typeof playerRef.current.unMute === 'function') {
+          playerRef.current.unMute();
+        }
+        if (typeof playerRef.current.setVolume === 'function') {
+          playerRef.current.setVolume(100);
+        }
+        
+        // Then play
         playerRef.current.playVideo();
         forceUnmuteAndVolume();
         console.log('[YTPlayer] playVideo() called from overlay');
@@ -400,6 +540,33 @@ const YTPlayer = forwardRef((props, ref) => {
       console.error('[YTPlayer] Player not ready on overlay click');
     }
   };
+
+  // Handle user interaction to enable audio
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      if (!userHasInteracted.current) {
+        userHasInteracted.current = true;
+        console.log('[YTPlayer] User interaction detected - enabling audio');
+        
+        // Force unmute when user interacts
+        if (playerRef.current && isPlayerReadyRef.current) {
+          forceUnmuteAndVolume();
+        }
+      }
+    };
+
+    // Listen for various user interaction events
+    const events = ['click', 'touchstart', 'keydown', 'mousedown'];
+    events.forEach(event => {
+      document.addEventListener(event, handleUserInteraction, { once: true });
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserInteraction);
+      });
+    };
+  }, [forceUnmuteAndVolume]);
 
   return (
     <>
@@ -414,7 +581,7 @@ const YTPlayer = forwardRef((props, ref) => {
           style={{ cursor: 'pointer' }}
         >
           <button className="bg-white rounded-full p-6 shadow-lg text-2xl font-bold">
-            ▶️ Tap to Play
+            {isAudioMuted ? '🔊 Tap to Enable Audio' : '▶️ Tap to Play'}
           </button>
         </div>
       )}

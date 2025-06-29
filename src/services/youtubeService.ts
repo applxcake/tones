@@ -137,32 +137,24 @@ const cleanupExpiredCache = () => {
 };
 
 // Enhanced fetch with API key rotation and request deduplication
-const fetchWithAPIKeyRotation = async (urlTemplate: string, cacheKey?: string, retries = MAX_RETRIES): Promise<Response> => {
-  // Check if there's already a pending request for this URL
+const fetchWithAPIKeyRotation = async (urlTemplate: string, cacheKey?: string, retries = MAX_RETRIES): Promise<any> => {
   if (cacheKey && pendingRequests.has(cacheKey)) {
     console.log(`Deduplicating request for: ${cacheKey}`);
-    return pendingRequests.get(cacheKey) as Promise<Response>;
+    return pendingRequests.get(cacheKey);
   }
-  
   const fetchPromise = (async () => {
     let lastError: Error | null = null;
-    
     for (let attempt = 0; attempt < retries; attempt++) {
       const apiKey = getAPIKey();
-      
       if (!apiKey) {
         throw new Error('No available API keys');
       }
-      
       const url = urlTemplate.replace('{API_KEY}', apiKey);
-      
       try {
         const response = await fetch(url);
-        
         if (response.ok) {
-          return response;
+          return await response.json();
         }
-        
         // Check if it's a quota exceeded error
         if (response.status === 403) {
           const errorText = await response.text();
@@ -172,43 +164,31 @@ const fetchWithAPIKeyRotation = async (urlTemplate: string, cacheKey?: string, r
             continue; // Try next API key
           }
         }
-        
         // Handle rate limiting (429) or server errors (5xx)
         if ((response.status === 429 || response.status >= 500) && attempt < retries - 1) {
           console.log(`YouTube API returned ${response.status}. Retrying in ${RETRY_DELAY}ms...`);
           await delay(RETRY_DELAY);
           continue;
         }
-        
         // Log detailed error for debugging
         const errorText = await response.text();
         console.error(`YouTube API Error (${response.status}):`, errorText);
         lastError = new Error(`YouTube API Error: ${response.status}`);
-        
       } catch (error) {
         console.log(`Network error with API key ${apiKey.substring(0, 10)}...:`, error);
         lastError = error as Error;
-        
         if (attempt < retries - 1) {
           console.log(`Retrying in ${RETRY_DELAY}ms...`);
           await delay(RETRY_DELAY);
         }
       }
     }
-    
     throw lastError || new Error('All API keys failed');
   })();
-  
-  // Store the promise for deduplication
   if (cacheKey) {
     pendingRequests.set(cacheKey, fetchPromise);
-    
-    // Clean up the promise after it resolves
-    fetchPromise.finally(() => {
-      pendingRequests.delete(cacheKey);
-    });
+    fetchPromise.finally(() => pendingRequests.delete(cacheKey));
   }
-  
   return fetchPromise;
 };
 
@@ -233,8 +213,7 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]
       query
     )}&key={API_KEY}&type=video`;
     
-    const response = await fetchWithAPIKeyRotation(urlTemplate, cacheKey);
-    const data = await response.json();
+    const data = await fetchWithAPIKeyRotation(urlTemplate, cacheKey);
     
     console.log(`YouTube search returned ${data.items?.length || 0} results`);
     
@@ -278,8 +257,7 @@ export const getYouTubeVideoById = async (videoId: string): Promise<YouTubeVideo
     
     const urlTemplate = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key={API_KEY}`;
     
-    const response = await fetchWithAPIKeyRotation(urlTemplate, `video:${videoId}`);
-    const data = await response.json();
+    const data = await fetchWithAPIKeyRotation(urlTemplate, `video:${videoId}`);
     
     if (data.items && data.items.length > 0) {
       const video = data.items[0];
@@ -335,8 +313,7 @@ export const searchVideos = async (query: string, pageToken?: string) => {
     }
     
     const cacheKey = pageToken ? `search:${query}:${pageToken}` : `search:${query}`;
-    const response = await fetchWithAPIKeyRotation(urlTemplate, cacheKey);
-    const data = await response.json();
+    const data = await fetchWithAPIKeyRotation(urlTemplate, cacheKey);
     
     const videos = data.items.map((item: any) => ({
       id: item.id.videoId,
@@ -388,8 +365,7 @@ export const getTrendingMusic = async (): Promise<YouTubeVideo[]> => {
     // Use YouTube's API to get music category videos
     const urlTemplate = `https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&videoCategoryId=10&maxResults=${MAX_RESULTS}&key={API_KEY}`;
     
-    const response = await fetchWithAPIKeyRotation(urlTemplate, 'trending');
-    const data = await response.json();
+    const data = await fetchWithAPIKeyRotation(urlTemplate, 'trending');
     
     if (data.items && data.items.length > 0) {
       const videos = data.items.map((item: any) => ({
@@ -479,8 +455,7 @@ export const getMultipleVideoDetails = async (videoIds: string[]): Promise<(YouT
       const idsParam = batch.join(',');
       
       const urlTemplate = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${idsParam}&key={API_KEY}`;
-      const response = await fetchWithAPIKeyRotation(urlTemplate, `batch:${idsParam}`);
-      const data = await response.json();
+      const data = await fetchWithAPIKeyRotation(urlTemplate, `batch:${idsParam}`);
       
       // Create a map of fetched videos
       const fetchedVideos = new Map<string, YouTubeVideo>();

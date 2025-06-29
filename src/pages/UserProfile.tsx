@@ -1,9 +1,8 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getUserById, followUser, unfollowUser, getCurrentUser } from '@/services/userService';
+import { getUserById, getCurrentUser } from '@/services/userService';
 import { Button } from '@/components/ui/button';
-import { User as UserIcon, ArrowLeft, UserPlus, UserMinus } from 'lucide-react';
+import { User as UserIcon, ArrowLeft } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
@@ -14,8 +13,6 @@ const UserProfile = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const [user, setUser] = useState<any>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,13 +23,6 @@ const UserProfile = () => {
           // Get the profile we're viewing
           const userData = await getUserById(id);
           setUser(userData);
-          
-          // Get current user data to check following status
-          if (authUser) {
-            const currentUserData = await getCurrentUser(authUser.id);
-            setCurrentUser(currentUserData);
-            setIsFollowing(currentUserData?.following?.includes(id) || false);
-          }
         } catch (error) {
           console.error('Error fetching user data:', error);
           toast({
@@ -47,7 +37,7 @@ const UserProfile = () => {
     };
     
     fetchData();
-  }, [id, authUser]);
+  }, [id]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -82,46 +72,6 @@ const UserProfile = () => {
     return null;
   }
 
-  const handleFollowToggle = async () => {
-    if (!authUser) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to follow users",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      if (isFollowing) {
-        const success = await unfollowUser(user.id, authUser.id);
-        if (success) setIsFollowing(false);
-      } else {
-        const success = await followUser(user.id, authUser.id);
-        if (success) setIsFollowing(true);
-      }
-      
-      // Refresh user data
-      if (id) {
-        const userData = await getUserById(id);
-        setUser(userData);
-      }
-      
-      // Refresh current user data
-      if (authUser) {
-        const currentUserData = await getCurrentUser(authUser.id);
-        setCurrentUser(currentUserData);
-      }
-    } catch (error) {
-      console.error('Error toggling follow status:', error);
-      toast({
-        title: "Error",
-        description: "Could not update follow status",
-        variant: "destructive"
-      });
-    }
-  };
-
   return (
     <div className="pt-6 pb-24 animate-slide-in">
       <Button 
@@ -154,27 +104,6 @@ const UserProfile = () => {
                 <h1 className="text-2xl font-bold">{user.username}</h1>
                 <p className="text-gray-400 mt-1">Joined {new Date(user.createdAt).toLocaleDateString()}</p>
               </div>
-              
-              <Button
-                variant={isFollowing ? "outline" : "default"} 
-                className={cn(
-                  "hover-scale animate-fade-in", 
-                  isFollowing ? "" : "bg-neon-purple hover:bg-neon-purple/80"
-                )}
-                onClick={handleFollowToggle}
-              >
-                {isFollowing ? (
-                  <>
-                    <UserMinus className="mr-2 h-4 w-4" />
-                    Unfollow
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Follow
-                  </>
-                )}
-              </Button>
             </div>
             
             {user.bio && (

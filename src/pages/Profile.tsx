@@ -6,62 +6,39 @@ import { usePlayer } from '@/contexts/PlayerContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import SongTile from '@/components/SongTile';
-import { getCurrentUser } from '@/services/userService';
 import { getUserPlaylists } from '@/services/playlistService';
+import { fetchUserProfile } from '@/services/userService';
+import { FirestoreUserProfile } from '@/integrations/firebase/database';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { supabase } from '@/integrations/supabase/client';
 
 const Profile = () => {
   const { recentlyPlayed, likedSongs } = usePlayer();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [currentUserData, setCurrentUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [userPlaylists, setUserPlaylists] = useState([]);
+  const [userProfile, setUserProfile] = useState<FirestoreUserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
-  
-  // Fetch current user data when the component mounts or user changes
+
   useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
+        setLoading(true);
         try {
-          setLoading(true);
-          // Fetch user profile from Supabase
-          const { data: userData, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-          if (!userData || error) {
-            // Fall back to local data if not found
-            const localUserData = await getCurrentUser(user.id);
-            setCurrentUserData(localUserData);
-          } else {
-            setCurrentUserData({
-              ...userData,
-              email: user.email,
-              username: userData.username,
-              bio: userData.bio,
-              avatar: userData.avatar_url
-            });
-          }
-          // Fetch the user's playlists
+          // Fetch the user's playlists from Firebase
           const playlists = await getUserPlaylists(user.id);
           setUserPlaylists(playlists);
+          
+          // Fetch user profile from Firestore
+          const profile = await fetchUserProfile(user.id);
+          setUserProfile(profile);
         } catch (error) {
           console.error('Error fetching user data:', error);
-          try {
-            const fallbackUserData = await getCurrentUser(user.id);
-            setCurrentUserData(fallbackUserData);
-          } catch (fallbackError) {
-            console.error('Error getting fallback user data:', fallbackError);
-          }
         } finally {
           setLoading(false);
         }
       }
     };
-    
     fetchUserData();
   }, [user]);
 
@@ -70,26 +47,40 @@ const Profile = () => {
     navigate('/login');
   };
 
-  if (loading) {
+  if (!user) {
     return (
       <div className="pt-6 pb-24 animate-slide-in">
         <div className="flex justify-center py-12">
           <div className="glass-panel p-8 rounded-xl shadow-lg">
-            <div className="flex gap-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div 
-                  key={i}
-                  className="w-3 h-3 bg-neon-purple rounded-full animate-pulse"
-                  style={{ animationDelay: `${i * 0.15}s` }}
-                />
-              ))}
-            </div>
-            <p className="mt-4 text-gray-400 text-sm">Loading your profile...</p>
+            <p className="text-gray-400 text-sm">Please sign in to view your profile.</p>
           </div>
         </div>
       </div>
     );
   }
+
+  if (loading) {
+    return (
+      <div className="pt-6 pb-24 animate-slide-in">
+        <div className="flex justify-center py-12">
+          <div className="flex gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div 
+                key={i}
+                className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Use profile data or fallback to auth user data
+  const displayName = userProfile?.displayName || user.username || user.email?.split('@')[0] || 'User';
+  const avatarUrl = userProfile?.avatarUrl || user.avatarUrl;
+  const bio = userProfile?.bio || '';
 
   return (
     <div className="pt-6 pb-24 animate-slide-in">
@@ -116,19 +107,16 @@ const Profile = () => {
         </div>
       </div>
       
-      {/* User Info Card with enhanced visuals */}
+      {/* User Info Card */}
       <div className="glass-card rounded-lg p-6 mb-8 relative overflow-hidden">
-        {/* Background gradient effect */}
         <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/10 to-neon-pink/5 z-0"></div>
-        
         <div className="flex flex-col md:flex-row items-center gap-6 relative z-10 animate-scale-in">
-          {/* Profile Avatar with glow effect */}
           <div className="relative">
             <div className="w-24 h-24 rounded-full glass-panel flex items-center justify-center neon-glow-blue hover-scale">
-              {currentUserData?.avatar ? (
+              {avatarUrl ? (
                 <img 
-                  src={currentUserData.avatar} 
-                  alt={currentUserData.username}
+                  src={avatarUrl} 
+                  alt={displayName}
                   className="w-full h-full object-cover rounded-full"
                   onError={(e) => {
                     e.currentTarget.onerror = null;
@@ -147,137 +135,71 @@ const Profile = () => {
               <Settings className="w-4 h-4 text-white/70" />
             </div>
           </div>
-          
-          <div className="text-center md:text-left">
-            <h2 className="text-2xl font-bold mb-1 text-gradient">{currentUserData?.username || 'User'}</h2>
-            <p className="text-gray-400 mb-2">{user?.email}</p>
-            {currentUserData?.bio && (
-              <p className="text-gray-300 mb-4 max-w-md">{currentUserData.bio}</p>
+          <div className="flex flex-col items-center md:items-start gap-2">
+            <h2 className="text-xl font-bold text-white">{displayName}</h2>
+            <p className="text-gray-400 text-sm">{user.email}</p>
+            {bio && (
+              <p className="text-gray-300 text-sm max-w-md text-center md:text-left">{bio}</p>
             )}
-            
-            <div className="flex flex-wrap gap-4 justify-center md:justify-start mt-4">
-              <div className="glass-card-hover p-3 w-24 text-center hover-scale animate-fade-in" style={{ animationDelay: '0.1s' }}>
-                <p className="text-xl font-bold">{userPlaylists?.length || 0}</p>
-                <p className="text-xs text-gray-400">Playlists</p>
-              </div>
-              <div className="glass-card-hover p-3 w-24 text-center hover-scale animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                <p className="text-xl font-bold">{likedSongs?.length || 0}</p>
-                <p className="text-xs text-gray-400">Liked Songs</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
       
-      {/* User Activity Tabs with improved mobile responsiveness */}
-      <Tabs defaultValue="history" className="w-full animate-fade-in">
-        <TabsList className="mb-4 w-full md:w-auto overflow-x-auto flex whitespace-nowrap">
-          <TabsTrigger value="history" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" /> 
-            {!isMobile && "Listening History"}
-            {isMobile && "History"}
-          </TabsTrigger>
-          <TabsTrigger value="liked" className="flex items-center gap-2">
-            <Heart className="h-4 w-4" /> 
-            {!isMobile && "Liked Songs"}
-            {isMobile && "Liked"}
-          </TabsTrigger>
-          <TabsTrigger value="playlists" className="flex items-center gap-2">
-            <ListMusic className="h-4 w-4" /> 
-            Playlists
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="history" className="animate-slide-in">
-          {recentlyPlayed.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-              {recentlyPlayed.map((song) => (
-                <SongTile key={song.id} song={song as any} />
-              ))}
-            </div>
-          ) : (
-            <div className="py-12 text-center glass-card relative overflow-hidden">
-              <div className="shimmer absolute inset-0"></div>
-              <div className="relative z-10">
-                <Clock className="w-10 h-10 mx-auto mb-4 text-gray-500" />
-                <p className="text-gray-400">Your listening history will appear here</p>
-                <Button 
-                  variant="outline"
-                  className="mt-4 border-neon-purple/40 hover:bg-neon-purple/20"
-                  onClick={() => navigate('/home')}
-                >
-                  Start listening
-                </Button>
+      {/* Playlists Section */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold mb-4">Your Playlists</h3>
+        {userPlaylists.length === 0 ? (
+          <p className="text-gray-400">No playlists yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {userPlaylists.map((playlist: any) => (
+              <div key={playlist.id} className="glass-panel p-4 rounded-lg">
+                <h4 className="font-semibold text-white mb-2">{playlist.name}</h4>
+                <p className="text-gray-400 text-sm mb-2">{playlist.description}</p>
+                <div className="flex flex-wrap gap-2">
+                  {playlist.songs && playlist.songs.length > 0 ? (
+                    playlist.songs.slice(0, 3).map((song: any) => (
+                      <span key={song.id} className="bg-purple-700/20 text-purple-300 px-2 py-1 rounded text-xs">
+                        {song.title}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-500 text-xs">No songs</span>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="liked" className="animate-slide-in">
-          {likedSongs.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-              {likedSongs.map((song) => (
-                <SongTile key={song.id} song={song as any} />
-              ))}
-            </div>
-          ) : (
-            <div className="py-12 text-center glass-card relative overflow-hidden">
-              <div className="shimmer absolute inset-0"></div>
-              <div className="relative z-10">
-                <Heart className="w-10 h-10 mx-auto mb-4 text-gray-500" />
-                <p className="text-gray-400">Your liked songs will appear here</p>
-                <Button 
-                  variant="outline"
-                  className="mt-4 border-neon-purple/40 hover:bg-neon-purple/20"
-                  onClick={() => navigate('/home')}
-                >
-                  Discover music
-                </Button>
-              </div>
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="playlists" className="animate-slide-in">
-          {userPlaylists.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-              {userPlaylists.map((playlist) => (
-                <Link 
-                  to={`/playlists/${playlist.id}`} 
-                  key={playlist.id}
-                  className="glass-card-hover p-4 transition-all animate-fade-in group"
-                >
-                  <div className="aspect-square rounded-md bg-gradient-to-br from-gray-800/50 to-black/50 mb-3 flex items-center justify-center group-hover:shadow-[0_0_15px_rgba(155,135,245,0.2)] transition-shadow">
-                    <ListMusic className="w-12 h-12 text-neon-purple opacity-70 group-hover:scale-110 transition-transform" />
-                  </div>
-                  <h3 className="font-medium truncate group-hover:text-neon-purple transition-colors">{playlist.name}</h3>
-                  <p className="text-sm text-gray-400 mt-1">
-                    {playlist.songs.length} song{playlist.songs.length !== 1 ? 's' : ''}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="py-12 text-center glass-card relative overflow-hidden">
-              <div className="shimmer absolute inset-0"></div>
-              <div className="relative z-10">
-                <ListMusic className="w-10 h-10 mx-auto mb-4 text-gray-500" />
-                <p className="text-gray-400">
-                  You don't have any playlists yet
-                </p>
-                <Link to="/playlists" className="inline-block mt-4">
-                  <Button 
-                    variant="default"
-                    className="bg-neon-purple hover:bg-neon-purple/80"
-                  >
-                    Create playlist
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            ))}
+          </div>
+        )}
+      </div>
+      
+      {/* Liked Songs Section */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold mb-4">Liked Songs</h3>
+        {likedSongs.length === 0 ? (
+          <p className="text-gray-400">No liked songs yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {likedSongs.map((song: any) => (
+              <SongTile key={song.id} song={song} />
+            ))}
+          </div>
+        )}
+      </div>
+      
+      {/* Recently Played Section */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold mb-4">Recently Played</h3>
+        {recentlyPlayed.length === 0 ? (
+          <p className="text-gray-400">No recently played songs yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {recentlyPlayed.map((song: any) => (
+              <SongTile key={song.id} song={song} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

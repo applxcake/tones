@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Disc3, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
+import { FcGoogle } from 'react-icons/fc';
+import { toast } from '@/hooks/use-toast';
 
 interface AuthProps {
   defaultTab?: 'signin' | 'signup';
@@ -20,8 +21,11 @@ const Auth = ({ defaultTab = 'signin' }: AuthProps) => {
   const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetting, setResetting] = useState(false);
   
-  const { signIn, signUp, isAuthenticated, isLoading } = useAuth();
+  const { signIn, signUp, signInWithGoogle, isAuthenticated, isLoading, resetPassword } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -56,6 +60,41 @@ const Auth = ({ defaultTab = 'signin' }: AuthProps) => {
       await signUp(email, password, username);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsSubmitting(true);
+    try {
+      await signInWithGoogle();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) return;
+    setResetting(true);
+    try {
+      const { error } = await resetPassword(resetEmail);
+      if (!error) {
+        toast({
+          title: 'Password reset email sent',
+          description: 'Check your inbox for a reset link.',
+          variant: 'success',
+        });
+        setShowReset(false);
+        setResetEmail('');
+      } else {
+        toast({
+          title: 'Reset failed',
+          description: error,
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -101,50 +140,97 @@ const Auth = ({ defaultTab = 'signin' }: AuthProps) => {
               </TabsList>
               
               <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email" className="text-white">Email</Label>
-                    <Input
-                      id="signin-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="bg-white/5 border-white/20 text-white"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password" className="text-white">Password</Label>
-                    <div className="relative">
+                {showReset ? (
+                  <form onSubmit={handleResetPassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email" className="text-white">Email</Label>
                       <Input
-                        id="signin-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="bg-white/5 border-white/20 text-white pr-10"
+                        id="reset-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        className="bg-white/5 border-white/20 text-white"
                         required
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 text-gray-400 hover:text-white"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
                     </div>
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-purple-600 hover:bg-purple-700"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? 'Signing In...' : 'Sign In'}
-                  </Button>
-                </form>
+                    <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700" disabled={resetting}>
+                      {resetting ? 'Sending...' : 'Send Password Reset Email'}
+                    </Button>
+                    <Button type="button" variant="ghost" className="w-full" onClick={() => setShowReset(false)}>
+                      Back to Sign In
+                    </Button>
+                  </form>
+                ) : (
+                  <>
+                    <form onSubmit={handleSignIn} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signin-email" className="text-white">Email</Label>
+                        <Input
+                          id="signin-email"
+                          type="email"
+                          placeholder="Enter your email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="bg-white/5 border-white/20 text-white"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signin-password" className="text-white">Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="signin-password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Enter your password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="bg-white/5 border-white/20 text-white pr-10"
+                            required
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 text-gray-400 hover:text-white"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-purple-600 hover:bg-purple-700"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? 'Signing In...' : 'Sign In'}
+                      </Button>
+                    </form>
+                    <button
+                      type="button"
+                      className="block w-full text-xs text-purple-300 mt-2 hover:underline text-center"
+                      onClick={() => setShowReset(true)}
+                    >
+                      Forgot password?
+                    </button>
+                    <div className="flex items-center my-4">
+                      <div className="flex-grow border-t border-white/20"></div>
+                      <span className="mx-2 text-gray-400 text-xs">or</span>
+                      <div className="flex-grow border-t border-white/20"></div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full flex items-center justify-center gap-2 bg-white text-black hover:bg-gray-100 border border-gray-300"
+                      onClick={handleGoogleSignIn}
+                      disabled={isSubmitting}
+                    >
+                      <FcGoogle className="h-5 w-5" />
+                      Continue with Google
+                    </Button>
+                  </>
+                )}
               </TabsContent>
               
               <TabsContent value="signup">
@@ -203,6 +289,21 @@ const Auth = ({ defaultTab = 'signin' }: AuthProps) => {
                     {isSubmitting ? 'Creating Account...' : 'Sign Up'}
                   </Button>
                 </form>
+                <div className="flex items-center my-4">
+                  <div className="flex-grow border-t border-white/20"></div>
+                  <span className="mx-2 text-gray-400 text-xs">or</span>
+                  <div className="flex-grow border-t border-white/20"></div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-2 bg-white text-black hover:bg-gray-100 border border-gray-300"
+                  onClick={handleGoogleSignIn}
+                  disabled={isSubmitting}
+                >
+                  <FcGoogle className="h-5 w-5" />
+                  Continue with Google
+                </Button>
               </TabsContent>
             </Tabs>
           </CardContent>

@@ -21,7 +21,7 @@ import Favorites from '@/pages/Favorites';
 import CleanLayout from '@/components/CleanLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Toaster } from '@/components/ui/toaster';
-import SupabaseInitializer from '@/components/SupabaseInitializer';
+import { FirebaseInitializer } from '@/components/FirebaseInitializer';
 import MiniPlayer from '@/components/MiniPlayer';
 import SongQueueDrawer from '@/components/SongQueueDrawer';
 import YTPlayer from '@/components/YTPlayer';
@@ -52,31 +52,32 @@ function AppContent() {
 
   return (
     <BrowserRouter>
-      <SupabaseInitializer />
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/login" element={<Auth />} /> 
-        <Route path="/signup" element={<Auth defaultTab="signup" />} />
-        
-        <Route element={<CleanLayout />}>
-          <Route path="/home" element={<Home />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/explore" element={<Explore />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/playlists" element={<Playlists />} />
-          <Route path="/favorites" element={<Favorites />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/playlists/:id" element={<PlaylistDetails />} />
-          <Route path="/shared/:shareToken" element={<SharedPlaylist />} />
-          <Route path="/users/:id" element={<UserProfile />} />
-        </Route>
-        
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      <MiniPlayer />
-      <SongQueueDrawer />
-      {currentTrack && <YTPlayer ref={ytPlayerRef} />}
+      <FirebaseInitializer>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/login" element={<Auth />} /> 
+          <Route path="/signup" element={<Auth defaultTab="signup" />} />
+          
+          <Route element={<CleanLayout />}>
+            <Route path="/home" element={<Home />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/explore" element={<Explore />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/playlists" element={<Playlists />} />
+            <Route path="/favorites" element={<Favorites />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/playlists/:id" element={<PlaylistDetails />} />
+            <Route path="/shared/:shareToken" element={<SharedPlaylist />} />
+            <Route path="/users/:id" element={<UserProfile />} />
+          </Route>
+          
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <MiniPlayer />
+        <SongQueueDrawer />
+        {currentTrack && <YTPlayer ref={ytPlayerRef} />}
+      </FirebaseInitializer>
     </BrowserRouter>
   );
 }

@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { YouTubeVideo } from '@/services/youtubeService';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './AuthContext';
+import { getUserFavorites, addToFavorites, removeFromFavorites } from '@/services/favoritesService';
 
 // Define the types
 type Song = YouTubeVideo;
@@ -64,6 +65,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
   const playWhenReady = useRef(false);
   const isYTPlayerReady = useRef(false);
+  const { user } = useAuth();
 
   // Helper function to check if a song is currently playing
   const isCurrentSong = useCallback((songId: string): boolean => {
@@ -71,6 +73,13 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   }, [currentTrack]);
 
   const nextTrack = () => {
+    console.log('[PlayerContext] nextTrack called', {
+      queueLength: queue.length,
+      autoPlayEnabled,
+      recentlyPlayedLength: recentlyPlayed.length,
+      currentTrackId: currentTrack?.id
+    });
+    
     if (queue.length > 0) {
       let nextSong;
       
@@ -85,6 +94,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
         setQueue(prev => prev.slice(1));
       }
       
+      console.log('[PlayerContext] Playing next song from queue:', nextSong.title);
       playTrack(nextSong);
     } else if (autoPlayEnabled && recentlyPlayed.length > 1) {
       // Play a random song from recently played (excluding current)
@@ -101,9 +111,14 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
           nextSong = availableSongs[0];
         }
         
+        console.log('[PlayerContext] Playing next song from recently played:', nextSong.title);
         playTrack(nextSong);
+      } else {
+        console.log('[PlayerContext] No more songs available, stopping playback');
+        setIsPlaying(false);
       }
     } else {
+      console.log('[PlayerContext] No queue and autoplay disabled, stopping playback');
       setIsPlaying(false);
     }
   };
@@ -124,6 +139,26 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!isPlaying || !currentTrack) return;
     
+    // Expose updateProgress function globally for YTPlayer to use
+    if (typeof window !== 'undefined') {
+      (window as any)._updatePlayerProgress = (newProgress: number) => {
+        setProgress(newProgress);
+        
+        // Auto-skip when song ends (progress >= 100)
+        if (newProgress >= 100) {
+          if (loopMode === 'one') {
+            seekToPosition(0);
+            setIsPlaying(true);
+          } else if (loopMode === 'all' || autoPlayEnabled) {
+            nextTrack();
+          } else {
+            setIsPlaying(false);
+          }
+        }
+      };
+    }
+    
+    // Fallback interval-based progress tracking (less reliable in background)
     const interval = setInterval(() => {
       setProgress(prev => {
         const newProgress = prev + (100 / duration);
@@ -147,10 +182,23 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       });
     }, 1000);
     
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      // Clean up global function
+      if (typeof window !== 'undefined') {
+        delete (window as any)._updatePlayerProgress;
+      }
+    };
   }, [isPlaying, currentTrack, duration, loopMode, autoPlayEnabled, seekToPosition, nextTrack]);
 
   const playTrack = useCallback((song: Song) => {
+    console.log('[PlayerContext] playTrack called:', {
+      songTitle: song.title,
+      songId: song.id,
+      isPlaying,
+      currentTrackId: currentTrack?.id
+    });
+    
     setCurrentTrack(song);
     setIsPlaying(true);
     setProgress(0);
@@ -159,35 +207,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       const newRecentlyPlayed = [song, ...prev.filter(s => s.id !== song.id)].slice(0, 20);
       return newRecentlyPlayed;
     });
-    // Save to supabase
-    const saveToSupabase = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: songExists } = await supabase
-            .from('songs')
-            .select('id')
-            .eq('id', song.id)
-            .maybeSingle();
-          if (!songExists) {
-            await supabase.from('songs').insert({
-              id: song.id,
-              title: song.title,
-              channel_title: song.channelTitle,
-              thumbnail_url: song.thumbnailUrl,
-            });
-          }
-          await supabase.from('recently_played').insert({
-            user_id: user.id,
-            song_id: song.id,
-            played_at: new Date().toISOString()
-          });
-        }
-      } catch (error) {
-        console.error('Error saving recently played song:', error);
-      }
-    };
-    saveToSupabase();
     // If player is not ready, set flag to play when ready
     if (!isYTPlayerReady.current) {
       playWhenReady.current = true;
@@ -281,64 +300,50 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const toggleLike = async (song: Song): Promise<boolean> => {
     try {
       const isCurrentlyLiked = isLiked(song.id);
-      
-      if (isCurrentlyLiked) {
-        setLikedSongs(prev => prev.filter(s => s.id !== song.id));
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase
-            .from('liked_songs')
-            .delete()
-            .eq('user_id', user.id)
-            .eq('song_id', song.id);
-        }
-        
-        toast({
-          title: "Removed from Liked Songs",
-          description: `${song.title} has been removed from your liked songs.`,
-        });
-        
-        return false;
-      } else {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: songExists } = await supabase
-            .from('songs')
-            .select('id')
-            .eq('id', song.id)
-            .maybeSingle();
-            
-          if (!songExists) {
-            await supabase.from('songs').insert({
-              id: song.id,
-              title: song.title,
-              channel_title: song.channelTitle,
-              thumbnail_url: song.thumbnailUrl,
-            });
-          }
-          
-          await supabase.from('liked_songs').insert({
-            user_id: user.id,
-            song_id: song.id,
-            liked_at: new Date().toISOString()
+      if (user && user.id) {
+        if (isCurrentlyLiked) {
+          await removeFromFavorites(song.id, user.id);
+          setLikedSongs(prev => prev.filter(s => s.id !== song.id));
+          toast({
+            title: "Removed from Liked Songs",
+            description: `${song.title} has been removed from your liked songs.`,
           });
+          return false;
+        } else {
+          await addToFavorites(song, user.id);
+          setLikedSongs(prev => [...prev, song]);
+          toast({
+            title: "Added to Liked Songs",
+            description: `${song.title} has been added to your liked songs.`,
+          });
+          return true;
         }
-        
-        setLikedSongs(prev => [...prev, song]);
-        
+      } else {
         toast({
-          title: "Added to Liked Songs",
-          description: `${song.title} has been added to your liked songs.`,
+          title: "Error",
+          description: "You must be logged in to like songs.",
+          variant: "destructive"
         });
-        
-        return true;
+        return isLiked(song.id);
       }
     } catch (error) {
       console.error('Error toggling song like:', error);
       return isLiked(song.id);
     }
   };
+
+  // Load liked songs from Firestore on mount and when user changes
+  useEffect(() => {
+    const loadLikedSongs = async () => {
+      if (user && user.id) {
+        const favorites = await getUserFavorites(user.id);
+        setLikedSongs(favorites);
+      } else {
+        setLikedSongs([]);
+      }
+    };
+    loadLikedSongs();
+  }, [user]);
 
   const contextValue = {
     currentTrack,

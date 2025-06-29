@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllUsers, searchUsers } from '@/services/userService';
+import { getAllUsers } from '@/services/userService';
 import { getTrendingMusic } from '@/services/youtubeService';
 import UserCard from '@/components/UserCard';
 import SongTile from '@/components/SongTile';
@@ -11,7 +11,6 @@ const Explore = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [trendingMusic, setTrendingMusic] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('q') || '';
   const navigate = useNavigate();
@@ -37,33 +36,17 @@ const Explore = () => {
     loadExploreData();
   }, []);
 
-  useEffect(() => {
-    // Search for users when query changes
-    const performSearch = async () => {
-      if (searchQuery) {
-        setLoading(true);
-        try {
-          const results = await searchUsers(searchQuery);
-          setSearchResults(results);
-        } catch (error) {
-          console.error('Search failed:', error);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setSearchResults([]);
-      }
-    };
-
-    performSearch();
-  }, [searchQuery]);
-
   const handleSearch = (query: string) => {
     navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
-  // Determine which users to display based on search
-  const displayUsers = searchQuery ? searchResults : users;
+  // Filter users based on search query if present
+  const displayUsers = searchQuery 
+    ? users.filter(user => 
+        user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (user.bio && user.bio.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : users;
 
   return (
     <div className="pt-6 pb-24 animate-slide-in">
@@ -100,9 +83,32 @@ const Explore = () => {
           )}
         </div>
       ) : (
-        // Only show a minimal message or nothing if not searching
-        <div className="text-center text-gray-400 py-12">
-          Use the search bar above to find music or users.
+        // Show all users when not searching
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Users</h2>
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="flex gap-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div 
+                    key={i}
+                    className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : displayUsers.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {displayUsers.map((user) => (
+                <UserCard key={user.id} user={user} />
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center glass-panel">
+              <p className="text-gray-400">No users found</p>
+            </div>
+          )}
         </div>
       )}
     </div>

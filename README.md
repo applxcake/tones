@@ -168,14 +168,15 @@ npm run build
 
 The built files will be in the `dist` directory.
 
-## Technology Stack
+## Tech Stack
 
-- **Frontend**: React 18, TypeScript, Vite
-- **Styling**: Tailwind CSS, Framer Motion
-- **Audio**: YouTube IFrame API, Web Audio API
-- **PWA**: Service Workers, Web App Manifest
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth
+- **Frontend**: React 18 + TypeScript + Vite
+- **UI**: Tailwind CSS + shadcn/ui + Framer Motion
+- **Authentication**: Firebase Auth
+- **Database**: Firebase Firestore
+- **Avatar Storage**: URLs stored in Firestore user profiles
+- **Background Audio**: YouTube Player API
+- **Deployment**: Vercel (recommended)
 
 ## Project Structure
 

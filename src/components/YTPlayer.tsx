@@ -74,9 +74,16 @@ const YTPlayer = forwardRef((props, ref) => {
     initializeBackgroundAudio();
 
     // Also initialize when user interacts with the page (required for some browsers)
-    const handleUserInteraction = () => {
+    const handleUserInteraction = async () => {
       if (!backgroundAudioInitialized.current) {
         initializeBackgroundAudio();
+      }
+      
+      // Request wake lock on user interaction if page is visible
+      try {
+        await backgroundAudioService.requestWakeLockFromUserInteraction();
+      } catch (error) {
+        console.warn('[YTPlayer] Failed to request wake lock on user interaction:', error);
       }
     };
 
@@ -174,6 +181,11 @@ const YTPlayer = forwardRef((props, ref) => {
   }, [isPlaying, currentTrack, togglePlayPause, nextTrack, previousTrack, seekToPosition]);
 
   const onPlayerReady = useCallback(() => {
+    if (isPlayerReadyRef.current) {
+      console.log('[YTPlayer] Player already ready, skipping initialization');
+      return;
+    }
+    
     isPlayerReadyRef.current = true;
     console.log('[YTPlayer] Player ready');
     
@@ -209,7 +221,7 @@ const YTPlayer = forwardRef((props, ref) => {
   }, [currentTrack]);
 
   const forceUnmuteAndVolume = useCallback(() => {
-    if (playerRef.current) {
+    if (playerRef.current && isPlayerReadyRef.current) {
       try {
         console.log('[YTPlayer] Attempting to unmute and set volume...');
         
@@ -236,7 +248,7 @@ const YTPlayer = forwardRef((props, ref) => {
             retryTimes.forEach((delay, index) => {
               setTimeout(() => {
                 try {
-                  if (playerRef.current) {
+                  if (playerRef.current && isPlayerReadyRef.current) {
                     playerRef.current.unMute();
                     playerRef.current.setVolume(100);
                     const stillMuted = playerRef.current.isMuted();
@@ -261,16 +273,30 @@ const YTPlayer = forwardRef((props, ref) => {
       } catch (e) {
         console.warn('[YTPlayer] Could not force unmute/volume:', e);
       }
+    } else {
+      console.log('[YTPlayer] Player not ready, skipping unmute/volume');
     }
   }, []);
 
   const onPlayerStateChange = useCallback((event: any) => {
     const playerState = event.data;
     console.log('[YTPlayer] Player state changed:', playerState);
+    
     if (playerState === window.YT?.PlayerState?.PLAYING) {
       const duration = playerRef.current?.getDuration() || 0;
       setDuration(duration);
-      forceUnmuteAndVolume();
+      
+      // Force unmute and set volume when playing starts
+      setTimeout(() => {
+        forceUnmuteAndVolume();
+      }, 100);
+      
+      // Request wake lock when playback starts
+      if (backgroundAudioInitialized.current) {
+        backgroundAudioService.onPlaybackStart().catch(error => {
+          console.warn('[YTPlayer] Failed to request wake lock on playback start:', error);
+        });
+      }
       
       // Update media session for background playback
       if (currentTrack && backgroundAudioInitialized.current) {
@@ -307,8 +333,15 @@ const YTPlayer = forwardRef((props, ref) => {
       backgroundAudioService.setPlaybackState('paused');
     } else if (playerState === window.YT?.PlayerState?.ENDED) {
       backgroundAudioService.setPlaybackState('none');
+      // Trigger next track when video ends
+      console.log('[YTPlayer] Video ended - triggering next track');
+      nextTrack();
+    } else if (playerState === window.YT?.PlayerState?.BUFFERING) {
+      console.log('[YTPlayer] Video buffering...');
+    } else if (playerState === window.YT?.PlayerState?.CUED) {
+      console.log('[YTPlayer] Video cued and ready to play');
     }
-  }, [currentTrack, setDuration, playbackRate, forceUnmuteAndVolume]);
+  }, [currentTrack, setDuration, playbackRate, forceUnmuteAndVolume, nextTrack]);
 
   const loadVideo = useCallback((videoId: string) => {
     if (playerRef.current && typeof playerRef.current.loadVideoById === 'function') {
@@ -355,8 +388,6 @@ const YTPlayer = forwardRef((props, ref) => {
           // Better mobile support
           iv_load_policy: 3,
           cc_load_policy: 0,
-          // Audio-only mode for better background playback
-          host: 'https://www.youtube-nocookie.com',
         } as any,
         events: {
           onReady: onPlayerReady,
@@ -389,7 +420,9 @@ const YTPlayer = forwardRef((props, ref) => {
       window.onYouTubeIframeAPIReady = () => {
         hasApiLoadedRef.current = true;
         scriptLoadedRef.current = true;
-        initializePlayer();
+        if (!playerRef.current) {
+          initializePlayer();
+        }
       };
       
       const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -418,7 +451,7 @@ const YTPlayer = forwardRef((props, ref) => {
         }
       }
     };
-  }, [initializePlayer]);
+  }, []);
 
   // Load video only when currentTrack changes
   useEffect(() => {
@@ -426,15 +459,33 @@ const YTPlayer = forwardRef((props, ref) => {
       if (lastLoadedVideoId.current !== currentTrack.id) {
         // New track selected, load it
         try {
+          console.log('[YTPlayer] Loading new video:', currentTrack.id);
           playerRef.current.loadVideoById({
             videoId: currentTrack.id,
             startSeconds: 0,
             suggestedQuality: 'small'
           });
           lastLoadedVideoId.current = currentTrack.id;
+          
+          // Handle track transition for background playback
+          if (backgroundAudioInitialized.current) {
+            backgroundAudioService.onTrackTransition({
+              title: currentTrack.title,
+              artist: currentTrack.channelTitle,
+              artwork: currentTrack.thumbnailUrl
+            }).catch(error => {
+              console.warn('[YTPlayer] Failed to handle track transition:', error);
+            });
+          }
+          
           if (isPlaying) {
-            playerRef.current.playVideo();
-            forceUnmuteAndVolume();
+            // Small delay to ensure video is loaded before playing
+            setTimeout(() => {
+              if (playerRef.current && isPlayerReadyRef.current) {
+                playerRef.current.playVideo();
+                forceUnmuteAndVolume();
+              }
+            }, 500);
           } else {
             playerRef.current.pauseVideo();
           }
@@ -453,9 +504,16 @@ const YTPlayer = forwardRef((props, ref) => {
       }
     } else if (currentTrack && !isPlayerReadyRef.current) {
       // If not ready, set flag to play when ready
-      playWhenReady.current = isPlaying;
+      playWhenReady.current = true;
+      console.log('[YTPlayer] Player not ready, setting playWhenReady flag');
+    } else if (currentTrack && !playerRef.current) {
+      // If no player, try to initialize
+      console.log('[YTPlayer] No player available, attempting to initialize');
+      if (window.YT && window.YT.Player && containerRef.current) {
+        initializePlayer();
+      }
     }
-  }, [currentTrack, isPlaying, forceUnmuteAndVolume]);
+  }, [currentTrack, isPlaying, forceUnmuteAndVolume, initializePlayer]);
   
   // Update volume when changed
   useEffect(() => {
@@ -544,29 +602,197 @@ const YTPlayer = forwardRef((props, ref) => {
   // Handle user interaction to enable audio
   useEffect(() => {
     const handleUserInteraction = () => {
-      if (!userHasInteracted.current) {
-        userHasInteracted.current = true;
-        console.log('[YTPlayer] User interaction detected - enabling audio');
-        
-        // Force unmute when user interacts
-        if (playerRef.current && isPlayerReadyRef.current) {
-          forceUnmuteAndVolume();
+      console.log('[YTPlayer] User interaction detected - enabling audio');
+      userInteractedRef.current = true;
+      
+      // Try to resume audio context if suspended
+      if (typeof window !== 'undefined' && window.AudioContext) {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (audioContext.state === 'suspended') {
+          audioContext.resume().then(() => {
+            console.log('[YTPlayer] Audio context resumed');
+          });
         }
+      }
+      
+      // Force unmute and set volume
+      if (playerRef.current && isPlayerReadyRef.current) {
+        forceUnmuteAndVolume();
       }
     };
 
-    // Listen for various user interaction events
-    const events = ['click', 'touchstart', 'keydown', 'mousedown'];
-    events.forEach(event => {
-      document.addEventListener(event, handleUserInteraction, { once: true });
-    });
+    // Add event listeners for user interaction
+    document.addEventListener('click', handleUserInteraction, { once: true });
+    document.addEventListener('touchstart', handleUserInteraction, { once: true });
+    document.addEventListener('keydown', handleUserInteraction, { once: true });
 
     return () => {
-      events.forEach(event => {
-        document.removeEventListener(event, handleUserInteraction);
-      });
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
     };
   }, [forceUnmuteAndVolume]);
+
+  // Real-time progress tracking that works in background
+  useEffect(() => {
+    if (!isPlaying || !currentTrack || !playerRef.current || !isPlayerReadyRef.current) {
+      return;
+    }
+
+    const updateProgress = () => {
+      try {
+        if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+          const currentTime = playerRef.current.getCurrentTime();
+          const duration = playerRef.current.getDuration();
+          
+          if (duration > 0) {
+            const progress = (currentTime / duration) * 100;
+            
+            // Update progress in PlayerContext
+            if (typeof window !== 'undefined' && (window as any)._updatePlayerProgress) {
+              (window as any)._updatePlayerProgress(progress);
+            }
+            
+            // Update media session position state
+            if (backgroundAudioInitialized.current) {
+              backgroundAudioService.setPositionState({
+                duration: duration,
+                playbackRate: playbackRate,
+                position: currentTime
+              });
+            }
+            
+            // Check if song is ending (within last 1 second) and trigger next track
+            if (duration - currentTime <= 1 && progress >= 95) {
+              console.log('[YTPlayer] Song ending - triggering next track');
+              // Small delay to ensure the current track finishes properly
+              setTimeout(() => {
+                nextTrack();
+              }, 500);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('[YTPlayer] Error updating progress:', error);
+      }
+    };
+
+    // Update progress every 500ms for smoother tracking
+    const progressInterval = setInterval(updateProgress, 500);
+    
+    // Also update immediately
+    updateProgress();
+
+    return () => {
+      clearInterval(progressInterval);
+    };
+  }, [isPlaying, currentTrack, playbackRate, nextTrack]);
+
+  // Expose setProgress function globally for PlayerContext to use
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any)._setProgress = (progress: number) => {
+        // This will be called by the progress tracking mechanism
+        // The PlayerContext can access this to update its progress state
+        if (typeof window !== 'undefined' && (window as any)._updatePlayerProgress) {
+          (window as any)._updatePlayerProgress(progress);
+        }
+      };
+    }
+  }, []);
+
+  // Backup mechanism to ensure next track is triggered when video ends
+  useEffect(() => {
+    if (!isPlaying || !currentTrack || !playerRef.current || !isPlayerReadyRef.current) {
+      return;
+    }
+
+    const checkVideoEnd = () => {
+      try {
+        if (playerRef.current && typeof playerRef.current.getPlayerState === 'function') {
+          const playerState = playerRef.current.getPlayerState();
+          
+          // YouTube PlayerState.ENDED = 0
+          if (playerState === 0) {
+            console.log('[YTPlayer] Video ended detected by state check - triggering next track');
+            nextTrack();
+          }
+        }
+      } catch (error) {
+        console.warn('[YTPlayer] Error checking video end:', error);
+      }
+    };
+
+    // Check every 2 seconds for video end state
+    const endCheckInterval = setInterval(checkVideoEnd, 2000);
+
+    return () => {
+      clearInterval(endCheckInterval);
+    };
+  }, [isPlaying, currentTrack, nextTrack]);
+
+  // Simple audio test function
+  const testAudio = useCallback(() => {
+    if (playerRef.current && isPlayerReadyRef.current) {
+      try {
+        console.log('[YTPlayer] Testing audio...');
+        
+        // Check player state
+        const playerState = playerRef.current.getPlayerState();
+        console.log('[YTPlayer] Player state:', playerState);
+        
+        // Check if muted
+        const isMuted = playerRef.current.isMuted();
+        console.log('[YTPlayer] Is muted:', isMuted);
+        
+        // Check volume
+        const volume = playerRef.current.getVolume();
+        console.log('[YTPlayer] Volume:', volume);
+        
+        // Try to unmute and set volume
+        playerRef.current.unMute();
+        playerRef.current.setVolume(100);
+        
+        // Check again
+        const newMuted = playerRef.current.isMuted();
+        const newVolume = playerRef.current.getVolume();
+        console.log('[YTPlayer] After fix - Muted:', newMuted, 'Volume:', newVolume);
+        
+        return !newMuted && newVolume > 0;
+      } catch (error) {
+        console.error('[YTPlayer] Audio test failed:', error);
+        return false;
+      }
+    }
+    return false;
+  }, []);
+
+  // Expose test function globally for debugging
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).testYTPlayerAudio = testAudio;
+    }
+  }, [testAudio]);
+
+  // Ensure player is initialized when component mounts
+  useEffect(() => {
+    const ensurePlayerInitialized = () => {
+      if (!playerRef.current && window.YT && window.YT.Player && containerRef.current) {
+        console.log('[YTPlayer] Ensuring player is initialized on mount');
+        initializePlayer();
+      }
+    };
+
+    // Try immediately
+    ensurePlayerInitialized();
+    
+    // Also try after a short delay in case API is still loading
+    const timeoutId = setTimeout(ensurePlayerInitialized, 1000);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [initializePlayer]);
 
   return (
     <>

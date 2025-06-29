@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import SocialShareButton from '@/components/SocialShareButton';
+import { getMultipleVideoDetails } from '@/services/youtubeService';
 
 type SortOption = 'default' | 'title-asc' | 'title-desc' | 'artist-asc' | 'artist-desc' | 'date-added';
 
@@ -44,8 +45,15 @@ const PlaylistDetails = () => {
         setLoading(true);
         try {
           const playlistData = await getPlaylistById(id);
-          setPlaylist(playlistData);
-          setSortedSongs(playlistData?.songs || []);
+          if (playlistData && Array.isArray(playlistData.songs) && playlistData.songs.length > 0) {
+            // Fetch full song details for each song ID
+            const songObjects = await getMultipleVideoDetails(playlistData.songs);
+            setPlaylist(playlistData);
+            setSortedSongs(songObjects.filter(Boolean));
+          } else {
+            setPlaylist(playlistData);
+            setSortedSongs([]);
+          }
           setIsSharing(playlistData?.isPublic || false);
         } catch (error) {
           console.error('Error fetching playlist:', error);
@@ -117,7 +125,9 @@ const PlaylistDetails = () => {
   }
 
   const handlePlaySong = (song: any) => {
-    playTrack(song);
+    if (song && song.id && song.title && song.thumbnailUrl) {
+      playTrack(song);
+    }
   };
 
   const handleRemoveSong = async (songId: string) => {
@@ -125,6 +135,12 @@ const PlaylistDetails = () => {
       // Refresh playlist data
       const updatedPlaylist = await getPlaylistById(playlist.id);
       setPlaylist(updatedPlaylist);
+      if (updatedPlaylist && Array.isArray(updatedPlaylist.songs) && updatedPlaylist.songs.length > 0) {
+        const songObjects = await getMultipleVideoDetails(updatedPlaylist.songs);
+        setSortedSongs(songObjects.filter(Boolean));
+      } else {
+        setSortedSongs([]);
+      }
     }
   };
 
@@ -139,14 +155,16 @@ const PlaylistDetails = () => {
   };
 
   const handlePlayAll = () => {
-    if (sortedSongs.length > 0) {
-      playPlaylist(sortedSongs, false);
+    const validSongs = sortedSongs.filter(song => song && song.id && song.title && song.thumbnailUrl);
+    if (validSongs.length > 0) {
+      playPlaylist(validSongs, false);
     }
   };
 
   const handleShufflePlay = () => {
-    if (sortedSongs.length > 0) {
-      playPlaylist(sortedSongs, true);
+    const validSongs = sortedSongs.filter(song => song && song.id && song.title && song.thumbnailUrl);
+    if (validSongs.length > 0) {
+      playPlaylist(validSongs, true);
     }
   };
 
@@ -156,9 +174,8 @@ const PlaylistDetails = () => {
 
   const handleToggleSharing = async () => {
     if (playlist) {
-      const success = await togglePlaylistSharing(playlist.id, !isSharing);
+      const success = await togglePlaylistSharing(playlist.id, !playlist.isPublic);
       if (success) {
-        setIsSharing(!isSharing);
         // Refresh playlist data to get updated share token
         const updatedPlaylist = await getPlaylistById(playlist.id);
         setPlaylist(updatedPlaylist);
@@ -201,7 +218,7 @@ const PlaylistDetails = () => {
           <div className="animate-fade-in">
             <div className="flex items-center gap-2 mb-2">
               <h1 className="text-3xl font-bold">{playlist.name}</h1>
-              {isSharing && (
+              {playlist.isPublic && (
                 <div className="flex items-center gap-1 text-neon-purple">
                   <Share2 className="h-4 w-4" />
                   <span className="text-sm">Shared</span>
@@ -243,14 +260,14 @@ const PlaylistDetails = () => {
 
             <Button 
               onClick={handleToggleSharing}
-              variant={isSharing ? "default" : "outline"}
+              variant={playlist.isPublic ? "default" : "outline"}
               className="flex items-center gap-2 hover-scale"
             >
-              {isSharing ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-              {isSharing ? 'Public' : 'Private'}
+              {playlist.isPublic ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+              {playlist.isPublic ? 'Public' : 'Private'}
             </Button>
 
-            {isSharing && playlist?.shareToken && (
+            {playlist.isPublic && playlist?.shareToken && (
               <Button 
                 onClick={handleCopyShareLink}
                 variant="outline"
@@ -261,7 +278,7 @@ const PlaylistDetails = () => {
               </Button>
             )}
 
-            {isSharing && playlist?.shareToken && (
+            {playlist.isPublic && playlist?.shareToken && (
               <SocialShareButton
                 url={getPlaylistShareUrl(playlist.shareToken)}
                 title={playlist.name}
@@ -337,11 +354,11 @@ const PlaylistDetails = () => {
         </div>
       </div>
 
-      {sortedSongs.length > 0 ? (
+      {sortedSongs.filter(song => song && song.id && song.title && song.thumbnailUrl).length > 0 ? (
         <div className="space-y-2">
-          {sortedSongs.map((song: any, index: number) => (
+          {sortedSongs.filter(song => song && song.id && song.title && song.thumbnailUrl).map((song: any, index: number) => (
             <div 
-              key={song.id} 
+              key={`${song.id}-${index}`}
               className={cn(
                 "flex items-center justify-between p-3 rounded-lg glass-panel hover:neon-glow-purple animate-fade-in",
                 { "neon-glow-blue": currentTrack?.id === song.id && isPlaying }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserPlaylists, createPlaylist, addSongToPlaylist } from '@/services/playlistService';
 import { YouTubeVideo } from '@/services/youtubeService';
@@ -47,7 +47,7 @@ const PlaylistSelector = ({ isOpen, onClose, song }: PlaylistSelectorProps) => {
     const newPlaylist = await createPlaylist(newPlaylistName.trim(), '', user.id);
     if (newPlaylist) {
       await addSongToPlaylist(newPlaylist.id, song, user.id);
-      setPlaylists(prev => [...prev, newPlaylist]);
+      await loadPlaylists();
       setNewPlaylistName('');
       setShowCreateForm(false);
       onClose();
@@ -68,6 +68,9 @@ const PlaylistSelector = ({ isOpen, onClose, song }: PlaylistSelectorProps) => {
       <DialogContent className="bg-gray-900 border-gray-700 text-white">
         <DialogHeader>
           <DialogTitle>Add to Playlist</DialogTitle>
+          <DialogDescription>
+            Select a playlist or create a new one to add this song.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">

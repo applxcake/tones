@@ -172,6 +172,38 @@ export const BackgroundAudioStatus: React.FC = () => {
           </div>
         </div>
 
+        {/* Wake Lock Status */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium">Wake Lock Status</h4>
+          <div className="space-y-1">
+            {(() => {
+              const status = backgroundAudioService.getWakeLockStatus();
+              return (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Supported</span>
+                    <Badge variant={status.isSupported ? 'default' : 'destructive'}>
+                      {status.isSupported ? 'Yes' : 'No'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Active</span>
+                    <Badge variant={status.isActive ? 'default' : 'secondary'}>
+                      {status.isActive ? 'Yes' : 'No'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Page Visible</span>
+                    <Badge variant={status.isVisible ? 'default' : 'destructive'}>
+                      {status.isVisible ? 'Yes' : 'No'}
+                    </Badge>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+
         {/* Test Results */}
         {Object.keys(testResults).length > 0 && (
           <div className="space-y-2">

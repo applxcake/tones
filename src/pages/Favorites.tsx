@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import SongTile from '@/components/SongTile';
-import { YouTubeVideo } from '@/services/youtubeService';
+import { YouTubeVideo, getMultipleVideoDetails } from '@/services/youtubeService';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { Heart, RefreshCw, Trash2 } from 'lucide-react';
@@ -14,6 +13,22 @@ const Favorites = () => {
   const { user } = useAuth();
   const { likedSongs, setLikedSongs, toggleLike } = usePlayer();
   const [loading, setLoading] = useState(false);
+  const [fullLikedSongs, setFullLikedSongs] = useState<YouTubeVideo[]>([]);
+
+  useEffect(() => {
+    const fetchFullLikedSongs = async () => {
+      if (likedSongs.length > 0) {
+        setLoading(true);
+        const ids = likedSongs.map(song => song.id);
+        const songObjects = await getMultipleVideoDetails(ids);
+        setFullLikedSongs(songObjects.filter(Boolean) as YouTubeVideo[]);
+        setLoading(false);
+      } else {
+        setFullLikedSongs([]);
+      }
+    };
+    fetchFullLikedSongs();
+  }, [likedSongs]);
 
   const handleRemoveLiked = async (song: YouTubeVideo) => {
     try {
@@ -63,7 +78,7 @@ const Favorites = () => {
           <div>
             <h1 className="text-3xl font-bold text-white">Liked Songs</h1>
             <p className="text-gray-400">
-              {likedSongs.length} {likedSongs.length === 1 ? 'song' : 'songs'} in your collection
+              {fullLikedSongs.length} {fullLikedSongs.length === 1 ? 'song' : 'songs'} in your collection
             </p>
           </div>
         </div>
@@ -86,7 +101,7 @@ const Favorites = () => {
         </div>
       </div>
 
-      {likedSongs.length === 0 ? (
+      {fullLikedSongs.length === 0 ? (
         <Card className="bg-white/5 border-white/10">
           <CardContent className="text-center py-16">
             <Heart className="h-16 w-16 mx-auto mb-4 text-gray-400" />
@@ -101,7 +116,7 @@ const Favorites = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {likedSongs.map((song, index) => (
+          {fullLikedSongs.map((song, index) => (
             <motion.div
               key={song.id}
               initial={{ opacity: 0, y: 20 }}

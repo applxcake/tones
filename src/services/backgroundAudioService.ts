@@ -109,18 +109,22 @@ class BackgroundAudioService {
 
   // Initialize wake lock to prevent device sleep
   private async initializeWakeLock(): Promise<void> {
-    if ('wakeLock' in navigator) {
-      try {
-        this.wakeLock = await navigator.wakeLock.request('screen');
-        console.log('Wake lock acquired for background audio');
-        
-        // Handle wake lock release
-        this.wakeLock.addEventListener('release', () => {
-          console.log('Wake lock released');
-        });
-      } catch (error) {
-        console.warn('Wake lock not available:', error);
-      }
+    if (!this.isWakeLockSupported()) {
+      console.log('Wake lock not supported or page not visible during initialization');
+      return;
+    }
+
+    try {
+      this.wakeLock = await navigator.wakeLock.request('screen');
+      console.log('Wake lock acquired for background audio');
+      
+      // Handle wake lock release
+      this.wakeLock.addEventListener('release', () => {
+        console.log('Wake lock released');
+        this.wakeLock = null;
+      });
+    } catch (error) {
+      console.warn('Wake lock not available:', error);
     }
   }
 
@@ -218,18 +222,52 @@ class BackgroundAudioService {
     window.dispatchEvent(event);
   }
 
+  // Get wake lock status
+  getWakeLockStatus(): { isSupported: boolean; isActive: boolean; isVisible: boolean } {
+    const status = {
+      isSupported: 'wakeLock' in navigator,
+      isActive: this.wakeLock !== null,
+      isVisible: document.visibilityState === 'visible'
+    };
+    
+    console.log('[BackgroundAudio] Wake lock status:', status);
+    return status;
+  }
+
+  // Check if wake lock is supported and available
+  private isWakeLockSupported(): boolean {
+    const supported = 'wakeLock' in navigator && document.visibilityState === 'visible';
+    if (!supported) {
+      console.log('[BackgroundAudio] Wake lock not supported or page not visible:', {
+        hasWakeLock: 'wakeLock' in navigator,
+        visibilityState: document.visibilityState
+      });
+    }
+    return supported;
+  }
+
   // Request wake lock
   async requestWakeLock(type: 'screen' = 'screen'): Promise<boolean> {
-    if ('wakeLock' in navigator) {
-      try {
-        this.wakeLock = await navigator.wakeLock.request(type);
-        return true;
-      } catch (error) {
-        console.warn('Failed to request wake lock:', error);
-        return false;
-      }
+    if (!this.isWakeLockSupported()) {
+      console.log('Wake lock not supported or page not visible');
+      return false;
     }
-    return false;
+
+    try {
+      this.wakeLock = await navigator.wakeLock.request(type);
+      console.log('Wake lock acquired successfully');
+      
+      // Handle wake lock release
+      this.wakeLock.addEventListener('release', () => {
+        console.log('Wake lock released');
+        this.wakeLock = null;
+      });
+      
+      return true;
+    } catch (error) {
+      console.warn('Failed to request wake lock:', error);
+      return false;
+    }
   }
 
   // Release wake lock
@@ -243,8 +281,12 @@ class BackgroundAudioService {
   // Enable background audio
   async enableBackgroundAudio(): Promise<void> {
     try {
-      // Request wake lock
-      await this.requestWakeLock();
+      // Request wake lock only if page is visible
+      if (this.isWakeLockSupported()) {
+        await this.requestWakeLock();
+      } else {
+        console.log('Wake lock not requested - page not visible or not supported');
+      }
 
       // Register background sync
       if (this.serviceWorker && 'sync' in this.serviceWorker) {
@@ -339,7 +381,8 @@ class BackgroundAudioService {
   // Handle visibility change
   private handleVisibilityChange(): void {
     if (document.visibilityState === 'hidden') {
-      // App went to background - ensure audio continues
+      // App went to background - release wake lock and ensure audio continues
+      this.handleWakeLockRelease();
       this.ensureBackgroundPlayback();
     } else {
       // App came to foreground
@@ -347,11 +390,26 @@ class BackgroundAudioService {
     }
   }
 
+  // Handle wake lock release when page becomes hidden
+  private handleWakeLockRelease(): void {
+    if (this.wakeLock) {
+      this.wakeLock.release().then(() => {
+        console.log('Wake lock released due to page visibility change');
+        this.wakeLock = null;
+      }).catch(error => {
+        console.warn('Failed to release wake lock:', error);
+        this.wakeLock = null;
+      });
+    }
+  }
+
   // Ensure audio continues in background
   private ensureBackgroundPlayback(): void {
-    // Request wake lock if not already held
-    if (!this.wakeLock) {
-      this.requestWakeLock();
+    // Only request wake lock if supported and page is visible
+    if (!this.wakeLock && this.isWakeLockSupported()) {
+      this.requestWakeLock().catch(error => {
+        console.warn('Failed to request wake lock during background playback:', error);
+      });
     }
 
     // Update media session to indicate background playback
@@ -383,9 +441,11 @@ class BackgroundAudioService {
 
   // Handle return to foreground
   private handleForegroundReturn(): void {
-    // Release wake lock if no longer needed
-    if (this.wakeLock) {
-      this.releaseWakeLock();
+    // Request wake lock when page becomes visible again
+    if (!this.wakeLock && this.isWakeLockSupported()) {
+      this.requestWakeLock().catch(error => {
+        console.warn('Failed to request wake lock on foreground return:', error);
+      });
     }
   }
 
@@ -448,6 +508,63 @@ class BackgroundAudioService {
   // Get initialization status
   get isServiceInitialized(): boolean {
     return this.isInitialized;
+  }
+
+  // Handle track transition for background playback
+  async onTrackTransition(newTrack: { title: string; artist: string; artwork?: string }): Promise<void> {
+    try {
+      // Update media session with new track info
+      this.updateMediaSession({
+        title: newTrack.title,
+        artist: newTrack.artist,
+        artwork: newTrack.artwork
+      });
+      
+      // Set playback state to playing
+      this.setPlaybackState('playing');
+      
+      // Request wake lock if page is visible
+      if (this.isWakeLockSupported()) {
+        await this.requestWakeLock();
+      }
+      
+      // Ensure audio context is active
+      try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+      } catch (error) {
+        console.warn('Audio context resume failed during track transition:', error);
+      }
+      
+      console.log('[BackgroundAudio] Track transition handled successfully');
+    } catch (error) {
+      console.error('[BackgroundAudio] Failed to handle track transition:', error);
+    }
+  }
+
+  // Handle wake lock request when playback starts
+  async onPlaybackStart(): Promise<void> {
+    // Request wake lock when playback starts (good user interaction moment)
+    if (!this.wakeLock && this.isWakeLockSupported()) {
+      try {
+        await this.requestWakeLock();
+        console.log('Wake lock requested on playback start');
+      } catch (error) {
+        console.warn('Failed to request wake lock on playback start:', error);
+      }
+    }
+  }
+
+  // Manually request wake lock (call this from user interactions)
+  async requestWakeLockFromUserInteraction(): Promise<boolean> {
+    if (this.wakeLock) {
+      console.log('Wake lock already active');
+      return true;
+    }
+    
+    return await this.requestWakeLock();
   }
 }
 

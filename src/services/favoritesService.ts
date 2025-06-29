@@ -1,7 +1,6 @@
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { firebaseService } from '@/integrations/firebase';
 import { YouTubeVideo } from './youtubeService';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface FavoriteItem {
   id: string;
@@ -21,42 +20,21 @@ export const addToFavorites = async (song: YouTubeVideo, userId?: string): Promi
     });
     return false;
   }
-
   try {
-    // Check if already in favorites
-    const { data: existing } = await supabase
-      .from('liked_songs')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('song_id', song.id)
-      .maybeSingle();
-
-    if (existing) {
+    const alreadyLiked = await firebaseService.isSongLiked(userId, song.id);
+    if (alreadyLiked) {
       toast({
         title: "Already Liked!",
         duration: 1500
       });
       return true;
     }
-
-    // Add to favorites
-    const { error } = await supabase
-      .from('liked_songs')
-      .insert({
-        id: uuidv4(),
-        user_id: userId,
-        song_id: song.id,
-        created_at: new Date().toISOString()
-      });
-
-    if (error) throw error;
-
+    await firebaseService.addLikedSong(userId, song.id);
     toast({
       title: "Liked!",
       duration: 1500,
       variant: "success"
     });
-
     return true;
   } catch (error) {
     console.error('Error adding to favorites:', error);
@@ -72,21 +50,12 @@ export const addToFavorites = async (song: YouTubeVideo, userId?: string): Promi
 // Remove from favorites
 export const removeFromFavorites = async (songId: string, userId?: string): Promise<boolean> => {
   if (!userId) return false;
-
   try {
-    const { error } = await supabase
-      .from('liked_songs')
-      .delete()
-      .eq('user_id', userId)
-      .eq('song_id', songId);
-
-    if (error) throw error;
-
+    await firebaseService.removeLikedSong(userId, songId);
     toast({
       title: "Removed from Favorites",
       description: "Song removed from your favorites.",
     });
-
     return true;
   } catch (error) {
     console.error('Error removing from favorites:', error);
@@ -97,25 +66,16 @@ export const removeFromFavorites = async (songId: string, userId?: string): Prom
 // Get user favorites
 export const getUserFavorites = async (userId?: string): Promise<YouTubeVideo[]> => {
   if (!userId) return [];
-
   try {
-    const { data, error } = await supabase
-      .from('liked_songs')
-      .select(`
-        *,
-        songs:song_id (*)
-      `)
-      .eq('user_id', userId);
-
-    if (error) throw error;
-
-    return data?.map(item => ({
-      id: item.songs.id,
-      title: item.songs.title,
-      thumbnailUrl: item.songs.thumbnail_url,
-      channelTitle: item.songs.channel_title || '',
-      publishedAt: item.liked_at,
-    })) || [];
+    const likedSongs = await firebaseService.getUserLikedSongs(userId);
+    // Map Firestore liked songs to YouTubeVideo format
+    return likedSongs.map((item: any) => ({
+      id: item.songId || item.song_id || item.song?.id,
+      title: item.song?.title || '',
+      thumbnailUrl: item.song?.thumbnailUrl || '',
+      channelTitle: item.song?.channelTitle || '',
+      publishedAt: item.createdAt?.toDate?.() ? item.createdAt.toDate().toISOString() : (item.createdAt || new Date().toISOString()),
+    }));
   } catch (error) {
     console.error('Error fetching favorites:', error);
     return [];

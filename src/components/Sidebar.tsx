@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Search, Heart, List, Settings, User, LogOut, Disc3 } from 'lucide-react';
+import { Home, SearchCheck, Heart, ListMusic, Settings2, UserRound, LogOut, Disc3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -12,11 +12,11 @@ const Sidebar = () => {
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/home' },
-    { icon: Search, label: 'Search', path: '/search' },
+    { icon: SearchCheck, label: 'Search', path: '/search' },
     { icon: Heart, label: 'Liked Songs', path: '/favorites' },
-    { icon: List, label: 'Playlists', path: '/playlists' },
-    { icon: User, label: 'Profile', path: '/profile' },
-    { icon: Settings, label: 'Settings', path: '/settings' },
+    { icon: ListMusic, label: 'Playlists', path: '/playlists' },
+    { icon: UserRound, label: 'Profile', path: '/profile' },
+    { icon: Settings2, label: 'Settings', path: '/settings' },
   ];
 
   // Hamburger for mobile

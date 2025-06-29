@@ -251,13 +251,14 @@ export const getYouTubeVideoById = async (videoId: string): Promise<YouTubeVideo
     // Check cache first
     const cachedVideo = videoCache.get(videoId);
     if (cachedVideo && isCacheValid(cachedVideo)) {
-      console.log(`Returning cached video: ${videoId}`);
+      console.log(`[getYouTubeVideoById] Returning cached video: ${videoId}`);
       return cachedVideo.data;
     }
     
     const urlTemplate = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key={API_KEY}`;
     
     const data = await fetchWithAPIKeyRotation(urlTemplate, `video:${videoId}`);
+    console.log(`[getYouTubeVideoById] API response for ${videoId}:`, data);
     
     if (data.items && data.items.length > 0) {
       const video = data.items[0];
@@ -275,9 +276,10 @@ export const getYouTubeVideoById = async (videoId: string): Promise<YouTubeVideo
       return videoData;
     }
     
+    console.warn(`[getYouTubeVideoById] No items found for videoId: ${videoId}`);
     return null;
   } catch (error) {
-    console.error('Error fetching YouTube video by ID:', error);
+    console.error(`[getYouTubeVideoById] Error fetching videoId ${videoId}:`, error);
     return getMockVideoById(videoId);
   }
 };
@@ -432,68 +434,71 @@ export const preloadPopularContent = async () => {
 // Batch video details fetching for efficiency
 export const getMultipleVideoDetails = async (videoIds: string[]): Promise<(YouTubeVideo | null)[]> => {
   try {
+    console.log('[getMultipleVideoDetails] Fetching details for IDs:', videoIds);
     // Filter out already cached videos
     const uncachedIds = videoIds.filter(id => {
       const cached = videoCache.get(id);
       return !cached || !isCacheValid(cached);
     });
     
+    let results: (YouTubeVideo | null)[] = new Array(videoIds.length);
     if (uncachedIds.length === 0) {
-      // All videos are cached
-      return videoIds.map(id => {
+      results = videoIds.map(id => {
         const cached = videoCache.get(id);
         return cached ? cached.data : null;
       });
-    }
-    
-    // Fetch uncached videos in batches (YouTube API allows up to 50 IDs per request)
-    const batchSize = 50;
-    const results: (YouTubeVideo | null)[] = new Array(videoIds.length);
-    
-    for (let i = 0; i < uncachedIds.length; i += batchSize) {
-      const batch = uncachedIds.slice(i, i + batchSize);
-      const idsParam = batch.join(',');
-      
-      const urlTemplate = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${idsParam}&key={API_KEY}`;
-      const data = await fetchWithAPIKeyRotation(urlTemplate, `batch:${idsParam}`);
-      
-      // Create a map of fetched videos
-      const fetchedVideos = new Map<string, YouTubeVideo>();
-      if (data.items) {
-        data.items.forEach((item: any) => {
-          const videoData = {
-            id: item.id,
-            title: item.snippet.title,
-            thumbnailUrl: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
-            channelTitle: item.snippet.channelTitle,
-            publishedAt: item.snippet.publishedAt,
-          };
-          fetchedVideos.set(item.id, videoData);
-          videoCache.set(item.id, createCacheEntry(videoData, CACHE_DURATION));
+    } else {
+      // Fetch uncached videos in batches (YouTube API allows up to 50 IDs per request)
+      const batchSize = 50;
+      for (let i = 0; i < uncachedIds.length; i += batchSize) {
+        const batch = uncachedIds.slice(i, i + batchSize);
+        const idsParam = batch.join(',');
+        const urlTemplate = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${idsParam}&key={API_KEY}`;
+        const data = await fetchWithAPIKeyRotation(urlTemplate, `batch:${idsParam}`);
+        console.log(`[getMultipleVideoDetails] API response for batch:`, idsParam, data);
+        // Create a map of fetched videos
+        const fetchedVideos = new Map<string, YouTubeVideo>();
+        if (data.items) {
+          data.items.forEach((item: any) => {
+            const videoData = {
+              id: item.id,
+              title: item.snippet.title,
+              thumbnailUrl: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
+              channelTitle: item.snippet.channelTitle,
+              publishedAt: item.snippet.publishedAt,
+            };
+            fetchedVideos.set(item.id, videoData);
+            videoCache.set(item.id, createCacheEntry(videoData, CACHE_DURATION));
+          });
+        }
+        // Fill results for this batch
+        batch.forEach(id => {
+          const video = fetchedVideos.get(id) || null;
+          const originalIndex = videoIds.indexOf(id);
+          if (originalIndex !== -1) {
+            results[originalIndex] = video;
+          }
         });
       }
-      
-      // Fill results for this batch
-      batch.forEach(id => {
-        const video = fetchedVideos.get(id) || null;
-        const originalIndex = videoIds.indexOf(id);
-        if (originalIndex !== -1) {
-          results[originalIndex] = video;
+      // Fill in cached results
+      videoIds.forEach((id, index) => {
+        if (results[index] === undefined) {
+          const cached = videoCache.get(id);
+          results[index] = cached ? cached.data : null;
         }
       });
     }
-    
-    // Fill in cached results
-    videoIds.forEach((id, index) => {
-      if (results[index] === undefined) {
-        const cached = videoCache.get(id);
-        results[index] = cached ? cached.data : null;
+    // Fallback: For any null/missing, fetch individually
+    for (let i = 0; i < results.length; i++) {
+      if (!results[i]) {
+        console.warn(`[getMultipleVideoDetails] Missing details for ID: ${videoIds[i]}, fetching individually...`);
+        results[i] = await getYouTubeVideoById(videoIds[i]);
       }
-    });
-    
+    }
+    console.log('[getMultipleVideoDetails] Final results:', results);
     return results;
   } catch (error) {
-    console.error('Error fetching multiple video details:', error);
+    console.error('[getMultipleVideoDetails] Error fetching multiple video details:', error);
     // Fallback to individual requests
     return Promise.all(videoIds.map(id => getYouTubeVideoById(id)));
   }

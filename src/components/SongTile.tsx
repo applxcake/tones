@@ -1,7 +1,6 @@
-
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Heart, MoreVertical, Plus } from 'lucide-react';
+import { PlayCircle, Heart, MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -89,7 +88,7 @@ const SongTile = ({
                   handlePlay();
                 }}
               >
-                <Play className="w-5 h-5 ml-0.5" />
+                <PlayCircle className="w-5 h-5 ml-0.5" />
               </Button>
             </motion.div>
 
@@ -120,7 +119,7 @@ const SongTile = ({
                     onClick={(e) => e.stopPropagation()}
                     className="w-8 h-8 bg-black/50 hover:bg-black/70 text-white"
                   >
-                    <MoreVertical className="w-4 h-4" />
+                    <MoreHorizontal className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-gray-900 border-gray-700">
@@ -140,7 +139,7 @@ const SongTile = ({
                     }}
                     className="text-white hover:bg-gray-700"
                   >
-                    <Plus className="w-4 h-4 mr-2" />
+                    <PlusCircle className="w-4 h-4 mr-2" />
                     Add to Playlist
                   </DropdownMenuItem>
                   {!showFavoriteButton && (

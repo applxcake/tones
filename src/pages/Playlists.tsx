@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ListMusic, Plus, MoreVertical, Trash, Edit, Play, Shuffle, Share2, Copy, Globe, Lock } from 'lucide-react';
+import { ListMusic, PlusCircle, MoreHorizontal, Trash2, Edit3, PlayCircle, Shuffle, Share2, Copy, Globe2, LockKeyhole } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,6 +22,7 @@ import { getUserPlaylists, createPlaylist, deletePlaylist, Playlist, togglePlayl
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlayer } from '@/contexts/PlayerContext';
+import { getMultipleVideoDetails } from '@/services/youtubeService';
 
 const Playlists = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -30,6 +31,7 @@ const Playlists = () => {
   const [playlistImageUrl, setPlaylistImageUrl] = useState('');
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
+  const [playlistSongsMap, setPlaylistSongsMap] = useState<Record<string, any[]>>({});
   const navigate = useNavigate();
   const { user } = useAuth();
   const { playPlaylist } = usePlayer();
@@ -41,6 +43,17 @@ const Playlists = () => {
         try {
           const userPlaylists = await getUserPlaylists(user.id);
           setPlaylists(userPlaylists || []);
+          // Fetch full song details for each playlist
+          const songsMap: Record<string, any[]> = {};
+          for (const pl of userPlaylists || []) {
+            if (pl.songs && pl.songs.length > 0) {
+              const songObjs = await getMultipleVideoDetails(pl.songs);
+              songsMap[pl.id] = songObjs.filter(Boolean);
+            } else {
+              songsMap[pl.id] = [];
+            }
+          }
+          setPlaylistSongsMap(songsMap);
         } catch (error) {
           console.error('Error fetching playlists:', error);
         } finally {
@@ -125,7 +138,7 @@ const Playlists = () => {
             size="icon" 
             className="h-14 w-14 rounded-full mb-3 bg-neon-purple/20 hover:bg-neon-purple/40 border border-neon-purple/30 transition-all duration-300 hover:shadow-glow-lg"
           >
-            <Plus className="h-6 w-6 animate-pulse" />
+            <PlusCircle className="h-6 w-6 animate-pulse" />
           </Button>
           <p className="font-medium">Create New Playlist</p>
         </div>
@@ -134,6 +147,7 @@ const Playlists = () => {
         {playlists.map((playlist, index) => {
           // Normalize image_url to imageUrl for compatibility
           const imageUrl = playlist.imageUrl || (playlist as any).image_url;
+          const songs = playlistSongsMap[playlist.id] || [];
           return (
             <div 
               key={playlist.id} 
@@ -165,24 +179,24 @@ const Playlists = () => {
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (playlist.songs.length > 0) {
-                          playPlaylist(playlist.songs, false);
+                        if (songs.length > 0) {
+                          playPlaylist(songs, false);
                         }
                       }}
-                      disabled={playlist.songs.length === 0}
+                      disabled={songs.length === 0}
                       className="bg-neon-purple/80 hover:bg-neon-purple text-white rounded-full h-10 w-10 shadow-glow transform scale-90 hover:scale-100 transition-all duration-300"
                     >
-                      <Play className="h-4 w-4" />
+                      <PlayCircle className="h-4 w-4" />
                     </Button>
                     <Button 
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (playlist.songs.length > 0) {
-                          playPlaylist(playlist.songs, true);
+                        if (songs.length > 0) {
+                          playPlaylist(songs, true);
                         }
                       }}
-                      disabled={playlist.songs.length === 0}
+                      disabled={songs.length === 0}
                       className="bg-neon-purple/80 hover:bg-neon-purple text-white rounded-full h-10 w-10 shadow-glow transform scale-90 hover:scale-100 transition-all duration-300"
                     >
                       <Shuffle className="h-4 w-4" />
@@ -203,17 +217,17 @@ const Playlists = () => {
                   {playlist.description && (
                     <p className="text-xs text-gray-400 mt-1 line-clamp-2">{playlist.description}</p>
                   )}
-                  <p className="text-sm text-gray-400">{playlist.songs.length} songs</p>
+                  <p className="text-sm text-gray-400">{songs.length} songs</p>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="hover-scale">
-                      <MoreVertical className="h-4 w-4" />
+                      <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="animate-scale-in">
                     <DropdownMenuItem onClick={() => viewPlaylist(playlist.id)} className="hover-scale">
-                      <Edit className="mr-2 h-4 w-4" />
+                      <Edit3 className="mr-2 h-4 w-4" />
                       View
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -223,12 +237,12 @@ const Playlists = () => {
                     >
                       {playlist.isPublic ? (
                         <>
-                          <Lock className="mr-2 h-4 w-4" />
+                          <LockKeyhole className="mr-2 h-4 w-4" />
                           Make Private
                         </>
                       ) : (
                         <>
-                          <Globe className="mr-2 h-4 w-4" />
+                          <Globe2 className="mr-2 h-4 w-4" />
                           Make Public
                         </>
                       )}
@@ -247,7 +261,7 @@ const Playlists = () => {
                       className="text-red-500 hover-scale"
                       onClick={() => handleDeletePlaylist(playlist.id)}
                     >
-                      <Trash className="mr-2 h-4 w-4" />
+                      <Trash2 className="mr-2 h-4 w-4" />
                       Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>

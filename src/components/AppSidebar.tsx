@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Search, ListMusic, User, Disc3, LogOut, Users } from 'lucide-react';
+import { Home, SearchCheck, ListMusic, UserRound, Disc3, LogOut, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -37,16 +36,16 @@ const AppSidebar = ({ onToggleSidebar }: AppSidebarProps) => {
           className="w-full flex items-center justify-start gap-2 mb-4"
           onClick={() => handleNavigation('/search')}
         >
-          <Search className="h-4 w-4" />
+          <SearchCheck className="h-4 w-4" />
           Search...
         </Button>
         
         <nav className="space-y-1">
           <SidebarNavItem to="/home" icon={<Home className="h-5 w-5" />} label="Home" onToggleSidebar={onToggleSidebar} />
-          <SidebarNavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" onToggleSidebar={onToggleSidebar} />
+          <SidebarNavItem to="/search" icon={<SearchCheck className="h-5 w-5" />} label="Search" onToggleSidebar={onToggleSidebar} />
           <SidebarNavItem to="/playlists" icon={<ListMusic className="h-5 w-5" />} label="Playlists" onToggleSidebar={onToggleSidebar} />
           <SidebarNavItem to="/explore" icon={<Users className="h-5 w-5" />} label="Explore" onToggleSidebar={onToggleSidebar} />
-          <SidebarNavItem to="/profile" icon={<User className="h-5 w-5" />} label="Profile" onToggleSidebar={onToggleSidebar} />
+          <SidebarNavItem to="/profile" icon={<UserRound className="h-5 w-5" />} label="Profile" onToggleSidebar={onToggleSidebar} />
         </nav>
       </div>
 

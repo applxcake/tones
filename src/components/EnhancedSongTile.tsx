@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, Heart, Plus, MoreVertical } from 'lucide-react';
+import { PlayCircle, PauseCircle, Heart, PlusCircle, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -86,9 +86,9 @@ const EnhancedSongTile = ({
             onClick={handlePlayPause}
           >
             {isCurrentSong && isPlaying ? (
-              <Pause className="h-4 w-4" />
+              <PauseCircle className="h-4 w-4" />
             ) : (
-              <Play className="h-4 w-4 ml-0.5" />
+              <PlayCircle className="h-4 w-4 ml-0.5" />
             )}
           </Button>
         </div>
@@ -111,7 +111,7 @@ const EnhancedSongTile = ({
             className="w-6 h-6 bg-black/50 hover:bg-black/70 text-white"
             onClick={handleAddToQueue}
           >
-            <Plus className="w-3 h-3" />
+            <PlusCircle className="w-3 h-3" />
           </Button>
           <Button
             size="icon"
@@ -123,7 +123,7 @@ const EnhancedSongTile = ({
             }}
             aria-label="More options"
           >
-            <MoreVertical className="w-3 h-3" />
+            <MoreHorizontal className="w-3 h-3" />
           </Button>
         </div>
 

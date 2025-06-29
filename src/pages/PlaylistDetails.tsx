@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, MoreVertical, ArrowLeft, Trash, ListPlus, Shuffle, SortAsc, SortDesc, Share2, Copy, Globe, Lock } from 'lucide-react';
+import { PlayCircle, MoreHorizontal, ArrowLeft, Trash2, ListMusic, Shuffle, SortAsc, SortDesc, Share2, Copy, Globe2, LockKeyhole } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getPlaylistById, removeSongFromPlaylist, deletePlaylist, togglePlaylistSharing, copyPlaylistShareUrl, getPlaylistShareUrl } from '@/services/playlistService';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -68,10 +68,10 @@ const PlaylistDetails = () => {
 
   // Sort songs based on selected option
   useEffect(() => {
-    if (!playlist?.songs) return;
+    if (!playlist?.songs || !Array.isArray(sortedSongs) || sortedSongs.length === 0) return;
 
-    let sorted = [...playlist.songs];
-    
+    let sorted = [...sortedSongs];
+
     switch (sortOption) {
       case 'title-asc':
         sorted.sort((a, b) => a.title.localeCompare(b.title));
@@ -89,10 +89,12 @@ const PlaylistDetails = () => {
         sorted.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
         break;
       default:
-        // Keep original order (by position in playlist)
-        sorted = [...playlist.songs];
+        // Restore original playlist order
+        sorted = playlist.songs
+          .map(id => sortedSongs.find(song => song.id === id))
+          .filter(Boolean);
     }
-    
+
     setSortedSongs(sorted);
   }, [playlist, sortOption]);
 
@@ -244,7 +246,7 @@ const PlaylistDetails = () => {
               disabled={sortedSongs.length === 0}
               className="flex items-center gap-2 hover-scale"
             >
-              <Play className="h-4 w-4" />
+              <PlayCircle className="h-4 w-4" />
               Play All
             </Button>
 
@@ -263,7 +265,7 @@ const PlaylistDetails = () => {
               variant={playlist.isPublic ? "default" : "outline"}
               className="flex items-center gap-2 hover-scale"
             >
-              {playlist.isPublic ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+              {playlist.isPublic ? <Globe2 className="h-4 w-4" /> : <LockKeyhole className="h-4 w-4" />}
               {playlist.isPublic ? 'Public' : 'Private'}
             </Button>
 
@@ -337,7 +339,7 @@ const PlaylistDetails = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="hover-scale">
-                  <MoreVertical className="h-4 w-4" />
+                  <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="animate-scale-in">
@@ -345,7 +347,7 @@ const PlaylistDetails = () => {
                   className="text-red-500 hover-scale"
                   onClick={() => setDeleteDialogOpen(true)}
                 >
-                  <Trash className="mr-2 h-4 w-4" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                   Delete Playlist
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -356,60 +358,61 @@ const PlaylistDetails = () => {
 
       {sortedSongs.filter(song => song && song.id && song.title && song.thumbnailUrl).length > 0 ? (
         <div className="space-y-2">
-          {sortedSongs.filter(song => song && song.id && song.title && song.thumbnailUrl).map((song: any, index: number) => (
-            <div 
-              key={`${song.id}-${index}`}
-              className={cn(
-                "flex items-center justify-between p-3 rounded-lg glass-panel hover:neon-glow-purple animate-fade-in",
-                { "neon-glow-blue": currentTrack?.id === song.id && isPlaying }
-              )}
-              style={{ animationDelay: `${0.1 * (index % 10)}s` }}
-            >
-              <div className="flex items-center flex-1 min-w-0">
-                <span className="text-sm text-gray-400 mr-3 w-6 text-center">
-                  {index + 1}
-                </span>
-                <img 
-                  src={song.thumbnailUrl} 
-                  alt={song.title}
-                  className="h-12 w-12 object-cover rounded mr-3"
-                />
-                <div className="min-w-0">
-                  <h3 className="font-medium truncate">{song.title}</h3>
-                  <p className="text-sm text-gray-400 truncate">{song.channelTitle}</p>
+          {playlist.songs.map((songId: string, index: number) => {
+            const song = sortedSongs.find((s: any) => s && s.id === songId);
+            if (!song) return null;
+            return (
+              <div 
+                key={`${song.id}-${index}`}
+                className={cn(
+                  "flex items-center justify-between p-3 rounded-lg glass-panel hover:neon-glow-purple animate-fade-in",
+                  { "neon-glow-blue": currentTrack?.id === song.id && isPlaying }
+                )}
+                style={{ animationDelay: `${0.1 * (index % 10)}s` }}
+              >
+                <div className="flex items-center flex-1 min-w-0">
+                  <span className="text-sm text-gray-400 mr-3 w-6 text-center">
+                    {index + 1}
+                  </span>
+                  <img 
+                    src={song.thumbnailUrl} 
+                    alt={song.title}
+                    className="h-12 w-12 object-cover rounded mr-3"
+                  />
+                  <div className="min-w-0">
+                    <h3 className="font-medium truncate">{song.title}</h3>
+                    <p className="text-sm text-gray-400 truncate">{song.channelTitle}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    onClick={() => handlePlaySong(song)}
+                    className="hover-scale"
+                  >
+                    <PlayCircle className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    onClick={() => addToQueue(song)}
+                    className="hover-scale"
+                  >
+                    <ListMusic className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="text-red-500 hover-scale" 
+                    onClick={() => handleRemoveSong(song.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-              
-              <div className="flex items-center space-x-2">
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  onClick={() => handlePlaySong(song)}
-                  className="hover-scale"
-                >
-                  <Play className="h-4 w-4" />
-                </Button>
-                
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  onClick={() => addToQueue(song)}
-                  className="hover-scale"
-                >
-                  <ListPlus className="h-4 w-4" />
-                </Button>
-                
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  className="text-red-500 hover-scale" 
-                  onClick={() => handleRemoveSong(song.id)}
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="py-12 text-center glass-panel rounded-lg animate-fade-in">

@@ -96,29 +96,9 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       
       console.log('[PlayerContext] Playing next song from queue:', nextSong.title);
       playTrack(nextSong);
-    } else if (autoPlayEnabled && recentlyPlayed.length > 1) {
-      // Play a random song from recently played (excluding current)
-      const availableSongs = recentlyPlayed.filter(song => song.id !== currentTrack?.id);
-      if (availableSongs.length > 0) {
-        let nextSong;
-        
-        if (shuffleMode) {
-          // Pick a random song from recently played
-          const randomIndex = Math.floor(Math.random() * availableSongs.length);
-          nextSong = availableSongs[randomIndex];
-        } else {
-          // Play the most recently played song (excluding current)
-          nextSong = availableSongs[0];
-        }
-        
-        console.log('[PlayerContext] Playing next song from recently played:', nextSong.title);
-        playTrack(nextSong);
-      } else {
-        console.log('[PlayerContext] No more songs available, stopping playback');
-        setIsPlaying(false);
-      }
     } else {
-      console.log('[PlayerContext] No queue and autoplay disabled, stopping playback');
+      // No more songs in queue, stop playback
+      console.log('[PlayerContext] No more songs in queue, stopping playback');
       setIsPlaying(false);
     }
   };

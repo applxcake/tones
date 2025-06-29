@@ -1,7 +1,7 @@
 import { toast } from '@/hooks/use-toast';
 import { firebaseService } from '@/integrations/firebase';
 import { YouTubeVideo } from './youtubeService';
-import { getSongById } from '@/integrations/firebase/database';
+import { getSongById, addSong } from '@/integrations/firebase/database';
 
 export interface FavoriteItem {
   id: string;
@@ -30,6 +30,20 @@ export const addToFavorites = async (song: YouTubeVideo, userId?: string): Promi
       });
       return true;
     }
+
+    // First, ensure the song exists in the songs collection
+    const existingSong = await getSongById(song.id);
+    if (!existingSong) {
+      // Add the song to the songs collection if it doesn't exist
+      await addSong({
+        title: song.title,
+        channelTitle: song.channelTitle,
+        thumbnailUrl: song.thumbnailUrl,
+        videoId: song.id,
+      });
+    }
+
+    // Then add to liked songs
     await firebaseService.addLikedSong(userId, song.id);
     toast({
       title: "Liked!",
@@ -70,27 +84,44 @@ export const getUserFavorites = async (userId?: string): Promise<YouTubeVideo[]>
   try {
     const likedSongs = await firebaseService.getUserLikedSongs(userId);
     
-    // Fetch full song data for each liked song
-    const fullSongs: YouTubeVideo[] = [];
-    for (const likedSong of likedSongs) {
+    if (likedSongs.length === 0) {
+      return [];
+    }
+    
+    // Fetch full song data for each liked song in parallel
+    const songPromises = likedSongs.map(async (likedSong) => {
       try {
         const songData = await getSongById(likedSong.songId);
         if (songData) {
-          fullSongs.push({
+          return {
             id: songData.id,
             title: songData.title,
             thumbnailUrl: songData.thumbnailUrl,
             channelTitle: songData.channelTitle,
             publishedAt: songData.createdAt?.toDate?.() ? songData.createdAt.toDate().toISOString() : new Date().toISOString(),
-          });
+          } as YouTubeVideo;
         }
+        
+        // Fallback: create a minimal song object if the song data is not found
+        // This can happen if the song was liked before we started storing full song data
+        console.warn(`Song data not found for ${likedSong.songId}, creating fallback object`);
+        return {
+          id: likedSong.songId,
+          title: `Song ${likedSong.songId.slice(0, 8)}...`,
+          thumbnailUrl: 'https://via.placeholder.com/120x90/1f2937/ffffff?text=Song',
+          channelTitle: 'Unknown Artist',
+          publishedAt: likedSong.createdAt?.toDate?.() ? likedSong.createdAt.toDate().toISOString() : new Date().toISOString(),
+        } as YouTubeVideo;
       } catch (error) {
         console.error(`Error fetching song data for ${likedSong.songId}:`, error);
-        // Continue with other songs even if one fails
+        return null;
       }
-    }
+    });
     
-    return fullSongs;
+    const results = await Promise.all(songPromises);
+    const validSongs = results.filter((song): song is YouTubeVideo => song !== null);
+    
+    return validSongs;
   } catch (error) {
     console.error('Error fetching favorites:', error);
     return [];

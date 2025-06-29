@@ -16,6 +16,7 @@ interface PlayerContextType {
   playbackRate: number;
   recentlyPlayed: Song[];
   likedSongs: Song[];
+  likedSongsLoading: boolean;
   progress: number; 
   duration: number; 
   loopMode: LoopMode; 
@@ -45,6 +46,7 @@ interface PlayerContextType {
   setShowQueue: (show: boolean) => void;
   setAutoPlayEnabled: (enabled: boolean) => void;
   playPlaylist: (songs: Song[], shuffle: boolean) => void;
+  refreshLikedSongs: () => Promise<void>;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -57,6 +59,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [recentlyPlayed, setRecentlyPlayed] = useState<Song[]>([]);
   const [likedSongs, setLikedSongs] = useState<Song[]>([]);
+  const [likedSongsLoading, setLikedSongsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [loopMode, setLoopMode] = useState<LoopMode>('none');
@@ -312,17 +315,30 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Function to refresh liked songs
+  const refreshLikedSongs = async () => {
+    if (!user?.id) {
+      setLikedSongs([]);
+      return;
+    }
+    
+    setLikedSongsLoading(true);
+    try {
+      console.log('[PlayerContext] Refreshing liked songs for user:', user.id);
+      const favorites = await getUserFavorites(user.id);
+      console.log('[PlayerContext] Fetched favorites:', favorites.length, 'songs');
+      setLikedSongs(favorites);
+    } catch (error) {
+      console.error('Error refreshing liked songs:', error);
+      // Don't clear existing liked songs on error
+    } finally {
+      setLikedSongsLoading(false);
+    }
+  };
+
   // Load liked songs from Firestore on mount and when user changes
   useEffect(() => {
-    const loadLikedSongs = async () => {
-      if (user && user.id) {
-        const favorites = await getUserFavorites(user.id);
-        setLikedSongs(favorites);
-      } else {
-        setLikedSongs([]);
-      }
-    };
-    loadLikedSongs();
+    refreshLikedSongs();
   }, [user]);
 
   const contextValue = {
@@ -333,6 +349,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     playbackRate,
     recentlyPlayed,
     likedSongs,
+    likedSongsLoading,
     progress,
     duration,
     loopMode,
@@ -361,7 +378,8 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     setDuration,
     setShowQueue,
     setAutoPlayEnabled,
-    playPlaylist
+    playPlaylist,
+    refreshLikedSongs
   };
 
   return (

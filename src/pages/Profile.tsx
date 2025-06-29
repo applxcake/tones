@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Settings, Clock, Heart, LogOut, ListMusic, Music } from 'lucide-react';
+import { User, Settings, Clock, Heart, ListMusic, Music, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -12,8 +12,8 @@ import { FirestoreUserProfile } from '@/integrations/firebase/database';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const Profile = () => {
-  const { recentlyPlayed, likedSongs } = usePlayer();
-  const { user, signOut } = useAuth();
+  const { recentlyPlayed, likedSongs, likedSongsLoading, refreshLikedSongs } = usePlayer();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [userPlaylists, setUserPlaylists] = useState([]);
   const [userProfile, setUserProfile] = useState<FirestoreUserProfile | null>(null);
@@ -41,11 +41,6 @@ const Profile = () => {
     };
     fetchUserData();
   }, [user]);
-
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/login');
-  };
 
   // Helper function to check if a song has valid data for rendering
   const isValidSong = (song: any) => {
@@ -100,14 +95,6 @@ const Profile = () => {
           >
             <Settings className="h-4 w-4 group-hover:text-neon-purple transition-colors" />
             Settings
-          </Button>
-          <Button 
-            variant="destructive" 
-            className="flex items-center gap-2 hover-scale group"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4 group-hover:text-white transition-colors" />
-            Logout
           </Button>
         </div>
       </div>
@@ -180,11 +167,31 @@ const Profile = () => {
       
       {/* Liked Songs Section */}
       <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Heart className="w-5 h-5 text-red-500" />
-          Liked Songs
-        </h3>
-        {likedSongs.length === 0 ? (
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Heart className="w-5 h-5 text-red-500" />
+            Liked Songs
+            {likedSongsLoading && (
+              <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+            )}
+          </h3>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refreshLikedSongs}
+            disabled={likedSongsLoading}
+            className="flex items-center gap-2"
+          >
+            <Loader2 className={`w-4 h-4 ${likedSongsLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+        {likedSongsLoading ? (
+          <div className="glass-panel p-8 rounded-lg text-center">
+            <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+            <p className="text-gray-400">Loading your liked songs...</p>
+          </div>
+        ) : likedSongs.length === 0 ? (
           <div className="glass-panel p-8 rounded-lg text-center">
             <Music className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-400">No liked songs yet.</p>

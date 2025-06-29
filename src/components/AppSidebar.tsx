@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, SearchCheck, ListMusic, UserRound, Disc3, LogOut, Users, Sparkle } from 'lucide-react';
+import { Home, SearchCheck, ListMusic, UserRound, Disc3, Users, Sparkle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ interface AppSidebarProps {
 }
 
 const AppSidebar = ({ onToggleSidebar }: AppSidebarProps) => {
-  const { isAuthenticated, user, signOut } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
   const handleNavigation = (path: string) => {
@@ -21,7 +21,7 @@ const AppSidebar = ({ onToggleSidebar }: AppSidebarProps) => {
   };
 
   return (
-    <div className="h-screen w-64 bg-sidebar fixed left-0 top-0 z-30 shadow-lg backdrop-blur-md bg-background/95">
+    <div className="h-full w-64 bg-sidebar backdrop-blur-md bg-background/95">
       <div className="p-6">
         <div className="flex items-center gap-2 mb-2">
           <Disc3 className="h-8 w-8 text-neon-purple animate-pulse-glow" />
@@ -52,25 +52,9 @@ const AppSidebar = ({ onToggleSidebar }: AppSidebarProps) => {
 
       <div className="mt-auto p-4 border-t border-gray-800">
         {isAuthenticated ? (
-          <div className="flex flex-col">
-            <div className="text-sm text-gray-400 mb-2">
-              <p>Signed in as:</p>
-              <p className="font-medium text-white">{user?.username || user?.email}</p>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              className="justify-start text-gray-400 hover:text-white"
-              onClick={() => {
-                signOut();
-                if (onToggleSidebar) {
-                  onToggleSidebar();
-                }
-              }}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign out
-            </Button>
+          <div className="text-sm text-gray-400">
+            <p>Signed in as:</p>
+            <p className="font-medium text-white">{user?.username || user?.email}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-2">

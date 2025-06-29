@@ -16,6 +16,7 @@ import PlaylistDetails from '@/pages/PlaylistDetails';
 import SharedPlaylist from '@/pages/SharedPlaylist';
 import UserProfile from '@/pages/UserProfile';
 import Favorites from '@/pages/Favorites';
+import AISuggestions from './pages/AISuggestions';
 
 // Components
 import CleanLayout from '@/components/CleanLayout';
@@ -70,6 +71,7 @@ function AppContent() {
             <Route path="/playlists/:id" element={<PlaylistDetails />} />
             <Route path="/shared/:shareToken" element={<SharedPlaylist />} />
             <Route path="/users/:id" element={<UserProfile />} />
+            <Route path="/ai" element={<AISuggestions />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />

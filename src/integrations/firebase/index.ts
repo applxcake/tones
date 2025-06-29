@@ -29,7 +29,8 @@ import {
   getUserRecentlyPlayed,
   addRecentlyPlayed,
   subscribeToUserPlaylists,
-  subscribeToLikedSongs
+  subscribeToLikedSongs,
+  getPlaylistByShareToken
 } from './database';
 
 // Unified Firebase service
@@ -55,6 +56,7 @@ export const firebaseService = {
   addRecentlyPlayed,
   subscribeToUserPlaylists,
   subscribeToLikedSongs,
+  getPlaylistByShareToken
 };
 
 export default firebaseService; 

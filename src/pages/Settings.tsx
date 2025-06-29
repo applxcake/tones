@@ -1,14 +1,14 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BackgroundAudioStatus } from '@/components/BackgroundAudioStatus';
-import ThemeToggle from '@/components/ThemeToggle';
 import AutoPlayToggle from '@/components/AutoPlayToggle';
 import AudioQualityControl from '@/components/AudioQualityControl';
+import UserProfileCustomizer from '@/components/UserProfileCustomizer';
+import { useState } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export const Settings: React.FC = () => {
-  const handleAutoPlayToggle = (enabled: boolean) => {
-    console.log('Auto-play toggled:', enabled);
-  };
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -17,33 +17,19 @@ export const Settings: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Background Audio Settings */}
-        <BackgroundAudioStatus />
-
-        {/* Theme Settings */}
+        {/* Edit Profile */}
         <Card>
           <CardHeader>
-            <CardTitle>Appearance</CardTitle>
+            <CardTitle>Edit Profile</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Dark Mode</span>
-              <ThemeToggle />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Playback Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Playback</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Auto-play</span>
-              <AutoPlayToggle onToggle={handleAutoPlayToggle} />
-            </div>
-            <AudioQualityControl />
+          <CardContent>
+            <button
+              className="px-4 py-2 rounded bg-neon-purple text-white font-semibold hover:bg-neon-purple/80 transition"
+              onClick={() => setEditProfileOpen(true)}
+            >
+              Edit Profile
+            </button>
+            {editProfileOpen && <UserProfileCustomizer />}
           </CardContent>
         </Card>
 

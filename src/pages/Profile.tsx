@@ -158,8 +158,8 @@ const Profile = () => {
                 <p className="text-gray-400 text-sm mb-2">{playlist.description}</p>
                 <div className="flex flex-wrap gap-2">
                   {playlist.songs && playlist.songs.length > 0 ? (
-                    playlist.songs.slice(0, 3).map((song: any) => (
-                      <span key={song.id} className="bg-purple-700/20 text-purple-300 px-2 py-1 rounded text-xs">
+                    playlist.songs.slice(0, 3).map((song: any, index: number) => (
+                      <span key={song.id || `song-${index}`} className="bg-purple-700/20 text-purple-300 px-2 py-1 rounded text-xs">
                         {song.title}
                       </span>
                     ))

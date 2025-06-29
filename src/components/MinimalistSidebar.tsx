@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,7 +9,8 @@ import {
   Settings, 
   Music,
   ChevronLeft,
-  ChevronRight 
+  ChevronRight, 
+  Sparkle 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,7 @@ const MinimalistSidebar = ({ isCollapsed = false, onToggle }: MinimalistSidebarP
     { icon: Home, label: 'Home', path: '/home' },
     { icon: Search, label: 'Search', path: '/search' },
     { icon: Library, label: 'Library', path: '/playlists' },
+    { icon: Sparkle, label: 'AI Suggestions', path: '/ai' },
     { icon: Download, label: 'Downloads', path: '/downloads' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

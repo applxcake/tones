@@ -272,3 +272,5 @@ export const copyPlaylistShareUrl = async (shareToken: string): Promise<boolean>
     return false;
   }
 };
+
+export const getPlaylistByShareToken = firebaseService.getPlaylistByShareToken;

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, SearchCheck, Heart, ListMusic, Settings2, UserRound, LogOut, Disc3 } from 'lucide-react';
+import { Home, SearchCheck, Heart, ListMusic, Settings2, UserRound, LogOut, Disc3, Sparkle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ const Sidebar = () => {
     { icon: SearchCheck, label: 'Search', path: '/search' },
     { icon: Heart, label: 'Liked Songs', path: '/favorites' },
     { icon: ListMusic, label: 'Playlists', path: '/playlists' },
+    { icon: Sparkle, label: 'AI Suggestions', path: '/ai' },
     { icon: UserRound, label: 'Profile', path: '/profile' },
     { icon: Settings2, label: 'Settings', path: '/settings' },
   ];
@@ -32,7 +33,7 @@ const Sidebar = () => {
       </button>
 
       {/* Sidebar (desktop) */}
-      <aside className={`bg-black/20 backdrop-blur-sm border-r border-white/10 flex flex-col hidden sm:flex transition-all duration-200 ${collapsed ? 'w-16 items-center' : 'w-64'} min-h-screen`}>
+      <aside className={`bg-black/20 backdrop-blur-sm border-r border-white/10 flex flex-col hidden sm:flex transition-all duration-200 ${collapsed ? 'w-16 items-center' : 'w-64'} min-h-screen glass-sidebar`}>
         {/* Logo and Collapse Button */}
         <div className={`border-b border-white/10 flex items-center justify-between ${collapsed ? 'px-0 py-4 flex-col gap-2' : 'p-6 flex-row gap-3'}`}>
           <div className={`flex items-center justify-center ${collapsed ? 'w-full' : ''}`}>

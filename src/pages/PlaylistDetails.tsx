@@ -34,9 +34,8 @@ const PlaylistDetails = () => {
   const { playTrack, addToQueue, isPlaying, currentTrack, togglePlayPause, playPlaylist } = usePlayer();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [playlist, setPlaylist] = useState<any>(null);
+  const [songs, setSongs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortOption, setSortOption] = useState<SortOption>('default');
-  const [sortedSongs, setSortedSongs] = useState<any[]>([]);
   const [isSharing, setIsSharing] = useState(false);
   
   useEffect(() => {
@@ -46,13 +45,12 @@ const PlaylistDetails = () => {
         try {
           const playlistData = await getPlaylistById(id);
           if (playlistData && Array.isArray(playlistData.songs) && playlistData.songs.length > 0) {
-            // Fetch full song details for each song ID
             const songObjects = await getMultipleVideoDetails(playlistData.songs);
             setPlaylist(playlistData);
-            setSortedSongs(songObjects.filter(Boolean));
+            setSongs(songObjects.filter(Boolean));
           } else {
             setPlaylist(playlistData);
-            setSortedSongs([]);
+            setSongs([]);
           }
           setIsSharing(playlistData?.isPublic || false);
         } catch (error) {
@@ -65,38 +63,6 @@ const PlaylistDetails = () => {
     
     loadPlaylist();
   }, [id]);
-
-  // Sort songs based on selected option
-  useEffect(() => {
-    if (!playlist?.songs || !Array.isArray(sortedSongs) || sortedSongs.length === 0) return;
-
-    let sorted = [...sortedSongs];
-
-    switch (sortOption) {
-      case 'title-asc':
-        sorted.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      case 'title-desc':
-        sorted.sort((a, b) => b.title.localeCompare(a.title));
-        break;
-      case 'artist-asc':
-        sorted.sort((a, b) => a.channelTitle.localeCompare(b.channelTitle));
-        break;
-      case 'artist-desc':
-        sorted.sort((a, b) => b.channelTitle.localeCompare(a.channelTitle));
-        break;
-      case 'date-added':
-        sorted.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-        break;
-      default:
-        // Restore original playlist order
-        sorted = playlist.songs
-          .map(id => sortedSongs.find(song => song.id === id))
-          .filter(Boolean);
-    }
-
-    setSortedSongs(sorted);
-  }, [playlist, sortOption]);
 
   useEffect(() => {
     if (!loading && !playlist) {
@@ -137,12 +103,6 @@ const PlaylistDetails = () => {
       // Refresh playlist data
       const updatedPlaylist = await getPlaylistById(playlist.id);
       setPlaylist(updatedPlaylist);
-      if (updatedPlaylist && Array.isArray(updatedPlaylist.songs) && updatedPlaylist.songs.length > 0) {
-        const songObjects = await getMultipleVideoDetails(updatedPlaylist.songs);
-        setSortedSongs(songObjects.filter(Boolean));
-      } else {
-        setSortedSongs([]);
-      }
     }
   };
 
@@ -157,21 +117,15 @@ const PlaylistDetails = () => {
   };
 
   const handlePlayAll = () => {
-    const validSongs = sortedSongs.filter(song => song && song.id && song.title && song.thumbnailUrl);
-    if (validSongs.length > 0) {
-      playPlaylist(validSongs, false);
+    if (songs.length > 0) {
+      playPlaylist(songs, false);
     }
   };
 
   const handleShufflePlay = () => {
-    const validSongs = sortedSongs.filter(song => song && song.id && song.title && song.thumbnailUrl);
-    if (validSongs.length > 0) {
-      playPlaylist(validSongs, true);
+    if (songs.length > 0) {
+      playPlaylist(songs, true);
     }
-  };
-
-  const handleSortChange = (option: SortOption) => {
-    setSortOption(option);
   };
 
   const handleToggleSharing = async () => {
@@ -188,19 +142,6 @@ const PlaylistDetails = () => {
   const handleCopyShareLink = async () => {
     if (playlist?.shareToken) {
       await copyPlaylistShareUrl(playlist.shareToken);
-    }
-  };
-
-  const getSortIcon = () => {
-    switch (sortOption) {
-      case 'title-asc':
-      case 'artist-asc':
-        return <SortAsc className="h-4 w-4" />;
-      case 'title-desc':
-      case 'artist-desc':
-        return <SortDesc className="h-4 w-4" />;
-      default:
-        return <SortAsc className="h-4 w-4" />;
     }
   };
 
@@ -231,19 +172,14 @@ const PlaylistDetails = () => {
               <p className="mt-2 text-gray-400">{playlist.description}</p>
             )}
             <p className="mt-2 text-sm text-gray-500">
-              {sortedSongs.length} {sortedSongs.length === 1 ? 'song' : 'songs'}
-              {sortOption !== 'default' && (
-                <span className="ml-2 text-neon-purple">
-                  • Sorted by {sortOption.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </span>
-              )}
+              {playlist.songs.length} {playlist.songs.length === 1 ? 'song' : 'songs'}
             </p>
           </div>
 
           <div className="flex space-x-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <Button 
               onClick={handlePlayAll}
-              disabled={sortedSongs.length === 0}
+              disabled={playlist.songs.length === 0}
               className="flex items-center gap-2 hover-scale"
             >
               <PlayCircle className="h-4 w-4" />
@@ -252,7 +188,7 @@ const PlaylistDetails = () => {
 
             <Button 
               onClick={handleShufflePlay}
-              disabled={sortedSongs.length === 0}
+              disabled={playlist.songs.length === 0}
               variant="outline"
               className="flex items-center gap-2 hover-scale"
             >
@@ -291,54 +227,6 @@ const PlaylistDetails = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="hover-scale">
-                  {getSortIcon()}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="animate-scale-in">
-                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => handleSortChange('default')}
-                  className={sortOption === 'default' ? 'bg-neon-purple/20' : ''}
-                >
-                  Default Order
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => handleSortChange('title-asc')}
-                  className={sortOption === 'title-asc' ? 'bg-neon-purple/20' : ''}
-                >
-                  Title (A-Z)
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => handleSortChange('title-desc')}
-                  className={sortOption === 'title-desc' ? 'bg-neon-purple/20' : ''}
-                >
-                  Title (Z-A)
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => handleSortChange('artist-asc')}
-                  className={sortOption === 'artist-asc' ? 'bg-neon-purple/20' : ''}
-                >
-                  Artist (A-Z)
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => handleSortChange('artist-desc')}
-                  className={sortOption === 'artist-desc' ? 'bg-neon-purple/20' : ''}
-                >
-                  Artist (Z-A)
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => handleSortChange('date-added')}
-                  className={sortOption === 'date-added' ? 'bg-neon-purple/20' : ''}
-                >
-                  Date Added
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="hover-scale">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -356,68 +244,54 @@ const PlaylistDetails = () => {
         </div>
       </div>
 
-      {sortedSongs.filter(song => song && song.id && song.title && song.thumbnailUrl).length > 0 ? (
+      {songs.length > 0 ? (
         <div className="space-y-2">
-          {playlist.songs.map((songId: string, index: number) => {
-            const song = sortedSongs.find((s: any) => s && s.id === songId);
-            if (!song) return null;
-            return (
-              <div 
-                key={`${song.id}-${index}`}
-                className={cn(
-                  "flex items-center justify-between p-3 rounded-lg glass-panel hover:neon-glow-purple animate-fade-in",
-                  { "neon-glow-blue": currentTrack?.id === song.id && isPlaying }
-                )}
-                style={{ animationDelay: `${0.1 * (index % 10)}s` }}
-              >
-                <div className="flex items-center flex-1 min-w-0">
-                  <span className="text-sm text-gray-400 mr-3 w-6 text-center">
-                    {index + 1}
-                  </span>
-                  <img 
-                    src={song.thumbnailUrl} 
-                    alt={song.title}
-                    className="h-12 w-12 object-cover rounded mr-3"
-                  />
-                  <div className="min-w-0">
-                    <h3 className="font-medium truncate">{song.title}</h3>
-                    <p className="text-sm text-gray-400 truncate">{song.channelTitle}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    onClick={() => handlePlaySong(song)}
-                    className="hover-scale"
-                  >
-                    <PlayCircle className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    onClick={() => addToQueue(song)}
-                    className="hover-scale"
-                  >
-                    <ListMusic className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className="text-red-500 hover-scale" 
-                    onClick={() => handleRemoveSong(song.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+          {songs.map((song, index) => (
+            <div 
+              key={`${song.id}-${index}`}
+              className={cn(
+                "flex items-center justify-between p-3 rounded-lg glass-panel hover:neon-glow-purple animate-fade-in",
+                { "neon-glow-blue": currentTrack?.id === song.id && isPlaying }
+              )}
+              style={{ animationDelay: `${0.1 * (index % 10)}s` }}
+            >
+              <div className="flex items-center flex-1 min-w-0">
+                <span className="text-sm text-gray-400 mr-3 w-6 text-center">
+                  {index + 1}
+                </span>
+                <img 
+                  src={song.thumbnailUrl} 
+                  alt={song.title}
+                  className="h-12 w-12 object-cover rounded mr-3"
+                />
+                <div className="min-w-0">
+                  <h3 className="font-medium truncate">{song.title}</h3>
+                  <p className="text-sm text-gray-400 truncate">{song.channelTitle}</p>
                 </div>
               </div>
-            );
-          })}
+              <div className="flex items-center space-x-2">
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  onClick={() => handlePlaySong(song)}
+                  className="hover-scale"
+                >
+                  <PlayCircle className="h-5 w-5" />
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  onClick={() => handleRemoveSong(song.id)}
+                  className="text-red-500 hover-scale"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
-        <div className="py-12 text-center glass-panel rounded-lg animate-fade-in">
-          <p className="text-gray-400">This playlist is empty. Add songs from the search page!</p>
-        </div>
+        <div className="text-center text-gray-500 py-8">No songs in this playlist.</div>
       )}
 
       {/* Delete Playlist Confirmation */}

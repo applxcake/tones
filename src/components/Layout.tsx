@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -14,10 +13,8 @@ import LyricFlashHighlight from '@/components/LyricFlashHighlight';
 const Layout = () => {
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(() => {
-    // Check localStorage for saved preference
     const saved = localStorage.getItem('sidebar-open');
-    // Default to open on desktop, closed on mobile
-    return saved !== null ? JSON.parse(saved) : !isMobile;
+    return saved !== null ? JSON.parse(saved) : true; // default to open
   });
 
   // Update sidebar state when screen size changes
@@ -45,7 +42,7 @@ const Layout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-hidden relative">
+    <div className="liquid-bg min-h-screen text-foreground overflow-hidden relative">
       {/* Enhanced background with animated elements */}
       <AnimatedBackground density={12} speed="slow" colorScheme="purple" />
       <FloatingElements count={15} type="mixed" className="z-0 opacity-30" />

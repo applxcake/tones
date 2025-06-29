@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, SearchCheck, ListMusic, UserRound, Disc3, LogOut, Users } from 'lucide-react';
+import { Home, SearchCheck, ListMusic, UserRound, Disc3, LogOut, Users, Sparkle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,7 @@ const AppSidebar = ({ onToggleSidebar }: AppSidebarProps) => {
           <SidebarNavItem to="/search" icon={<SearchCheck className="h-5 w-5" />} label="Search" onToggleSidebar={onToggleSidebar} />
           <SidebarNavItem to="/playlists" icon={<ListMusic className="h-5 w-5" />} label="Playlists" onToggleSidebar={onToggleSidebar} />
           <SidebarNavItem to="/explore" icon={<Users className="h-5 w-5" />} label="Explore" onToggleSidebar={onToggleSidebar} />
+          <SidebarNavItem to="/ai" icon={<Sparkle className="h-5 w-5" />} label="AI Suggestions" onToggleSidebar={onToggleSidebar} />
           <SidebarNavItem to="/profile" icon={<UserRound className="h-5 w-5" />} label="Profile" onToggleSidebar={onToggleSidebar} />
         </nav>
       </div>
@@ -122,7 +123,7 @@ const SidebarNavItem = ({ to, icon, label, onToggleSidebar }: SidebarNavItemProp
     <NavLink
       to={to}
       className={({ isActive }) => cn(
-        "flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200",
+        "flex items-center gap-3 px-3 py-2 transition-all duration-200",
         isActive 
           ? "bg-accent text-accent-foreground neon-glow-purple" 
           : "text-gray-400 hover:text-white hover:bg-gray-800/50"

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Settings, Clock, Heart, LogOut, ListMusic } from 'lucide-react';
+import { User, Settings, Clock, Heart, LogOut, ListMusic, Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -45,6 +45,11 @@ const Profile = () => {
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
+  };
+
+  // Helper function to check if a song has valid data for rendering
+  const isValidSong = (song: any) => {
+    return song && song.id && song.title && song.thumbnailUrl;
   };
 
   if (!user) {
@@ -175,28 +180,60 @@ const Profile = () => {
       
       {/* Liked Songs Section */}
       <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-4">Liked Songs</h3>
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Heart className="w-5 h-5 text-red-500" />
+          Liked Songs
+        </h3>
         {likedSongs.length === 0 ? (
-          <p className="text-gray-400">No liked songs yet.</p>
+          <div className="glass-panel p-8 rounded-lg text-center">
+            <Music className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-400">No liked songs yet.</p>
+            <p className="text-gray-500 text-sm mt-2">Start liking songs to see them here!</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {likedSongs.map((song: any) => (
-              <SongTile key={song.id} song={song} />
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {likedSongs
+              .filter(isValidSong)
+              .map((song: any) => (
+                <SongTile key={song.id} song={song} showFavoriteButton={true} isFavorited={true} />
+              ))}
+            {likedSongs.filter(isValidSong).length === 0 && (
+              <div className="col-span-full glass-panel p-8 rounded-lg text-center">
+                <Music className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-400">No valid liked songs found.</p>
+                <p className="text-gray-500 text-sm mt-2">Try liking some songs from the explore page.</p>
+              </div>
+            )}
           </div>
         )}
       </div>
       
       {/* Recently Played Section */}
       <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-4">Recently Played</h3>
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Clock className="w-5 h-5 text-blue-500" />
+          Recently Played
+        </h3>
         {recentlyPlayed.length === 0 ? (
-          <p className="text-gray-400">No recently played songs yet.</p>
+          <div className="glass-panel p-8 rounded-lg text-center">
+            <Music className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-400">No recently played songs yet.</p>
+            <p className="text-gray-500 text-sm mt-2">Start playing music to see your history here!</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {recentlyPlayed.map((song: any) => (
-              <SongTile key={song.id} song={song} />
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recentlyPlayed
+              .filter(isValidSong)
+              .map((song: any) => (
+                <SongTile key={song.id} song={song} />
+              ))}
+            {recentlyPlayed.filter(isValidSong).length === 0 && (
+              <div className="col-span-full glass-panel p-8 rounded-lg text-center">
+                <Music className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-400">No valid recently played songs found.</p>
+                <p className="text-gray-500 text-sm mt-2">Try playing some music to build your history.</p>
+              </div>
+            )}
           </div>
         )}
       </div>

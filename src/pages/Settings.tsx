@@ -39,7 +39,7 @@ export const Settings: React.FC = () => {
             <CardTitle>About</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>Tones Music Player v1.0.0</p>
+            <p>Tones Music Player v2.0</p>
             <p>A modern music player with background playback support.</p>
             <p>Built with React, TypeScript, and Tailwind CSS.</p>
           </CardContent>

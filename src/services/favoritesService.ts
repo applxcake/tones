@@ -1,6 +1,7 @@
 import { toast } from '@/hooks/use-toast';
 import { firebaseService } from '@/integrations/firebase';
 import { YouTubeVideo } from './youtubeService';
+import { getSongById } from '@/integrations/firebase/database';
 
 export interface FavoriteItem {
   id: string;
@@ -68,14 +69,28 @@ export const getUserFavorites = async (userId?: string): Promise<YouTubeVideo[]>
   if (!userId) return [];
   try {
     const likedSongs = await firebaseService.getUserLikedSongs(userId);
-    // Map Firestore liked songs to YouTubeVideo format
-    return likedSongs.map((item: any) => ({
-      id: item.songId || item.song_id || item.song?.id,
-      title: item.song?.title || '',
-      thumbnailUrl: item.song?.thumbnailUrl || '',
-      channelTitle: item.song?.channelTitle || '',
-      publishedAt: item.createdAt?.toDate?.() ? item.createdAt.toDate().toISOString() : (item.createdAt || new Date().toISOString()),
-    }));
+    
+    // Fetch full song data for each liked song
+    const fullSongs: YouTubeVideo[] = [];
+    for (const likedSong of likedSongs) {
+      try {
+        const songData = await getSongById(likedSong.songId);
+        if (songData) {
+          fullSongs.push({
+            id: songData.id,
+            title: songData.title,
+            thumbnailUrl: songData.thumbnailUrl,
+            channelTitle: songData.channelTitle,
+            publishedAt: songData.createdAt?.toDate?.() ? songData.createdAt.toDate().toISOString() : new Date().toISOString(),
+          });
+        }
+      } catch (error) {
+        console.error(`Error fetching song data for ${likedSong.songId}:`, error);
+        // Continue with other songs even if one fails
+      }
+    }
+    
+    return fullSongs;
   } catch (error) {
     console.error('Error fetching favorites:', error);
     return [];
